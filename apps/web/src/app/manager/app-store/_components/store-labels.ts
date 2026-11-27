@@ -24,6 +24,10 @@ export const STATUS_TONES: Record<AppStoreStatus, 'green' | 'amber' | 'blue' | '
 /** "Đã cài" in the status filter. */
 export const INSTALLED_STATUSES: readonly AppStoreStatus[] = ['enabled', 'enabled_all', 'removing']
 
+/** An app the AI built for this cooperative (M13): the label and the page of its spec and gate report. */
+export const GENERATED_LABEL = 'App do AI xây'
+export const GENERATED_REPORT_LABEL = 'Đặc tả và báo cáo kiểm tra'
+
 export const NEW_VERSION_LABEL = 'Có bản mới'
 /** True when the HTX uses the app and the server runs another version than the catalogue offers. */
 export const hasNewVersion = (app: { version: string; installedVersion: string | null; status: AppStoreStatus }) =>

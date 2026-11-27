@@ -140,23 +140,116 @@ def test_telegram_credentials_reach_the_helper_on_stdin_only(tmp_path):
     assert (tmp_path / "stdin").read_text() == "DXOS_TELEGRAM_CLIENT_SECRET=s3cret\n"
 
 
-def test_telegram_disable_removes_both_credential_files_and_clients(tmp_path):
+def test_telegram_disable_removes_its_credentials_and_clients(tmp_path):
     body = subprocess.run(["sed", "-n", "/^telegram_disable()/,/^}/p", str(DXOS)], capture_output=True, text=True).stdout
     snippet = (f"set -e\nkc_exec() {{ echo kc >>{tmp_path}/calls; }}\n"
                f"telegram_env_remove() {{ echo \"rm $1/$2\" >>{tmp_path}/calls; }}\n"
+               f"roles_env_update() {{ echo \"drop $*\" >>{tmp_path}/calls; }}\n"
                "telegram_restart() { echo restart >>" f"{tmp_path}/calls; }}\n"
                f"{body}\ntelegram_disable\n")
     run = subprocess.run(["bash", "-c", snippet], capture_output=True, text=True)
     assert run.returncode == 0, run.stderr
     assert (tmp_path / "calls").read_text().splitlines() == [
-        "kc", "rm /run/dxos-telegram/telegram.env", "rm /run/dxos-web/roles.env", "restart",
+        "kc", "rm /run/dxos-telegram/telegram.env",
+        "drop DXOS_ROLES_CLIENT_ID DXOS_ROLES_CLIENT_SECRET DXOS_TELEGRAM_WEBAPP_KEY DXOS_WEB_SERVICE_SECRET", "restart",
     ]
+
+
+def test_telegram_enable_and_disable_handle_the_web_service_client():
+    enable = subprocess.run(["sed", "-n", "/^telegram_enable()/,/^}/p", str(DXOS)], capture_output=True, text=True).stdout
+    assert 'ensure_client dxos-web-service "$WS_SCOPES"' in enable and "--rolename web-service" in enable
+    assert "service-account-dxos-web-service" in enable
+    assert "echo" not in enable.split("DXOS_WEB_SERVICE_SECRET")[1].split("\n")[0]  # the secret is piped to the helper, never echoed
+    disable = subprocess.run(["sed", "-n", "/^telegram_disable()/,/^}/p", str(DXOS)], capture_output=True, text=True).stdout
+    assert "dxos-telegram dxos-web-roles dxos-web-service" in disable
 
 
 def test_telegram_is_in_usage_and_takes_one_action():
     text = DXOS.read_text()
     assert "telegram <enable|disable>" in text
     assert "telegram)" in text and "[ $# -eq 1 ] || usage" in text
+
+
+def run_roles_env_update(tmp_path, existing, keys, new):
+    """Source the real roles_env_update() with stubs for the helper container; returns (written file or None, removed?)."""
+    body = subprocess.run(["sed", "-n", "/^roles_env_update()/,/^}/p", str(DXOS)], capture_output=True, text=True).stdout
+    (tmp_path / "existing").write_text(existing)
+    snippet = (f"set -euo pipefail\nroles_env_read() {{ cat {tmp_path}/existing; }}\n"
+               f"telegram_env_write() {{ echo \"$1 $2\" >{tmp_path}/target; cat >{tmp_path}/written; }}\n"
+               f"telegram_env_remove() {{ echo \"$1 $2\" >{tmp_path}/removed; }}\n{body}\n"
+               f"printf '%s' '{new}' | roles_env_update {keys}\n")
+    run = subprocess.run(["bash", "-c", snippet], capture_output=True, text=True)
+    assert run.returncode == 0, run.stderr
+    written = (tmp_path / "written").read_text() if (tmp_path / "written").exists() else None
+    return written, (tmp_path / "removed").exists()
+
+
+def test_roles_env_update_replaces_its_keys_and_keeps_the_others(tmp_path):
+    existing = "DXOS_ROLES_CLIENT_ID=dxos-web-roles\nDXOS_ROLES_CLIENT_SECRET=old\nDXOS_APPS_ACTOR_SECRET=keep\n"
+    written, removed = run_roles_env_update(
+        tmp_path, existing, "DXOS_ROLES_CLIENT_ID DXOS_ROLES_CLIENT_SECRET",
+        "DXOS_ROLES_CLIENT_ID=dxos-web-roles\nDXOS_ROLES_CLIENT_SECRET=new\n")
+    assert sorted(written.splitlines()) == [
+        "DXOS_APPS_ACTOR_SECRET=keep", "DXOS_ROLES_CLIENT_ID=dxos-web-roles", "DXOS_ROLES_CLIENT_SECRET=new"]
+    assert not removed
+    assert (tmp_path / "target").read_text() == "/run/dxos-web roles.env\n"
+
+
+def test_roles_env_update_on_a_missing_file_writes_only_the_new_lines(tmp_path):
+    written, _ = run_roles_env_update(tmp_path, "", "DXOS_APPS_ACTOR_SECRET", "DXOS_APPS_ACTOR_SECRET=s3\n")
+    assert written == "DXOS_APPS_ACTOR_SECRET=s3\n"
+
+
+def test_roles_env_update_with_nothing_left_removes_the_file(tmp_path):
+    written, removed = run_roles_env_update(
+        tmp_path, "DXOS_ROLES_CLIENT_ID=x\nDXOS_ROLES_CLIENT_SECRET=y\n", "DXOS_ROLES_CLIENT_ID DXOS_ROLES_CLIENT_SECRET", "")
+    assert written is None and removed
+
+
+def test_apps_actor_enable_is_wired_and_never_prints_the_secret():
+    text = DXOS.read_text()
+    assert "apps actor <enable>" in text or "apps actor enable" in text
+    body = subprocess.run(["sed", "-n", "/^apps_actor_enable()/,/^}/p", str(DXOS)], capture_output=True, text=True).stdout
+    assert "dxos-apps-actor" in body and "roles_env_update DXOS_APPS_ACTOR_SECRET" in body
+    assert body.count("$secret") == 2  # the emptiness check and the one pipe into the helper; never an echo
+    assert "echo" not in body.split("printf 'DXOS_APPS_ACTOR_SECRET")[1].split("\n")[0]
+
+
+def run_function(name, snippet_after, tmp_path):
+    body = subprocess.run(["sed", "-n", f"/^{name}()/,/^}}/p", str(DXOS)], capture_output=True, text=True).stdout
+    assert body, name
+    script = (f"set -e\nPROJECT=proj\ncompose() {{ echo \"cid-${{@: -1}}\"; }}\n"
+              f"docker() {{ echo \"docker $*\" >>{tmp_path}/calls; }}\n{body}\n{snippet_after}\n")
+    return subprocess.run(["bash", "-c", script], capture_output=True, text=True)
+
+
+def test_gen_network_connect_joins_apisix_and_postgres_under_their_service_names(tmp_path):
+    """A plain `docker network connect` gives only the container name on the new network; the app's database URL says
+    `postgres`, so without the alias the app cannot resolve its database (the generated app answered 500 in CI)."""
+    run = run_function("gen_network_connect", "gen_network_connect gen-tea-log", tmp_path)
+    assert run.returncode == 0, run.stderr
+    assert (tmp_path / "calls").read_text().splitlines() == [
+        "docker network connect --alias apisix proj_dxos-gen-gen-tea-log cid-apisix",
+        "docker network connect --alias postgres proj_dxos-gen-gen-tea-log cid-postgres"]
+
+
+def test_gen_network_connect_ignores_a_store_app(tmp_path):
+    assert run_function("gen_network_connect", "gen_network_connect tea-shop", tmp_path).returncode == 0
+    assert not (tmp_path / "calls").exists()
+
+
+def test_gen_network_drop_disconnects_then_removes_the_network(tmp_path):
+    assert run_function("gen_network_drop", "gen_network_drop gen-tea-log", tmp_path).returncode == 0
+    assert (tmp_path / "calls").read_text().splitlines() == [
+        "docker network disconnect proj_dxos-gen-gen-tea-log cid-apisix", "docker network disconnect proj_dxos-gen-gen-tea-log cid-postgres",
+        "docker network rm proj_dxos-gen-gen-tea-log"]
+
+
+def test_worker_installs_a_generated_app_from_its_runtime_export():
+    text = DXOS.read_text()
+    assert "read -r job action app htx installed version" in text
+    assert '/repo/docker/runtime/generated/$app/$version' in text
+    assert text.count("gen_network_connect") >= 4  # defined, install, upgrade, worker start
 
 
 def _staff_snippet(tmp_path, function, htx_row="1", secret="s3cret"):

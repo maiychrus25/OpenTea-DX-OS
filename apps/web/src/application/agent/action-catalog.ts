@@ -14,6 +14,11 @@ import { notificationInternalAction } from './actions/notification-internal.acti
 import { agentSettingsUpdateAction } from './actions/agent-settings-update.action'
 import { improvementAdoptAction } from './actions/improvement-adopt.action'
 import { staffTaskCreateAction } from './actions/staff-task-create.action'
+import { appSpecApproveAction } from './actions/app-spec-approve.action'
+import { miniappInstallAction } from './actions/miniapp-install.action'
+import { miniappRemoveAction } from './actions/miniapp-remove.action'
+import { appActionCatalog } from './app-actions/default-app-actions'
+import { strategyAdoptAction } from './actions/strategy-adopt.action'
 import type { EvidenceLoaders } from './actions/journal-evidence'
 import type { JournalSubject } from './actions/journal-labels'
 
@@ -32,6 +37,8 @@ export interface ActionDefinition<P extends Record<string, unknown> = Record<str
   approverRoles: readonly ApproverRole[]
   origins: readonly Origin[]
   autonomy: AutonomyMode
+  /** An app action that moves money: unlockable, with a 2 h window in autonomous mode (M9). */
+  money?: boolean
   channels: readonly DecisionChannel[]
   payloadSchema: z.ZodType<P, z.ZodTypeDef, unknown>
   editableFields: readonly (keyof P & string)[]
@@ -43,7 +50,9 @@ export interface ActionDefinition<P extends Record<string, unknown> = Record<str
   repeatAfterHours: number | null
   expiresAfterHours: number
   preview(payload: P, subjects?: ReadonlyMap<string, JournalSubject>, evidence?: Evidence): string[]
-  subjects(payload: P): string[]
+  subjects(payload: P, evidence?: Evidence): string[]
+  /** Refuses a proposal that could never run (M13: a generated app of another cooperative). Throws ValidationError. */
+  validate?(payload: P, ctx: { htxCode: string }): Promise<void>
   isStale(payload: P, evidence: Evidence, ctx: ActionStalenessContext): Promise<boolean>
   execute(payload: P, approver: Tenant): Promise<Record<string, unknown>>
 }
@@ -59,8 +68,23 @@ export const ACTION_CATALOG: Readonly<Record<string, ActionDefinition<any>>> = O
   'agent.settings.update': agentSettingsUpdateAction,
   'improvement.adopt': improvementAdoptAction,
   'staff.task.create': staffTaskCreateAction,
+  'app.spec.approve': appSpecApproveAction,
+  'miniapp.install': miniappInstallAction,
+  'miniapp.remove': miniappRemoveAction,
+  'strategy.adopt': strategyAdoptAction,
 })
 
-export function getAction(kind: string): ActionDefinition<any> | undefined {
-  return Object.prototype.hasOwnProperty.call(ACTION_CATALOG, kind) ? ACTION_CATALOG[kind] : undefined
+/**
+ * A built-in kind, or an `app.<id>.<action>` kind of an installed app from the cache `ensureAppActions` fills.
+ * With `htxCode`, an app action resolves only when the app is enabled for that cooperative.
+ */
+export function getAction(kind: string, htxCode?: string): ActionDefinition<any> | undefined {
+  if (Object.prototype.hasOwnProperty.call(ACTION_CATALOG, kind)) return ACTION_CATALOG[kind]
+  return appActionCatalog.find(kind, htxCode)
+}
+
+/** Refreshes the app actions when older than 60 s; callers that hold only built-in kinds skip it. */
+export async function ensureAppActions(kinds?: string | readonly string[]): Promise<void> {
+  const list = kinds === undefined ? undefined : typeof kinds === 'string' ? [kinds] : kinds
+  if (list === undefined || list.some((kind) => kind.startsWith('app.'))) await appActionCatalog.ensure()
 }

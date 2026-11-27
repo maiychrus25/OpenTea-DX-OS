@@ -34,6 +34,9 @@ jest.mock('@/infrastructure/db/agent/PrismaProposalRepository', () => ({
     list: async () => [],
   })),
 }))
+jest.mock('@/infrastructure/db/agent/PrismaStrategyPlanRepository', () => ({
+  PrismaStrategyPlanRepository: jest.fn().mockImplementation(() => ({ adoptedFor: async () => null })),
+}))
 jest.mock('@/infrastructure/db/agent/PrismaCampaignRepository', () => ({
   PrismaCampaignRepository: jest.fn().mockImplementation(() => ({
     create: async () => ({ id: 'camp-1', created: true }),

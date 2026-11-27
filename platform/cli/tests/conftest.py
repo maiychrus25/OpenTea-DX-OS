@@ -23,6 +23,43 @@ FIXTURES = Path(__file__).parent / "fixtures"
 COPIED = ["platform/gateway/apisix.yaml", "platform/apps/manifest.schema.json", "apps/web/package.json"]
 
 
+# Contract C1 of the M13 plan, as the web track puts it in platform/postgres/init/08-agent.sql. Applied here too (every
+# statement is idempotent), so these tests do not wait for that file to land.
+APP_BUILDER_DDL = """
+CREATE TABLE IF NOT EXISTS platform.app_build_requests (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  htx_code text NOT NULL, requested_by text NOT NULL, requested_by_name text NULL,
+  request_text text NOT NULL CHECK (char_length(request_text) BETWEEN 5 AND 500),
+  questions jsonb NOT NULL DEFAULT '[]',
+  answer_text text NULL CHECK (char_length(answer_text) <= 1000),
+  path text NULL CHECK (path IN ('store','book','build')),
+  app_id text NULL, spec jsonb NULL,
+  status text NOT NULL DEFAULT 'new' CHECK (status IN
+    ('new','asking','routed','spec_proposed','spec_approved','building','passed','failed','installed','cancelled')),
+  error_vi text NULL,
+  created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE platform.app_build_requests ADD COLUMN IF NOT EXISTS announced_at timestamptz NULL;
+CREATE TABLE IF NOT EXISTS platform.app_builds (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  request_id uuid NOT NULL REFERENCES platform.app_build_requests(id) ON DELETE CASCADE,
+  htx_code text NOT NULL, app_id text NOT NULL, version text NOT NULL,
+  provider text NOT NULL, rounds smallint NOT NULL DEFAULT 0 CHECK (rounds BETWEEN 0 AND 3),
+  status text NOT NULL DEFAULT 'running' CHECK (status IN ('running','passed','failed')),
+  gates jsonb NOT NULL DEFAULT '[]',
+  git_tag text NULL, started_at timestamptz NOT NULL DEFAULT now(), finished_at timestamptz NULL,
+  UNIQUE (app_id, version)
+);
+CREATE TABLE IF NOT EXISTS platform.app_build_files (
+  build_id uuid NOT NULL REFERENCES platform.app_builds(id) ON DELETE CASCADE,
+  name text NOT NULL CHECK (name IN ('desktop-light.png','desktop-dark.png','mobile-light.png','mobile-dark.png','review.md','spec.md')),
+  content_type text NOT NULL, bytes bytea NOT NULL, PRIMARY KEY (build_id, name)
+);
+ALTER TABLE platform.app_catalog ADD COLUMN IF NOT EXISTS owner_htx text NULL;
+ALTER TABLE platform.app_catalog ADD COLUMN IF NOT EXISTS build_id uuid NULL REFERENCES platform.app_builds(id);
+"""
+
+
 def _docker(*args: str, stdin: str | None = None) -> subprocess.CompletedProcess:
     return subprocess.run(["docker", *args], input=stdin, capture_output=True, text=True)
 
@@ -61,7 +98,8 @@ def pg_url():
         port = _docker("port", name, "5432/tcp").stdout.splitlines()[0].rsplit(":", 1)[1]
         yield f"postgresql://agrimarket:test@127.0.0.1:{port}/agrimarket"
     finally:
-        _docker("rm", "-f", name)
+        # -v: the image declares a data volume, and a forced removal without it leaves that volume behind on every run.
+        _docker("rm", "-f", "-v", name)
 
 
 @pytest.fixture
@@ -74,7 +112,9 @@ def root(tmp_path, monkeypatch, pg_url):
     monkeypatch.setenv("DXOS_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("DXOS_DB_URL", pg_url)
     with psycopg.connect(pg_url) as conn:
-        conn.execute("TRUNCATE platform.installed_apps, platform.app_catalog, platform.app_catalog_screenshots, platform.app_enablements, platform.app_requests")
+        conn.execute(APP_BUILDER_DDL)  # per test: the store upgrade tests drop and recreate platform.app_catalog
+        conn.execute("TRUNCATE platform.installed_apps, platform.app_catalog, platform.app_catalog_screenshots, platform.app_enablements, platform.app_requests,"
+                     " platform.app_build_requests, platform.app_builds, platform.app_build_files")
         for (name,) in conn.execute(r"SELECT rolname FROM pg_roles WHERE rolname LIKE 'app\_%'").fetchall():
             conn.execute(sql.SQL("DROP SCHEMA IF EXISTS {} CASCADE").format(sql.Identifier(name)))
             conn.execute(sql.SQL("DROP OWNED BY {}").format(sql.Identifier(name)))

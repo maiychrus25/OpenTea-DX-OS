@@ -745,8 +745,22 @@ Mỗi sáng agent A9 (`daily-campaign`, 06:00 giờ Việt Nam) gom các đề x
 
 ### Nội bộ (token agent)
 
-- **`GET /api/internal/agent/campaigns/candidates?day=YYYY-MM-DD`**: trả về `{ day, proposals, rain_parcel_codes, withdrawal_parcel_codes, people_available }`. `proposals` là đề xuất `proposed` chưa hết hạn, mỗi mục có `id`, `kind`, `risk`, `title_vi`, `created_at`, `parcel_codes`, `goal_key`, `target`, `involves_spraying` (luôn `false`), `people_needed` (1 cho `staff.task.create`, 2 cho `harvest.approve` có sản lượng ước tính trên 500 kg, còn lại `0`). `rain_parcel_codes` là thửa có dự báo từ 5 mm mưa; `withdrawal_parcel_codes` là thửa còn trong thời gian cách ly phun thuốc của ngày đó. `people_available` là số người có mặt hôm nay do app nhân sự báo (`platform.staff_attendance`), hoặc `null` khi chưa có báo cáo; khi đó quy tắc người của A9 bị bỏ qua.
+- **`GET /api/internal/agent/campaigns/candidates?day=YYYY-MM-DD`**: trả về `{ day, proposals, rain_parcel_codes, withdrawal_parcel_codes, people_available }`. `proposals` là đề xuất `proposed` chưa hết hạn, mỗi mục có `id`, `kind`, `risk`, `title_vi`, `created_at`, `parcel_codes`, `goal_key`, `target`, `involves_spraying` (luôn `false`), `people_needed` (1 cho `staff.task.create`, 2 cho `harvest.approve` có sản lượng ước tính trên 500 kg, còn lại `0`). `rain_parcel_codes` là thửa có dự báo từ 5 mm mưa; `withdrawal_parcel_codes` là thửa còn trong thời gian cách ly phun thuốc của ngày đó. `people_available` là số người có mặt hôm nay do app nhân sự báo (`platform.staff_attendance`), hoặc `null` khi chưa có báo cáo; khi đó quy tắc người của A9 bị bỏ qua. `season_goal_keys` (M11) là các `goal_key` của chiến dịch mà kế hoạch mùa vụ đang áp dụng đề cao (`harvest`, `inspection`, `journal_backlog`); rỗng khi quý chưa có kế hoạch.
 - **`POST /api/internal/agent/campaigns`**: `{ day, items: [{ proposal_id, position }], dropped: [{ proposal_id, rule }], summary_vi, run_id }`. `position` phải là 1..n theo thứ tự; `rule` là `withdrawal`, `rain`, `people` hoặc `overflow`. Web tính lại `goal_key` và `target` từ đề xuất, không tin giá trị agent gửi. `201 { id }` khi tạo mới; `200 { existing: true, id }` khi HTX đã có chiến dịch của ngày đó (không gửi Telegram lần nữa). `400 INVALID_CAMPAIGN` khi một đề xuất không còn `proposed` hoặc không thuộc HTX; `400 INVALID_RUN_ID` khi `run_id` không thuộc HTX. Danh sách `dropped` chỉ ghi vào sự kiện kiểm toán `agent.campaign.created`.
+
+### Kế hoạch mùa vụ (M11, nội bộ, token agent)
+
+- **`GET /api/internal/agent/strategy/inputs?season=YYYY-Qn`**: `{ data: { season, current, last_year, previous, adopted, draft_exists } }`.
+  - `current`, `last_year` (cùng quý năm trước), `previous` (quý trước): `{ yield_kg, journal_on_time_rate, diseased_parcel_rate, shop_revenue_vnd }`, mỗi số liệu là số hoặc `null` khi không có dòng nào. `shop_revenue_vnd` là `null` khi `tea-shop` chưa cài hoặc chưa bật cho HTX.
+  - `adopted`: `{ id, season }` của kế hoạch đã áp dụng cho quý đó, hoặc `null`. `draft_exists`: quý đã có bản nháp.
+  - `400` khi `season` không phải `YYYY-Qn`.
+- **`POST /api/internal/agent/strategy/plans`**: `{ season, goals: [{ key, target }], priorities, initiatives: [{ kind, title_vi }], run_id? }`.
+  - Tối đa 5 `priorities` (mỗi mục tối đa 160 ký tự) và 5 `initiatives` (`kind` ∈ `miniapp|training|partner|expand|outside`); `goals` không lặp `key`.
+  - Web đặt nhãn, đơn vị, hướng và `baseline` của mục tiêu từ số liệu cùng quý năm trước; mục tiêu không có số liệu năm trước bị từ chối (`400 INVALID_GOAL`).
+  - `warnings` do web tính lại: mỗi mục tiêu tệ hơn cùng kỳ (thấp hơn với `up`, cao hơn với `down`) thêm `Mục tiêu <nhãn> thấp hơn cùng kỳ năm trước`.
+  - `201 { data: { id, proposal_id } }` và tạo đề xuất `strategy.adopt` (agent `strategy`, payload `{ plan_id }`). `200 { data: { existing: true } }` khi quý đã có bản nháp.
+- **`strategy.adopt`** (danh mục): rủi ro `medium`, người duyệt `manager`, `autonomy: unlockable`, cửa sổ chặn 48 giờ khi tự vận hành. Áp dụng kế hoạch (`adopted`) và chuyển kế hoạch đã áp dụng trước của cùng quý sang `superseded` trong một giao dịch; ghi sự kiện kiểm toán `strategy.adopted`. Kế hoạch có `warnings` không bao giờ đủ điều kiện tự chạy (lý do `rule_warning`).
+- Báo cáo tuần thứ Hai thêm tối đa 3 dòng `<nhãn>: <hiện tại> (cùng kỳ năm trước: <baseline>)` từ kế hoạch đã áp dụng, không nhắc tới mục tiêu.
 
 ### Web (quản lý và cán bộ)
 
@@ -773,13 +787,14 @@ Các route nội bộ dùng token agent, không có phiên trình duyệt. Mọi
 
 ### Nội bộ (token agent)
 
-- **`GET /api/internal/agent/improvements/inputs?week=YYYY-MM-DD`** (thứ Hai): trả về `{ data: { week, settings, proposal_stats, journal_review, campaign_goals, improvements, metrics } }`.
+- **`GET /api/internal/agent/improvements/inputs?week=YYYY-MM-DD`** (thứ Hai): trả về `{ data: { week, settings, proposal_stats, journal_review, campaign_goals, improvements, metrics, season_progress } }`.
   - `settings`: ngưỡng và giờ báo cáo của từng agent có dòng cài đặt.
   - `proposal_stats`: đề xuất đã quyết định trong 28 ngày, nhóm theo `agent`, `kind`, `template`, với `approved`, `rejected`, `expired`, `median_wait_hours`.
   - `journal_review`: `reviewed` và `returned_missing_info` trong 28 ngày.
   - `campaign_goals`: số ngày và số ngày trượt mục tiêu trong 14 ngày gần nhất (`actual < target`).
   - `improvements`: cải tiến của 8 tuần gần nhất.
-  - `metrics`: giá trị hiện tại của từng `metric_key` trong `improvements`; khóa không có số liệu không có giá trị.
+  - `metrics`: giá trị hiện tại của từng `metric_key` trong `improvements`; khóa không có số liệu không có giá trị. Khóa `season_goal:<key>` (M11) có giá trị là số liệu hiện tại của mục tiêu vụ đó.
+  - `season_progress` (M11): mỗi mục tiêu của kế hoạch mùa vụ đã áp dụng cho quý hiện tại: `{ key, label_vi, direction, baseline, target, current, pro_rated_target, weeks_elapsed }`. `pro_rated_target` là mục tiêu nhân tỉ lệ quý đã qua với sản lượng và doanh thu (cộng dồn), và là chính mục tiêu với tỉ lệ. Rỗng khi không có kế hoạch.
 - **`POST /api/internal/agent/improvements`**: `{ week, kind, metric_key, title_vi, rationale_vi, baseline, evidence, settings_change?, template?, run_id? }`.
   - `kind` là `setting` (cần `settings_change`), `process` hoặc `template` (cần `template`).
   - `week` phải là thứ Hai; `title_vi` tối đa 120 ký tự, `rationale_vi` tối đa 600.
@@ -921,14 +936,17 @@ Các route dưới đây không dành cho trình duyệt. Chúng dùng chung b�
 ### Cập nhật từ relay: `POST /api/internal/telegram/updates`
 
 Ngoài `message_id`, `chat`, `from`, `text`, tin nhắn có thể kèm:
-- `caption`: chú thích của ảnh (không dùng để định tuyến);
+- `caption`: chú thích của ảnh; được xử lý như tin nhắn chữ khi không có phiên nào đang chờ ảnh, bị bỏ qua trong bước nhận ảnh;
 - `photo`: `{ "mime_type": "image/jpeg", "data_base64": "...", "file_unique_id": "..." }`, ảnh lớn nhất không quá 5 MB;
 - `photo_error`: `too_large` hoặc `download_failed` khi có ảnh nhưng không chuyển tiếp được;
-- `location`: `{ "latitude": number, "longitude": number }`.
+- `location`: `{ "latitude": number, "longitude": number }`;
+- `voice_text`: câu relay nghe được từ tin thoại (tối đa 500 ký tự, không bao giờ là âm thanh). Web trả `Em nghe được: “…”` kèm ba nút `Đúng`, `Sửa`, `Huỷ` và giữ câu trong cuộc hội thoại loại `voice` 10 phút; chỉ `Đúng` mới chuyển câu đó đi như tin nhắn chữ, nên việc ghi vẫn cần thẻ xác nhận. Văn bản rỗng trả `Chưa nghe rõ. Bạn nói lại hoặc nhắn chữ nhé.` không kèm nút;
+- `voice_duration`: số giây của tin thoại (0 đến 3600);
+- `voice_error`: `too_long` (tin thoại dài quá 60 giây) hoặc `stt_unavailable` (dịch vụ nhận dạng không chạy hoặc lỗi); web trả câu giải thích, không giữ gì.
 
 ### Trả lời cho relay: `op`
 
-Mỗi trả lời là `{ op: 'send', chat_id, text, buttons? }` hoặc `{ op: 'edit', chat_id, edit_message_id, text, buttons? }`. `buttons` là mảng hàng, mỗi nút có `text` và `callback_data`. Một lần `edit` không có `buttons` sẽ xoá bàn phím.
+Mỗi trả lời là `{ op: 'send', chat_id, text, buttons?, audio? }` hoặc `{ op: 'edit', chat_id, edit_message_id, text, buttons? }`. `buttons` là mảng hàng, mỗi nút có `text` và `callback_data`. Một lần `edit` không có `buttons` sẽ xoá bàn phím. `audio: { kind: 'bulletin', id }` (chỉ có ở `send`) bảo rơle lấy tệp tại `GET /api/internal/telegram/media?bulletin=<id>` rồi gửi bằng `sendDocument` (`ban-tin.wav`, `text` làm chú thích); không lấy được thì rơle gửi `Chưa đọc được bản tin lúc này.`.
 
 ### Callback dữ liệu v2
 
@@ -958,3 +976,53 @@ Mini App chỉ bật khi web có `DXOS_TELEGRAM_WEBAPP_KEY` (hex của `HMAC_SHA
 - **Trang `/telegram/open`** (cần phiên; khách chưa đăng nhập được chuyển tới `/login?callbackUrl=/telegram/open?...` và quay lại sau khi đăng nhập): gửi `initData` tới route trên một lần, rồi chuyển tới `?to=<đường dẫn>` nếu đó là đường dẫn cùng nguồn thuộc danh sách của vai trò (`/farmer/journal/new`; `/officer/journal`, `/officer/households`, `/officer/farm-zones`; `/manager/ai`, `/manager/journal-approve`), nếu không thì tới trang chủ của vai trò. Ngoài Telegram hoặc khi `WEBAPP_DISABLED` trang chỉ chuyển hướng; khi `403` trang hiện lý do.
 - `TelegramWebAppShell` (layout gốc) chỉ hoạt động khi URL có `tgWebAppData` hoặc `tgWebAppPlatform` (cờ lưu trong `sessionStorage`); khi đó mới tải `https://telegram.org/js/telegram-web-app.js`, gọi `ready()` và `expand()`, đặt `data-theme` theo `colorScheme` của Telegram và nối nút Back với `router.back()` khi `history.length > 1`.
 - **Nút Mini App trong chat (M6)**, chỉ hiện khi web có `DXOS_WEB_PUBLIC_URL` bắt đầu bằng `https://` (không thì chat giữ nguyên): menu có thêm hàng `Mở ứng dụng` (nút `web_app` tới `/telegram/open`, mọi vai trò); thẻ xác nhận `journal.create` của nông dân có thêm nút `Sửa` mở `/farmer/journal/new?parcel&activity&product&dosage&withdrawal` đã điền sẵn; tin đề xuất mức `high` có thêm nút `Mở chi tiết` tới `/manager/ai?proposal=<id>`. Cán bộ và `harvest.approve` chưa có biểu mẫu riêng nên không có nút `Sửa`. Hàng đợi gửi nhận thêm loại nút `{ text, web_app: { url } }`.
+
+## Hành động của mini-app (M9)
+
+- **`POST /api/internal/agent/proposals`** nhận thêm `agent: "app:<id>"` (`^app:[a-z0-9][a-z0-9-]{0,39}$`) và `kind: "app.<id>.<action>"`. Loại này chỉ được nhận khi ứng dụng đã cài và đang bật cho HTX của token; ngược lại `400 UNKNOWN_KIND`. Tải trọng phải khớp lược đồ khai báo trong `agent.actions[].payload` của `app.yaml` (`400 INVALID_PAYLOAD`), cộng `_labels` (chuỗi → chuỗi, tùy chọn). Bằng chứng dùng bảng `app:<id>` (hàng do ứng dụng khai; chỉ hành động của chính ứng dụng đó được trích); các `id` của hàng này là chủ thể để chống trùng 24 giờ. Câu trả lời không đổi.
+- **Danh mục động.** `getAction(kind, htxCode)` đọc `platform.installed_apps.manifest.agent` và `platform.app_enablements`, lưu 60 giây (xóa khi cài hoặc gỡ qua `./dxos`, nên thay đổi có hiệu lực trong tối đa 60 giây). `risk`, `approver_roles`, `title_vi` lấy từ manifest; `autonomy` là `unlockable` khi `money: true` (cửa sổ tự chạy 2 giờ), ngược lại `auto`; hết hạn sau 72 giờ; không có trường chỉnh sửa.
+- **Duyệt = thực thi.** `POST /api/agent/proposals/{id}/decide` (và nút Telegram) gọi `POST {CORE_GATEWAY_URL}/apps/<id><path>` với token `client_credentials` của `dxos-apps-actor` (bí mật `DXOS_APPS_ACTOR_SECRET` trong môi trường hoặc `/run/dxos-web/roles.env`, ghi bởi `./dxos apps actor enable`) và ba header `X-DXOS-Acting-Sub`, `X-DXOS-Acting-Role`, `X-DXOS-Acting-Htx`; thân là tải trọng bỏ `_labels`. 2xx → `executed` với `result: { result: <JSON của ứng dụng> }`; 4xx → `failed` kèm `message_vi` của ứng dụng; lỗi khác → `failed` với thông báo chung. Chưa có bí mật → `failed` với thông báo yêu cầu quản trị viên bật.
+- **Gỡ hoặc tắt ứng dụng.** Mọi đề xuất `proposed` có `kind` `app.<id>.%` của ứng dụng không còn cài hoặc không còn bật cho HTX chuyển sang `expired` (sự kiện kiểm toán `agent.proposal.expired`, `reason` là `app_removed` hoặc `app_disabled`), chạy mỗi lần danh mục nạp lại. Quyết định muộn trên đề xuất đó trả `{ outcome: "expired" }` và không gọi ứng dụng.
+
+## Xưởng mini-app (M13)
+
+Trưởng HTX nhờ AI làm app; A12 chọn cách rẻ nhất (app trong Kho, mẫu Sổ tự tạo, hoặc viết app mới). Mọi lỗi dự kiến trả `{ error: { code, message } }`.
+
+### Trưởng HTX (phiên đăng nhập, vai trò `manager`)
+
+- **`POST /api/agent/app-requests`**: `{ request_text }` (5 đến 500 ký tự) → `201 { data: { id, status: "new" } }`. HTX và người gửi lấy từ phiên. `409 REQUEST_ACTIVE` khi HTX đang có yêu cầu ở `new`, `asking`, `spec_proposed`, `spec_approved` hoặc `building`.
+- **`POST /api/agent/app-requests/{id}/answer`**: `{ answer_text }` (1 đến 1000 ký tự) cho yêu cầu `asking` chưa có câu trả lời; `409 WRONG_STATE` nếu không còn chờ. Trên Telegram, tin nhắn kế tiếp của người gửi (cuộc hội thoại `app_answer`, 24 giờ) có tác dụng như vậy.
+- **`POST /api/agent/app-requests/{id}/cancel`**: đóng yêu cầu ở `new`, `asking`, `spec_proposed`.
+- **`GET /api/agent/app-requests/{id}/files/{name}`**: ảnh chụp (`desktop-light.png`, `desktop-dark.png`, `mobile-light.png`, `mobile-dark.png`), `review.md` hoặc `spec.md` của bản xây mới nhất.
+- Trang `/manager/ai/apps` (biểu mẫu, danh sách, câu hỏi) và `/manager/ai/apps/{id}` (đặc tả, bảng cổng kiểm tra, báo cáo AI thứ hai, bốn ảnh chụp, nút duyệt đặc tả).
+- Telegram: câu có `cần app`, `làm app`, `xây app` hoặc `cần phần mềm` của trưởng HTX tạo yêu cầu (`Đã nhận yêu cầu. Trợ lý sẽ hỏi lại vài câu nếu cần.`); đã có yêu cầu mở thì trả `HTX đang có một yêu cầu xây app chưa xong.`.
+
+### A12 (token `agent`, phạm vi `htx_code` của token; mọi đường dẫn nằm dưới `/api/internal/agent/`)
+
+- **`GET /api/internal/agent/app-builder/requests`** → `{ data: { requests } }`: yêu cầu `new`; `asking` đã có câu trả lời; `passed` hoặc `failed` mà `announced_at` còn trống. Yêu cầu đang mở có `{ id, status, request_text, questions, answer_text, store_apps: [{ id, name_vi, description_vi, enabled }], book_templates, custom_books_enabled, code_providers }`; yêu cầu đã xong chỉ có `{ id, status }`. `store_apps` không có app của HTX khác.
+- **`POST …/requests/{id}/questions`**: `{ questions }` (1 đến 5, mỗi câu tối đa 160 ký tự) → `asking`; gửi một tin Telegram và mở hội thoại `app_answer`.
+- **`POST …/requests/{id}/route`**: `{ path: "store" | "book", target, reason_vi (≤ 300) }` → `routed` và `{ data: { proposal_id } }`. `store`: đề xuất `miniapp.install` của `target`. `book`: đề xuất `app.custom-books.book.create` (mẫu `target`), hoặc `miniapp.install` của `custom-books` khi chưa bật.
+- **`POST …/requests/{id}/spec`**: thân là đặc tả (`app_id` `^gen-[a-z0-9-]{3,27}$`, `name_vi`, `summary_vi`, `roles` 1 đến 3, `screens` 1 đến 8, `data` 0 đến 5 bảng, `agent_reads` 0 đến 5; không có chỗ cho hành động) → `201 { data: { proposal_id } }`, đề xuất `app.spec.approve`. `409 APP_ID_TAKEN` khi mã có trong danh mục, trong `app_builds` hoặc ở yêu cầu khác.
+- **`POST …/requests/{id}/announce`**: thân rỗng. Khi `passed`: xếp tin `App "<tên>" đã xây xong, qua 7 cổng kiểm tra.` kèm 4 ảnh và tạo đề xuất `miniapp.install` (`agent: app-builder`) → `{ data: { proposal_id } }`. Khi `failed`: xếp tin `Chưa xây được app "<tên>": <lỗi>. Yêu cầu đã đóng.` → `{ data: { proposal_id: null } }`. Gọi lần hai không làm gì thêm (`announced_at`).
+
+### Hành động (danh mục)
+
+| Loại | Rủi ro, tự chạy | Tải trọng | Thực thi |
+|---|---|---|---|
+| `app.spec.approve` | medium, `auto` | `{ request_id }` | `spec_proposed` → `spec_approved`; cũ khi đặc tả hoặc trạng thái đổi |
+| `miniapp.install` | high, `unlockable` | `{ app_id }` | yêu cầu `ENABLE` của Kho cho HTX của đề xuất; app `gen-*` chỉ khi `owner_htx` là HTX đó, bản xây `passed` và đặc tả đã duyệt (từ chối khi tạo và khi chạy: `Bản này chưa qua kiểm tra hoặc không thuộc HTX này`) |
+| `miniapp.remove` | high, `unlockable` | `{ app_id }` | yêu cầu `DISABLE` của Kho |
+
+### Telegram
+
+- `GET /api/internal/telegram/outbox`: mỗi mục có thể có `photos: [{ build_id, name }]` (tối đa 4).
+- `GET /api/internal/telegram/media?build=<uuid>&name=<n>` (token relay): một trong bốn ảnh PNG của bản xây; `400` cho tên khác, `404` khi không có.
+- `GET /api/internal/telegram/media?bulletin=<uuid>` (token relay): bản tin đã đăng đọc thành tiếng, `audio/wav` (Piper, tối đa 2.000 ký tự đã bỏ markdown); `400` cho mã không phải uuid, `404` khi không có bản tin hoặc bản tin rỗng, `503` khi Piper không chạy.
+
+### Gọi API chẩn đoán không có phiên (issue #80)
+
+`POST /api/internal/web/disease/predict?model=<tea|general>` (multipart `file`): route của cổng, chỉ trên cổng nội bộ 9081, chuyển tới `disease-api` như `/api/ai/disease/*`. Chỉ nhận token của client `dxos-web-service` (vai trò `web-service`, audience `dx-os-core`); token của người dùng, agent, rơle và app nhân sự bị từ chối, và các route của người dùng từ chối token này. Web dùng nó để chẩn đoán ảnh gửi qua Telegram (`disease.report`).
+
+### Kho ứng dụng
+
+Danh mục có `owner_htx` chỉ hiện cho HTX đó (danh sách, chi tiết `404` cho HTX khác). Thẻ và trang chi tiết có `generated: true` và `buildRequestId`, hiển thị `App do AI xây` kèm liên kết tới `/manager/ai/apps/<request id>`.

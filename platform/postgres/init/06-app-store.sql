@@ -77,3 +77,6 @@ INSERT INTO platform.app_enablements (app_id, htx_code, enabled_by)
   SELECT id, '*', 'dxos-upgrade' FROM platform.installed_apps
   WHERE current_setting('dxos.store_first_run')::boolean
   ON CONFLICT (app_id, htx_code) DO NOTHING;
+
+-- A mini-app written for one cooperative (M13): the cooperative that owns it. Null for every store app.
+ALTER TABLE platform.app_catalog ADD COLUMN IF NOT EXISTS owner_htx text NULL;

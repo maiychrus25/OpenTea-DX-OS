@@ -15,7 +15,7 @@ import { SampleApps } from '@/components/features/sample/SampleLists'
 import styles from './AppStoreClient.module.css'
 import { StoreAppIcon } from './StoreAppIcon'
 import { StoreHistory } from './StoreHistory'
-import { CATEGORY_LABELS, hasNewVersion, INSTALLED_STATUSES, NEW_VERSION_LABEL, normalizeSearch, ROLE_LABELS, STATUS_LABELS, STATUS_TONES, WORKER_WARNING } from './store-labels'
+import { CATEGORY_LABELS, GENERATED_LABEL, GENERATED_REPORT_LABEL, hasNewVersion, INSTALLED_STATUSES, NEW_VERSION_LABEL, normalizeSearch, ROLE_LABELS, STATUS_LABELS, STATUS_TONES, WORKER_WARNING } from './store-labels'
 import { useStorePolling } from './use-store-polling'
 
 export interface AppStoreData {
@@ -193,6 +193,12 @@ export function AppStoreClient({ initial }: { initial: AppStoreData }) {
                         {app.roles.length > 0 && <> · Dành cho {app.roles.map(role => ROLE_LABELS[role] ?? role).join(', ')}</>}
                         {app.hasPublic && <> · Có trang công khai</>}
                       </p>
+                      {app.generated && (
+                        <p className={styles.meta}>
+                          {GENERATED_LABEL}
+                          {app.buildRequestId && <> · <Link href={`/manager/ai/apps/${app.buildRequestId}`}>{GENERATED_REPORT_LABEL}</Link></>}
+                        </p>
+                      )}
                       <div className={styles.footer}>
                         <Pill tone={STATUS_TONES[app.status]} size="md">
                           {STATUS_LABELS[app.status]}

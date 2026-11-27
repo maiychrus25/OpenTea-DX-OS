@@ -3,8 +3,12 @@
 """Calls to the web's internal Telegram API `/api/internal/telegram/*`, through APISIX on port 9081."""
 import json
 import urllib.error
+import urllib.parse
 import urllib.request
 from typing import Any, Callable, Mapping
+
+
+AUDIO_TIMEOUT_SECONDS = 90.0  # Piper has 30 s to speak; the file then comes back whole
 
 
 class GatewayError(Exception):
@@ -36,6 +40,28 @@ class WebGateway:
         except (urllib.error.URLError, OSError) as exc:
             raise GatewayError(f"{method} {path} unreachable: {type(exc).__name__}") from None
         return payload.get("data")
+
+    def fetch_media(self, build_id: str, name: str) -> bytes:
+        """One build file (a screenshot) for an outbox item with photos; the answer is the file, not JSON."""
+        return self._media({"build": build_id, "name": name}, self._timeout)
+
+    def fetch_bulletin_audio(self, bulletin_id: str) -> bytes:
+        """A bulletin read aloud (WAV). The web synthesises it on the spot, so the wait is longer than for a screenshot."""
+        return self._media({"bulletin": bulletin_id}, AUDIO_TIMEOUT_SECONDS)
+
+    def _media(self, params: Mapping[str, str], timeout: float) -> bytes:
+        query = urllib.parse.urlencode(params)
+        req = urllib.request.Request(
+            f"{self._base}/api/internal/telegram/media?{query}",
+            headers={"Authorization": f"Bearer {self._token_provider()}"},
+        )
+        try:
+            with self._urlopen(req, timeout=timeout) as resp:
+                return resp.read()
+        except urllib.error.HTTPError as exc:
+            raise GatewayError(f"GET media answered {exc.code}") from None
+        except (urllib.error.URLError, OSError) as exc:
+            raise GatewayError(f"GET media unreachable: {type(exc).__name__}") from None
 
     def forward_update(self, update: Mapping[str, Any]) -> dict[str, Any]:
         return dict(self._call("POST", "/api/internal/telegram/updates", update) or {})

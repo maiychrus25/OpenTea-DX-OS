@@ -15,4 +15,8 @@ export class TelegramPhotoStore implements PhotoStore {
   get(key: string): Promise<Buffer> {
     return this.storage.downloadDocument(key)
   }
+
+  delete(key: string): Promise<void> {
+    return this.storage.deleteDocument(key)
+  }
 }

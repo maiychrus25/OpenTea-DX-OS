@@ -2,8 +2,10 @@
 # SPDX-FileCopyrightText: 2026 OpenTea Developers
 # Copied by make appkit-sync from platform/appkit/appkit.py. Edit the original.
 """Python helpers shared by the mini-apps: paging, safe query parameters, Vietnamese formats, CSV, chart widths."""
+import base64
 import csv
 import io
+import json
 import re
 import unicodedata
 from dataclasses import dataclass
@@ -18,6 +20,10 @@ PAGE_SIZE = 25
 VN_TZ = ZoneInfo("Asia/Ho_Chi_Minh")
 _DATE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")
 _INT = re.compile(r"-?[0-9]+")
+ROLES = ("farmer", "officer", "manager", "agent")
+ACTOR_CLIENT = "dxos-apps-actor"  # the web's executor: only its token may carry the X-DXOS-Acting-* headers
+ACTING_ROLES = ("manager", "officer")
+_ACTING_HTX = re.compile(r"[A-Za-z0-9_-]{1,20}")
 
 
 @dataclass(frozen=True)
@@ -146,3 +152,45 @@ def csv_response(filename: str, header: Sequence[str], rows: Iterable[Sequence])
 def shell_url(role: str, app_id: str, path: str = "/") -> str:
     """The web page that frames the app, for a link back out of a print page: /manager/apps/tea-shop/orders."""
     return f"/{role}/apps/{app_id}{path}"
+
+
+@dataclass(frozen=True)
+class Claims:
+    sub: str
+    name: str
+    htx_code: str
+    roles: tuple[str, ...]
+
+
+def read_claims(authorization: str | None, headers=None) -> Claims | None:
+    """The caller's claims from the bearer token, which APISIX already verified (no signature check here).
+
+    A token of the dxos-apps-actor client carries no person: it is replaced by the approver named in the three
+    X-DXOS-Acting-* headers (role manager or officer only), or refused when they are not all valid. The headers are
+    ignored next to any other token, so a forged header never changes who the caller is.
+    """
+    if not authorization or not authorization.startswith("Bearer "):
+        return None
+    try:
+        payload = authorization.removeprefix("Bearer ").split(".")[1]
+        data = json.loads(base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4)))
+    except (IndexError, ValueError):
+        return None
+    if not isinstance(data, dict) or not isinstance(data.get("sub"), str) or not data["sub"]:
+        return None
+    if data.get("azp") == ACTOR_CLIENT:
+        given = {k.lower(): v for k, v in (headers or {}).items()}
+        sub, acting_role, htx = (given.get(f"x-dxos-acting-{n}", "") for n in ("sub", "role", "htx"))
+        if not sub or len(sub) > 128 or acting_role not in ACTING_ROLES or not _ACTING_HTX.fullmatch(htx):
+            return None
+        return Claims(sub=sub, name="", htx_code=htx, roles=(acting_role,))
+    access = data.get("realm_access")
+    roles = access.get("roles") if isinstance(access, dict) else None
+    htx_code = data.get("htx_code")
+    return Claims(
+        sub=data["sub"],
+        name=str(data.get("name") or data.get("preferred_username") or ""),
+        htx_code=htx_code if isinstance(htx_code, str) else "",
+        # An odd claim means no roles, never a crash.
+        roles=tuple(r for r in ROLES if r in roles) if isinstance(roles, list) else (),
+    )

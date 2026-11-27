@@ -41,8 +41,41 @@ def test_photo_update_injected_on_control_is_returned_by_get_updates(stub):
     assert BotApi(stub, "123:smoke").call("getUpdates", {"offset": 0, "timeout": 0}) == [update]
 
 
+def test_stub_accepts_send_media_group_and_records_the_album(stub):
+    api = BotApi(stub, "123:smoke")
+    media = [{"type": "photo", "media": "attach://p0", "caption": "Xong"}, {"type": "photo", "media": "attach://p1"}]
+    result = api.call_files("sendMediaGroup", {"chat_id": 5, "media": media},
+                            {"p0": ("a.png", b"AAAA", "image/png"), "p1": ("b.png", b"BB", "image/png")})
+    assert [m["message_id"] for m in result] == [1001, 1002]
+    calls = json.loads(urllib.request.urlopen(f"{stub}/control/calls", timeout=5).read())
+    assert calls == [{"method": "sendMediaGroup", "params": {"chat_id": 5, "media": media},
+                      "files": [{"name": "p0", "filename": "a.png", "size": 4}, {"name": "p1", "filename": "b.png", "size": 2}]}]
+
+
+def test_stub_accepts_send_photo(stub):
+    api = BotApi(stub, "123:smoke")
+    assert api.call_files("sendPhoto", {"chat_id": 5, "caption": "x"}, {"photo": ("a.png", b"A", "image/png")})["message_id"] == 1001
+
+
 def test_stub_records_set_chat_menu_button(stub):
     params = {"menu_button": {"type": "web_app", "text": "Mở ứng dụng", "web_app": {"url": "https://x.example/telegram/open"}}}
     assert BotApi(stub, "123:smoke").call("setChatMenuButton", params) is True
     calls = json.loads(urllib.request.urlopen(f"{stub}/control/calls", timeout=5).read())
     assert calls == [{"method": "setChatMenuButton", "params": params}]
+
+
+def test_get_file_names_a_voice_path_the_stub_serves_as_ogg(stub):
+    api = BotApi(stub, "123:smoke")
+    info = api.call("getFile", {"file_id": "smoke-voice-1"})
+    assert info["file_path"] == "voice/smoke.oga"
+    data = api.download(info["file_path"], max_bytes=2 * 1024 * 1024)
+    assert data[:4] == b"OggS" and len(data) < 1024
+
+
+def test_stub_accepts_send_document_and_records_the_file(stub):
+    api = BotApi(stub, "123:smoke")
+    result = api.call_files("sendDocument", {"chat_id": 5, "caption": "Bản tin 25/11/2026"}, {"document": ("ban-tin.wav", b"RIFFwav", "audio/wav")})
+    assert result["message_id"] == 1001
+    calls = json.loads(urllib.request.urlopen(f"{stub}/control/calls", timeout=5).read())
+    assert calls == [{"method": "sendDocument", "params": {"chat_id": 5, "caption": "Bản tin 25/11/2026"},
+                      "files": [{"name": "document", "filename": "ban-tin.wav", "size": 7}]}]

@@ -9,6 +9,50 @@
   "$defs": {
     "route": { "type": "string", "pattern": "^/([a-z0-9_-]+(/[a-z0-9_-]+)*/?)?$" },
     "role": { "enum": ["farmer", "officer", "manager"] },
+    "agentRole": { "enum": ["officer", "manager"] },
+    "payloadField": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": { "enum": ["string", "integer", "number", "boolean"] },
+        "enum": { "type": "array", "minItems": 1, "maxItems": 50, "items": { "type": ["string", "number"] } },
+        "minimum": { "type": "number" },
+        "maximum": { "type": "number" },
+        "minLength": { "type": "integer", "minimum": 0 },
+        "maxLength": { "type": "integer", "minimum": 1, "maximum": 2000 }
+      }
+    },
+    "agentAction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "title_vi", "risk", "approver_roles", "money", "path", "payload", "preview_vi"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-z][a-z0-9_.]{2,40}$" },
+        "title_vi": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "risk": { "enum": ["low", "medium", "high"] },
+        "approver_roles": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/agentRole" } },
+        "money": { "type": "boolean" },
+        "path": { "$ref": "#/$defs/route" },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "additionalProperties", "properties"],
+          "properties": {
+            "type": { "const": "object" },
+            "additionalProperties": { "const": false },
+            "required": { "type": "array", "items": { "type": "string" } },
+            "properties": {
+              "type": "object",
+              "maxProperties": 20,
+              "propertyNames": { "pattern": "^[a-z][a-z0-9_]{0,40}$" },
+              "additionalProperties": { "$ref": "#/$defs/payloadField" }
+            }
+          }
+        },
+        "preview_vi": { "type": "string", "minLength": 1, "maxLength": 200 }
+      }
+    },
     "relativeDir": { "type": "string", "pattern": "^(\\.|[A-Za-z0-9_-]+(/[A-Za-z0-9_-]+)*/?)$" }
   },
   "properties": {
@@ -85,6 +129,16 @@
             }
           }
         }
+      }
+    },
+    "generated": { "type": "boolean" },
+    "agent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["suggestions", "actions"],
+      "properties": {
+        "suggestions": { "$ref": "#/$defs/route" },
+        "actions": { "type": "array", "minItems": 1, "maxItems": 10, "items": { "$ref": "#/$defs/agentAction" } }
       }
     },
     "feed": { "$ref": "#/$defs/route" },

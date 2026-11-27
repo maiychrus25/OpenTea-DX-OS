@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 TESTS = ROOT / "platform" / "tests"
 SHELL_SCRIPTS = [
     "smoke-telegram.sh", "smoke-platform.sh", "smoke-agent.sh", "smoke-llm.sh", "smoke-agents.sh", "smoke-assistant.sh",
-    "smoke-campaign.sh", "smoke-improvement.sh", "smoke-mcp.sh", "smoke-staff.sh", "smoke-autopilot.sh", "smoke-agentic.sh", "lib.sh", "lib-telegram.sh", "tokens.sh",
+    "smoke-campaign.sh", "smoke-improvement.sh", "smoke-mcp.sh", "smoke-staff.sh", "smoke-autopilot.sh", "smoke-app-actions.sh", "smoke-builder.sh", "smoke-strategy.sh", "smoke-voice.sh", "smoke-agentic.sh", "lib.sh", "lib-telegram.sh", "tokens.sh",
 ]
 
 
@@ -285,3 +285,172 @@ def test_autopilot_smoke_presses_the_button_the_stub_recorded_and_signs_nothing(
                    "executed:autopilot", "test 31", "Đã dừng tự vận hành. Các việc đang chờ chuyển về chờ duyệt."):
         assert needle in text, needle
     assert "callback_sign" not in text and "hmac" not in text
+
+
+def test_app_actions_smoke_runs_after_the_autopilot_smoke_and_stays_out_of_the_platform_count():
+    text = (TESTS / "smoke-agentic.sh").read_text(encoding="utf-8")
+    assert text.index("source platform/tests/smoke-autopilot.sh") < text.index("source platform/tests/smoke-app-actions.sh")
+    # smoke-apps.sh counts the PASS lines of make platform-smoke, so the app action checks must not run there.
+    for name in ("smoke-platform.sh", "smoke-agent.sh", "smoke-telegram.sh", "smoke-autopilot.sh"):
+        assert "smoke-app-actions.sh" not in (TESTS / name).read_text(encoding="utf-8"), name
+
+
+def test_app_actions_smoke_chains_every_earlier_cleanup_and_reinstalls_the_app():
+    text = (TESTS / "smoke-app-actions.sh").read_text(encoding="utf-8")
+    assert "trap 'app_actions_cleanup; autopilot_cleanup; staff_cleanup; mcp_cleanup; improvement_cleanup; campaign_cleanup; assistant_cleanup; m4_cleanup; llm_cleanup' EXIT" in text
+    for needle in ("delete from platform.agent_proposals", "delete from platform.telegram_outbox",
+                   "delete from platform.telegram_conversations", "./dxos install miniapps/tea-shop"):
+        assert needle in text, needle
+
+
+def test_app_actions_smoke_stops_the_agent_before_seeding_and_restarts_it_after():
+    text = (TESTS / "smoke-app-actions.sh").read_text(encoding="utf-8")
+    # A running agent between the seeds and its restart would race with them (lesson 5 of M4).
+    assert text.index("$COMPOSE stop dxos-agent") < text.index("insert into app_tea_shop.products") < text.index("--force-recreate dxos-agent")
+
+
+def test_app_actions_smoke_approves_from_the_recorded_keyboard_and_signs_nothing():
+    text = (TESTS / "smoke-app-actions.sh").read_text(encoding="utf-8")
+    for needle in ("approve_by_telegram", "./dxos apps actor enable", "./dxos remove tea-shop", "executed:telegram",
+                   "test 16", "app.tea-shop.promotion.create"):
+        assert needle in text, needle
+    assert "callback_sign" not in text and "hmac" not in text
+
+
+def builder_smoke():
+    return (TESTS / "smoke-builder.sh").read_text(encoding="utf-8")
+
+
+def test_builder_smoke_is_a_job_of_its_own_and_stays_out_of_the_other_smokes():
+    # The image is large, so CI runs it in a separate job (plan M13); it must not sit in the agentic or platform counts.
+    for name in ("smoke-agentic.sh", "smoke-platform.sh", "smoke-agent.sh"):
+        assert "smoke-builder.sh" not in (TESTS / name).read_text(encoding="utf-8"), name
+
+
+def test_builder_smoke_uses_the_replay_tool_and_the_replay_agent_and_never_a_real_key():
+    text = builder_smoke()
+    assert "replay:fertiliser-stock" in text and "DXOS_AGENT_PROVIDER: replay" in text
+    # No real key and no real model: the only key is the placeholder that makes the agent report a code provider.
+    assert "ANTHROPIC_API_KEY" not in text
+    assert [line.strip() for line in text.splitlines() if "OPENAI_API_KEY" in line] == ["OPENAI_API_KEY: smoke-replay-placeholder"]
+
+
+def test_builder_smoke_covers_tests_26_to_30():
+    text = builder_smoke()
+    for needle in ("test 26", "test 27", "test 28", "test 29", "test 30", "with-script", "extra-dependency", "with-agent-actions",
+                   "env-probe.json", "sendMediaGroup", "apisix:9081", "example.com"):
+        assert needle in text, needle
+
+
+def test_builder_smoke_stops_the_agent_before_seeding_and_removes_what_it_made_on_exit():
+    text = builder_smoke()
+    assert text.index("stop dxos-agent") < text.index("delete from platform.app_catalog where owner_htx is null")
+    assert "trap builder_cleanup EXIT" in text
+    for needle in ('./dxos remove "$APP_ID" --purge', 'rm -rf "generated-apps/TC"', "delete from platform.app_build_requests"):
+        assert needle in text, needle
+
+
+def test_builder_smoke_signs_nothing_and_presses_the_button_the_stub_recorded():
+    text = builder_smoke()
+    assert "telegram_approve_data_for" in text and "hmac" not in text.lower()
+
+
+def test_strategy_smoke_runs_after_the_autopilot_smoke_and_stays_out_of_the_platform_count():
+    text = (TESTS / "smoke-agentic.sh").read_text(encoding="utf-8")
+    assert text.index("source platform/tests/smoke-autopilot.sh") < text.index("source platform/tests/smoke-strategy.sh")
+    # smoke-apps.sh counts the PASS lines of make platform-smoke, so the strategy checks must not run there.
+    for name in ("smoke-platform.sh", "smoke-agent.sh", "smoke-telegram.sh", "smoke-campaign.sh", "smoke-autopilot.sh"):
+        assert "smoke-strategy.sh" not in (TESTS / name).read_text(encoding="utf-8"), name
+
+
+def test_strategy_smoke_chains_every_earlier_cleanup_on_exit():
+    # The EXIT trap of smoke-autopilot is replaced, so this one chains it after its own cleanup.
+    text = (TESTS / "smoke-strategy.sh").read_text(encoding="utf-8")
+    assert "trap 'strategy_cleanup; app_actions_cleanup; autopilot_cleanup; staff_cleanup; mcp_cleanup; improvement_cleanup; campaign_cleanup; assistant_cleanup; m4_cleanup; llm_cleanup' EXIT" in text
+
+
+def test_strategy_smoke_stops_the_agent_before_seeding_and_restarts_it_after():
+    text = (TESTS / "smoke-strategy.sh").read_text(encoding="utf-8")
+    # A running agent between the seeds and its restart would race with them (lesson 5 of M4), in both of its two seedings.
+    first = text.index("$COMPOSE stop dxos-agent")
+    assert first < text.index("insert into lots") < text.index("--force-recreate dxos-agent")
+    second = text.index("$COMPOSE stop dxos-agent", first + 1)
+    assert second < text.index("insert into parcels") < text.index("--force-recreate dxos-agent", second)
+
+
+def test_strategy_smoke_restores_its_rows_on_exit():
+    text = (TESTS / "smoke-strategy.sh").read_text(encoding="utf-8")
+    for needle in ("delete from platform.strategy_plans", "delete from platform.agent_proposals", "delete from platform.agent_runs",
+                   "delete from platform.campaigns", "delete from lots", "delete from parcels"):
+        assert needle in text, needle
+
+
+def test_strategy_smoke_approves_from_the_recorded_keyboard_and_signs_nothing():
+    text = (TESTS / "smoke-strategy.sh").read_text(encoding="utf-8")
+    assert "approve_by_telegram" in text
+    assert "callback_sign" not in text and "hmac" not in text
+
+
+def test_strategy_smoke_checks_the_105_percent_target_and_the_warning_of_test_37():
+    text = (TESTS / "smoke-strategy.sh").read_text(encoding="utf-8")
+    for needle in ("*1.05", "yield_kg", "strategy.adopt", "/api/internal/agent/strategy/plans", "test 37", "thấp hơn cùng kỳ năm trước"):
+        assert needle in text, needle
+
+
+def test_voice_smoke_runs_last_and_stays_out_of_the_platform_count():
+    text = (TESTS / "smoke-agentic.sh").read_text(encoding="utf-8")
+    assert text.index("source platform/tests/smoke-mcp.sh") < text.index("source platform/tests/smoke-staff.sh") < text.index("source platform/tests/smoke-autopilot.sh") < text.index("source platform/tests/smoke-voice.sh")
+    # smoke-apps.sh counts the PASS lines of make platform-smoke, so the voice checks must not run there.
+    for name in ("smoke-platform.sh", "smoke-agent.sh", "smoke-telegram.sh", "smoke-assistant.sh", "smoke-mcp.sh"):
+        assert "smoke-voice.sh" not in (TESTS / name).read_text(encoding="utf-8"), name
+
+
+def test_voice_smoke_chains_every_earlier_cleanup_on_exit():
+    text = (TESTS / "smoke-voice.sh").read_text(encoding="utf-8")
+    assert "trap 'voice_cleanup; strategy_cleanup; app_actions_cleanup; autopilot_cleanup; staff_cleanup; mcp_cleanup; improvement_cleanup; campaign_cleanup; assistant_cleanup; m4_cleanup; llm_cleanup' EXIT" in text
+
+
+def test_voice_smoke_uses_the_stt_stub_and_never_the_real_server():
+    text = (TESTS / "smoke-voice.sh").read_text(encoding="utf-8")
+    assert "--profile stt-test up -d --no-deps stt-test-stub" in text
+    assert "dxos-stt" not in text.replace("network as dxos-stt", "") and "up-voice" not in text
+    # The assertions the plan names: three buttons, Đúng starts the journal flow, test 40 (no row before Xác nhận).
+    for needle in ('"Đúng" "Sửa" "Huỷ"', "Chọn thửa:", "test 40", "Tin thoại dài quá 60 giây", "Chưa nghe được tin thoại lúc này"):
+        assert needle in text, needle
+
+
+def test_builder_smoke_checks_the_owner_cooperative_through_the_web_proxy():
+    """The gateway's internal port checks the role only; whether a cooperative has an app is the web proxy's rule
+    (forward-to-app.ts). An LB token sent straight to apisix:9081 answers 200, so the smoke asks the web instead."""
+    text = builder_smoke()
+    assert 'web_status_as smoke_manager_tc TC "/apps/$APP_ID")" "200"' in text
+    assert 'web_status_as smoke_manager_lb LB "/apps/$APP_ID")" "404"' in text
+    assert 'Bearer $TM_LB" "$APP_GW/apps/$APP_ID/")" "404"' not in text
+
+
+def test_builder_smoke_makes_its_own_token_client_and_users():
+    # It runs in its own CI job (Builder Smoke), where smoke-platform.sh has not created them.
+    text = (TESTS / "smoke-builder.sh").read_text(encoding="utf-8")
+    client = text.index("ensure_client dxos-smoke dx-os-core,roles,profile")
+    assert client < text.index("ensure_user smoke_manager_tc manager TC") < text.index("telegram_link_owner")
+    assert "ensure_user smoke_manager_lb manager LB" in text
+
+
+def test_builder_smoke_waits_for_a_code_provider_before_it_sends_the_request():
+    # A12 offers the build path only when the web lists a code tool, which comes from the agent's heartbeat.
+    text = (TESTS / "smoke-builder.sh").read_text(encoding="utf-8")
+    assert "OPENAI_API_KEY: smoke-replay-placeholder" in text
+    heartbeat = text.index("from platform.service_heartbeats where service='agent:TC'")
+    assert text.index('$COMPOSE -f "$AGENT_OVERRIDE" up -d --no-deps --force-recreate dxos-agent') < heartbeat < text.index('tg_text "$TG_OWNER" "$REQUEST_TEXT"')
+
+
+def test_assistant_smoke_checks_the_chat_media_with_stubs_and_restores_what_it_stopped():
+    # Issue #80: a caption, a disease photo through the internal gateway route, and Nghe with and without a voice service.
+    text = (TESTS / "smoke-assistant.sh").read_text(encoding="utf-8")
+    for needle in ("tg_photo_caption", "stub_disease.py", "stub_tts.py", "--network-alias disease-api", "--network-alias piper",
+                   "ban-tin.wav", "Chưa đọc được bản tin lúc này.", "Cán bộ sẽ xác nhận kết quả này."):
+        assert needle in text, needle
+    cleanup = text[text.index("assistant_cleanup() {"):text.index("# The EXIT trap of smoke-agents stays in place")]
+    for needle in ("docker rm -f", "start disease-api", "start piper", "delete from bulletins", "delete from disease_reports"):
+        assert needle in cleanup, needle
+    assert (TESTS / "stub_disease.py").exists() and (TESTS / "stub_tts.py").exists()

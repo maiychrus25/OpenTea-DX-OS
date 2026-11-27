@@ -9,7 +9,7 @@ from pathlib import Path
 import psycopg
 import yaml
 
-from dxos_cli import commands, store
+from dxos_cli import builder, commands, store
 from dxos_cli.gateway import GatewayError, sync_gateway
 from dxos_cli.manifest import ManifestError, load_manifest, read_core_version, repo_root, validate_manifest
 from dxos_cli.steps import InstallError
@@ -96,7 +96,8 @@ def cmd_store(args) -> int:
                 while True:
                     store.heartbeat(conn)
                     if job := store.claim_known(conn):
-                        print(f"{job.id}\t{job.action}\t{job.app_id}\t{job.htx_code}\t{int(job.installed)}")
+                        print(f"{job.id}\t{job.action}\t{job.app_id}\t{job.htx_code}\t{int(job.installed)}"
+                              + (f"\t{job.version}" if job.version else ""))
                         break
                     if time.monotonic() >= deadline:
                         break
@@ -106,6 +107,23 @@ def cmd_store(args) -> int:
             else:
                 print(f"remaining={store.finish(conn, args.job_id, args.result == 'ok', args.message)}")
     except (LookupError, ValueError, ManifestError, OSError, yaml.YAMLError, psycopg.Error) as exc:
+        print(f"{args.command}: {exc}", file=sys.stderr)
+        return 1
+    return 0
+
+
+def cmd_builder(args) -> int:
+    """builder-start, builder-claim and builder-finish; builder-claim prints one line or nothing."""
+    try:
+        with psycopg.connect(os.environ["DXOS_DB_URL"], autocommit=True) as conn:
+            if args.command == "builder-start":
+                builder.start(conn)
+            elif args.command == "builder-claim":
+                if claimed := builder.claim(conn):
+                    print(claimed.line())
+            else:
+                builder.finish(conn, repo_root(), args.build, args.result, Path(args.dir), args.error)
+    except (builder.BuilderError, LookupError, ValueError, ManifestError, OSError, yaml.YAMLError, psycopg.Error) as exc:
         print(f"{args.command}: {exc}", file=sys.stderr)
         return 1
     return 0
@@ -135,6 +153,13 @@ def main(argv: list[str] | None = None) -> int:
     progress = sub.add_parser("worker-progress", help="Ghi giai đoạn cài đặt của yêu cầu đang chạy")
     progress.add_argument("job_id")
     progress.add_argument("phase")
+    sub.add_parser("builder-start", help="Đóng các bản xây còn 'running' của lần chạy trước (host dừng giữa chừng)")
+    sub.add_parser("builder-claim", help="Nhận yêu cầu xây app đã duyệt đặc tả; in một dòng hoặc không in gì")
+    built = sub.add_parser("builder-finish", help="Ghi kết quả một bản xây; 'passed' đưa app vào kho cho HTX yêu cầu")
+    built.add_argument("build", help="build_id (hoặc request_id của bản đang chạy)")
+    built.add_argument("result", choices=["passed", "failed"])
+    built.add_argument("dir", help="thư mục có gates.json, review.md, spec.md và bốn ảnh PNG")
+    built.add_argument("error", nargs="?", help="lý do (tiếng Việt) khi failed")
     sub.add_parser("abort", help="Hoàn tác bản cài dở theo nhật ký").add_argument("id")
     remove = sub.add_parser("remove", help="Gỡ app; giữ dữ liệu trừ khi có --purge")
     remove.add_argument("id")
@@ -145,6 +170,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_install(args)
     if args.command in ("catalog-sync", "worker-start", "worker-claim", "worker-finish", "worker-progress"):
         return cmd_store(args)
+    if args.command in ("builder-start", "builder-claim", "builder-finish"):
+        return cmd_builder(args)
     if args.command == "manifest-id":
         return cmd_manifest_id(args.dir)
     if args.command == "gateway-sync":

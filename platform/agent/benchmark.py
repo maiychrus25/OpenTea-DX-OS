@@ -24,6 +24,7 @@ from dxos_agent.agents.field_watch import run_field_watch
 from dxos_agent.agents.harvest_ready import run_harvest_ready
 from dxos_agent.agents.improvement import RATIONALE_SCHEMA, run_improvement
 from dxos_agent.agents.journal_review import _classify_entry
+from dxos_agent.agents.strategy import PLAN_SCHEMA, run_strategy
 from dxos_agent.config import Config
 from dxos_agent.providers import (
     AnthropicProvider,
@@ -45,6 +46,7 @@ REPLAY_MODEL = "replay-v1"
 OPERATION = re.compile(r"\s*query\s+(\w+)")
 A7_NOW = datetime(2026, 11, 26, 3, 0, tzinfo=timezone.utc)
 A10_NOW = datetime(2026, 11, 30, 0, 0, tzinfo=timezone.utc)
+A11_NOW = datetime(2026, 10, 1, 0, 0, tzinfo=timezone.utc)
 A10_BASE_INPUTS: dict[str, Any] = {
     "week": "2026-11-30",
     "settings": {},
@@ -185,6 +187,14 @@ class BenchGateway:
         self.effects.append((improvement_id, dict(body)))
         return {"id": improvement_id}
 
+    def get_strategy_inputs(self, season: str) -> dict[str, Any]:
+        del season
+        return json.loads(json.dumps(self.inputs))
+
+    def post_strategy_plan(self, body: Mapping[str, Any]) -> dict[str, Any]:
+        self.posted.append(dict(body))
+        return {"id": "plan-1", "proposal_id": "p-1"}
+
     def claim_assistant_requests(self, limit: int) -> list[dict[str, Any]]:
         claimed, self._pending_requests = self._pending_requests[:limit], self._pending_requests[limit:]
         return claimed
@@ -313,6 +323,31 @@ def _run_a10_measurement(case: Mapping[str, Any], gateway: BenchGateway, real: L
     return [{"id": imp_id, **body} for imp_id, body in gateway.effects] == case["expect"]
 
 
+def _run_a11(case: Mapping[str, Any], gateway: BenchGateway, real: LLMProvider | None) -> bool:
+    gateway.inputs = case["inputs"]
+    if real is not None:
+        chain: list[LLMProvider] = [real]
+    elif case.get("primary_error"):
+        chain = [_Replay({}, name="anthropic", external=True, fail=True)]
+    elif "replay" in case:
+        chain = [_Replay({"default": case["replay"]})]
+    else:
+        chain = []
+    outcome = run_strategy(gateway, A11_NOW, chain)
+    expect = case["expect"]
+    if outcome.status != expect["status"]:
+        return False
+    if expect["status"] != "posted":
+        return not gateway.posted
+    body = gateway.posted[0]
+    if [[g["key"], g["target"], g["baseline"], g["direction"]] for g in body["goals"]] != expect["goals"]:
+        return False
+    # A real provider words its own priorities and initiatives, so only the replay run compares the words.
+    if real is None and (body["priorities"] != expect["priorities"] or body["initiatives"] != expect["initiatives"]):
+        return False
+    return _schema_ok({"priorities": body["priorities"], "initiatives": body["initiatives"]}, PLAN_SCHEMA)
+
+
 def _run_a7(case: Mapping[str, Any], gateway: BenchGateway, real: LLMProvider | None) -> bool:
     settings = AgentSettings()
     if real is not None:
@@ -347,6 +382,7 @@ SUITES: tuple[tuple[str, Callable[..., bool]], ...] = (
     ("a9_daily_campaign", _run_a9),
     ("a10_improvement", _run_a10),
     ("a10_improvement_measurement", _run_a10_measurement),
+    ("a11_strategy", _run_a11),
 )
 SUITE_NAMES = tuple(name for name, _ in SUITES)
 

@@ -162,3 +162,14 @@ def test_deduped_answer_counts_as_done_without_error() -> None:
 
     assert run_improvement(gateway, NOW, []).status == "done"
     assert len(gateway.posted) == 1
+
+
+def test_season_goal_rule_waits_for_four_weeks_of_the_quarter() -> None:
+    inputs = _inputs({"season_progress": [{"key": "yield_kg", "target": 1000, "baseline": 900, "current": 100, "pro_rated_target": 600}]})
+    day_27 = datetime.fromisoformat("2026-10-28T00:00:00+00:00")  # the 28th day of the quarter in Vietnam: 27 days gone
+    day_28 = datetime.fromisoformat("2026-10-29T00:00:00+00:00")  # 4 weeks gone
+
+    assert run_improvement(ImprovementGateway(inputs), day_27, []).proposed == 0
+    gateway = ImprovementGateway(inputs)
+    assert run_improvement(gateway, day_28, []).proposed == 1
+    assert gateway.posted[0]["metric_key"] == "season_goal:yield_kg"

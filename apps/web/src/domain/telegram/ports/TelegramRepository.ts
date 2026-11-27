@@ -33,6 +33,13 @@ export interface OutboxInsert {
   proposalId?: string | null
   purpose: 'proposal' | 'result' | 'report' | 'health' | 'reply'
   healthKey?: string | null
+  /** Photos of the message, at most 4: the relay fetches each from the media route (M13). */
+  photos?: OutboxPhoto[] | null
+}
+
+export interface OutboxPhoto {
+  build_id: string
+  name: string
 }
 
 export type OutboxButton =
@@ -47,7 +54,7 @@ export interface OutboxRow extends OutboxInsert {
   telegramMessageId: string | null
 }
 
-export type ConversationKind = 'reject_reason' | 'flow'
+export type ConversationKind = 'reject_reason' | 'flow' | 'app_answer' | 'voice'
 
 /** One open conversation per Telegram user: a reject reason (M2) or a chat flow or card (M5). */
 export interface TelegramConversation {
@@ -73,6 +80,8 @@ export interface RejectConversationInput {
 
 export interface FlowInput {
   telegramUserId: string
+  /** Defaults to 'flow'; 'voice' holds a heard sentence until the person confirms it (M15). */
+  kind?: 'flow' | 'voice'
   flow: string
   step: number | null
   state: Record<string, unknown>
@@ -102,6 +111,8 @@ export interface TelegramRepository {
   activeConversation(telegramUserId: string, now: Date): Promise<TelegramConversation | null>
   /** The conversation whatever its expiry, so a late button press can be answered as expired. */
   conversationOf(telegramUserId: string): Promise<TelegramConversation | null>
+  /** The next text of this user answers the questions of a mini-app request (M13); replaces any open conversation. */
+  setAppAnswer(input: { telegramUserId: string; requestId: string; expiresAt: Date }): Promise<void>
   /** Starts or replaces the user's chat flow or card (replaces a reject reason too). */
   setFlow(flow: FlowInput): Promise<void>
   deleteConversation(telegramUserId: string): Promise<void>

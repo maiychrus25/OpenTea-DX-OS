@@ -11,7 +11,7 @@ import threading
 import time as time_module
 
 from . import __version__
-from .agents import bulletin, daily_campaign, disease_watch, field_watch, harvest_ready, improvement, staff_tasks
+from .agents import app_builder, app_suggestions, bulletin, daily_campaign, disease_watch, field_watch, harvest_ready, improvement, staff_tasks, strategy
 from .agents.assistant import run_assistant_once
 from .agents.digest import DigestSchedule, run_digest
 from .agents.journal_review import (
@@ -31,17 +31,19 @@ from .providers import (
     ProviderError,
     ReplayProvider,
 )
-from .schedule import DailySchedule, IntervalSchedule, ReviewSchedule, WeeklySchedule
+from .schedule import DailySchedule, IntervalSchedule, ReviewSchedule, SeasonSchedule, WeeklySchedule
 from .settings import AgentSettings, OLLAMA, choose_providers, fetch_settings
 
 HEARTBEAT_INTERVAL = timedelta(minutes=5)
 FIELD_WATCH_INTERVAL = timedelta(minutes=30)
+APP_SUGGESTIONS_INTERVAL = timedelta(minutes=30)  # the web repeats no app proposal within 24 h, so asking often costs little
 HARVEST_READY_AT = time(5, 30)  # Vietnam time; early, so A9 at 06:00 reads its warnings
 DISEASE_WATCH_AT = time(5, 40)  # Vietnam time
 STAFF_TASKS_AT = time(5, 50)  # Vietnam time, after A4 and A3 and before A9, which reads the tasks
 CAMPAIGN_AT = time(6, 0)  # Vietnam time, after A2, A4 and A3 (contract C5)
 BULLETIN_AT = time(5, 0)  # Vietnam time
 IMPROVEMENT_AT = time(6, 30)  # Vietnam time, Mondays: after the day's agents, before the 07:00 weekly report (contract C4)
+STRATEGY_AT = time(6, 15)  # Vietnam time, on a quarter's first day: after A9's campaign at 06:00 (contract C5 of M11)
 ASSISTANT_POLL_SECONDS = 1.5
 # The web expires an assistant request after 60 s; a result must land before that.
 ASSISTANT_EXTERNAL_TIMEOUT_SECONDS = 45.0
@@ -81,6 +83,8 @@ class _CooperativeRuntime:
     gateway: CoreGatewayClient
     # Keyed by provider name; "ollama" is always present (Ollama, or the replay provider in CI).
     providers: dict[str, LLMProvider]
+    # What the heartbeat tells the web; in replay mode it also names the providers whose keys are set (see _reported).
+    reported: list[str] = field(default_factory=list)
     schedule: ReviewSchedule = field(default_factory=ReviewSchedule)
     digest: DigestSchedule = field(default_factory=DigestSchedule)
     heartbeat_at: datetime | None = None
@@ -90,11 +94,23 @@ class _CooperativeRuntime:
     disease_watch: DailySchedule = field(default_factory=lambda: DailySchedule(DISEASE_WATCH_AT))
     disease_fingerprint: str | None = None
     staff_tasks: DailySchedule = field(default_factory=lambda: DailySchedule(STAFF_TASKS_AT))
+    app_suggestions: IntervalSchedule = field(default_factory=lambda: IntervalSchedule(APP_SUGGESTIONS_INTERVAL))
     daily_campaign: DailySchedule = field(default_factory=lambda: DailySchedule(CAMPAIGN_AT))
     bulletin: DailySchedule = field(default_factory=lambda: DailySchedule(BULLETIN_AT))
     improvement: WeeklySchedule = field(default_factory=lambda: WeeklySchedule(IMPROVEMENT_AT))
+    app_builder_backoff: app_builder.RequestBackoff = field(default_factory=app_builder.RequestBackoff)
+    strategy: SeasonSchedule = field(default_factory=lambda: SeasonSchedule(STRATEGY_AT))
     # The bulletin's LLM call can take minutes on a CPU server, so it runs on its own thread (one at a time).
     bulletin_thread: threading.Thread | None = None
+
+
+def _reported(cfg: Config, providers: dict[str, LLMProvider]) -> list[str]:
+    """The providers the keys on this machine allow. Replay answers every model call, but the keys are still there, so
+    the web keeps offering what needs them (the code tools of the mini-app factory)."""
+    names = list(providers)
+    if cfg.provider_name == "replay":
+        names += [name for name, key in (("anthropic", cfg.anthropic_api_key), ("openai", cfg.openai_api_key)) if key]
+    return names
 
 
 def _build_providers(cfg: Config, token_client: KeycloakTokenClient) -> dict[str, LLMProvider]:
@@ -136,6 +152,7 @@ def _runtime_for(
             gateway=CoreGatewayClient(cfg.gateway_url, token_client.get_token),
             providers=_build_providers(cfg, token_client),
         )
+        runtime.reported = _reported(cfg, runtime.providers)
         runtimes[creds.htx_code] = runtime
     return runtime
 
@@ -200,7 +217,7 @@ def _digest_and_heartbeat(runtime: _CooperativeRuntime, now: datetime, settings:
         log.exception("A6 digest failed for htx=%s", runtime.creds.htx_code)
     if runtime.heartbeat_at is None or now - runtime.heartbeat_at >= HEARTBEAT_INTERVAL:
         try:
-            runtime.gateway.heartbeat(__version__, list(runtime.providers))
+            runtime.gateway.heartbeat(__version__, runtime.reported or list(runtime.providers))
             runtime.heartbeat_at = now
         except Exception:
             log.warning("Agent heartbeat failed for htx=%s", runtime.creds.htx_code)
@@ -247,6 +264,11 @@ def _run_m4_agents(runtime: _CooperativeRuntime, now: datetime, settings: AgentS
             staff_tasks.run_staff_tasks(gateway, now)
             runtime.staff_tasks.record(now)  # only after a run that did not fail, so a failed run is retried
 
+    def app_suggestions_cycle() -> None:
+        if runtime.app_suggestions.is_due(now):
+            app_suggestions.run_app_suggestions(gateway, now)
+            runtime.app_suggestions.record(now)  # one failing app is logged inside; a failure of the list itself is retried
+
     def campaign_cycle() -> None:
         if not runtime.daily_campaign.is_due(now):
             return
@@ -290,13 +312,31 @@ def _run_m4_agents(runtime: _CooperativeRuntime, now: datetime, settings: AgentS
         improvement.run_improvement(gateway, now, chain)
         runtime.improvement.record(now)  # a finished or refused week is done; a raised failure is retried next cycle
 
+    def app_builder_cycle() -> None:
+        # Cheap when no request waits: one list call, and no model is asked.
+        provider, fallback = choose_providers(settings, app_builder.AGENT_NAME, runtime.providers)
+        provider, fallback = _local_unless_busy(provider), _local_unless_busy(fallback)
+        app_builder.run_app_builder(gateway, now, [provider] if fallback is None else [provider, fallback], runtime.app_builder_backoff)
+
+    def strategy_cycle() -> None:
+        if not runtime.strategy.is_due(now):
+            return
+        provider, fallback = choose_providers(settings, strategy.AGENT_NAME, runtime.providers)
+        provider, fallback = _local_unless_busy(provider), _local_unless_busy(fallback)
+        chain = [provider] if fallback is None else [provider, fallback]
+        strategy.run_strategy(gateway, now, chain)
+        runtime.strategy.record(now)  # a drafted, skipped or refused quarter is done; a raised failure is retried next cycle
+
     _guarded("A2 field-watch", htx, field_watch_cycle)
     _guarded("A4 harvest-ready", htx, harvest_cycle)
     _guarded("A3 disease-watch", htx, disease_cycle)
     _guarded("A8 staff-tasks", htx, staff_tasks_cycle)
+    _guarded("app suggestions", htx, app_suggestions_cycle)  # before A9, so the campaign sees them
     _guarded("A9 daily-campaign", htx, campaign_cycle)
     _guarded("A5 bulletin", htx, bulletin_cycle)
     _guarded("A10 improvement", htx, improvement_cycle)
+    _guarded("A12 app-builder", htx, app_builder_cycle)
+    _guarded("A11 strategy", htx, strategy_cycle)
 
 
 def run_once(

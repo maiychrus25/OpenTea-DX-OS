@@ -136,6 +136,35 @@ main().catch((err) => { console.error(err.message); process.exit(1); });
 ' "$TG_TOKEN_VALUE" "$1" "$2" "$(user_token smoke_manager_tc)" "$TG_SUB"
 }
 
+# web_status_as <keycloak user> <htx code> <path>: the status the web answers to that manager's browser session.
+# Whether a cooperative has an app is the rule of the web's app proxy; the gateway's internal port checks the role only.
+# So "only this cooperative can open it" is asked of the web. The session cookie is built as in webapp_session above.
+web_status_as() {
+  $COMPOSE exec -T web node -e '
+const crypto = require("node:crypto");
+async function main() {
+  const [accessToken, htxCode, path] = process.argv.slice(1);
+  const token = JSON.parse(Buffer.from(accessToken.split(".")[1], "base64url").toString());
+  const b64u = (b) => Buffer.from(b).toString("base64url");
+  const name = "authjs.session-token";
+  const key = Buffer.from(crypto.hkdfSync("sha256", process.env.AUTH_SECRET, name, "Auth.js Generated Encryption Key (" + name + ")", 64));
+  const now = Math.floor(Date.now() / 1000);
+  const claims = { sub: token.sub, role: "manager", htxCode, accessToken, refreshToken: "smoke", accessTokenExpiresAt: token.exp, iat: now, exp: now + 3600, jti: crypto.randomUUID() };
+  const header = b64u(JSON.stringify({ alg: "dir", enc: "A256CBC-HS512" }));
+  const iv = crypto.randomBytes(16);
+  const cipher = crypto.createCipheriv("aes-256-cbc", key.subarray(32), iv);
+  const ct = Buffer.concat([cipher.update(JSON.stringify(claims)), cipher.final()]);
+  const al = Buffer.alloc(8);
+  al.writeBigUInt64BE(BigInt(header.length * 8));
+  const tag = crypto.createHmac("sha512", key.subarray(0, 32)).update(Buffer.concat([Buffer.from(header), iv, ct, al])).digest().subarray(0, 32);
+  const cookie = name + "=" + [header, "", b64u(iv), b64u(ct), b64u(tag)].join(".");
+  const res = await fetch("http://localhost:3000" + path, { headers: { Cookie: cookie }, redirect: "manual" });
+  console.log(res.status);
+}
+main().catch((err) => { console.error(err.message); process.exit(1); });
+' "$(user_token "$1")" "$2" "$3"
+}
+
 # Turns the relay off the way the smoke leaves it: relay disabled, relay container back in its normal config, stub stopped.
 telegram_relay_down() {
   ./dxos telegram disable >/dev/null

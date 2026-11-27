@@ -16,6 +16,7 @@ OSI_LICENSES = frozenset({
 })
 
 _CORE_RE = re.compile(r"^>=(\d+)\.(\d+)\.(\d+)$")
+GENERATED_ID_RE = re.compile(r"^gen-[a-z0-9-]{3,30}$")
 
 
 class ManifestError(Exception):
@@ -85,6 +86,72 @@ def _schema_message(error) -> str:
     return f"'{field}': {error.message}"
 
 
+def _covers(prefix: str, path: str) -> bool:
+    return (path.rstrip("/") + "/").startswith(prefix.rstrip("/") + "/")
+
+
+def _field_errors(where: str, name: str, spec: dict) -> list[str]:
+    """Keywords the schema allows but only for some types, and the bounds that contradict each other."""
+    kind, out = spec.get("type"), []
+    for keyword, types in (("minLength", ("string",)), ("maxLength", ("string",)),
+                           ("minimum", ("integer", "number")), ("maximum", ("integer", "number"))):
+        if keyword in spec and kind not in types:
+            out.append(f"'{where}.{name}': từ khoá '{keyword}' không dùng được với kiểu '{kind}'")
+    if kind == "boolean" and "enum" in spec:
+        out.append(f"'{where}.{name}': từ khoá 'enum' không dùng được với kiểu 'boolean'")
+    for value in spec.get("enum", []):
+        ok = (isinstance(value, str) if kind == "string"
+              else isinstance(value, int) and not isinstance(value, bool) if kind == "integer"
+              else isinstance(value, (int, float)) and not isinstance(value, bool))
+        if not ok:
+            out.append(f"'{where}.{name}.enum': giá trị {value!r} không đúng kiểu '{kind}'")
+    for low, high in (("minimum", "maximum"), ("minLength", "maxLength")):
+        if low in spec and high in spec and spec[low] > spec[high]:
+            out.append(f"'{where}.{name}': '{low}' lớn hơn '{high}'")
+    return out
+
+
+def _agent_errors(data: dict, routes: dict) -> list[str]:
+    agent = data.get("agent")
+    actions = agent.get("actions") if isinstance(agent, dict) else None
+    if not isinstance(actions, list):
+        return []
+    out = []
+    if data.get("generated") is True and actions:
+        out.append("'generated': app do AI sinh ra không được khai 'agent.actions'")
+    protected = routes.get("protected") if isinstance(routes.get("protected"), dict) else {}
+    public = [p for p in routes.get("public", []) if isinstance(p, str)] if isinstance(routes.get("public"), list) else []
+    paths = [("agent.suggestions", agent.get("suggestions"))] + [
+        (f"agent.actions.{n}.path", a.get("path")) for n, a in enumerate(actions) if isinstance(a, dict)]
+    for where, path in paths:
+        if not isinstance(path, str) or not path.startswith("/"):
+            continue
+        if not any(_covers(p, path) for p in protected if isinstance(p, str)):
+            out.append(f"'{where}': đường dẫn '{path}' phải nằm dưới một tiền tố cần đăng nhập trong 'routes.protected'")
+        if any(_covers(p, path) for p in public):
+            out.append(f"'{where}': đường dẫn '{path}' không được nằm dưới một đường dẫn công khai")
+    for key, label in (("name", "tên"), ("path", "đường dẫn")):
+        seen = set()
+        for action in (a for a in actions if isinstance(a, dict)):
+            value = action.get(key)
+            if value in seen:
+                out.append(f"'agent.actions': {label} '{value}' bị khai hai lần")
+            seen.add(value)
+    for n, action in enumerate(a for a in actions if isinstance(a, dict)):
+        payload = action.get("payload")
+        props = payload.get("properties") if isinstance(payload, dict) else None
+        if not isinstance(props, dict):
+            continue
+        where = f"agent.actions.{n}.payload"
+        for name in (payload.get("required") if isinstance(payload.get("required"), list) else []):
+            if name not in props:
+                out.append(f"'{where}.required': '{name}' không có trong 'properties'")
+        for name, spec in props.items():
+            if isinstance(spec, dict):
+                out += _field_errors(f"{where}.properties", name, spec)
+    return out
+
+
 def validate_manifest(data: dict, core_version: str, installed_ids: set[str]) -> list[str]:
     errors = [_schema_message(e) for e in sorted(
         Draft202012Validator(_schema()).iter_errors(data), key=lambda e: [str(p) for p in e.absolute_path])]
@@ -111,6 +178,14 @@ def validate_manifest(data: dict, core_version: str, installed_ids: set[str]) ->
         if not isinstance(protected, dict) or not any(
                 isinstance(p, str) and covered.startswith(p.rstrip("/") + "/") for p in protected):
             errors.append(f"'feed': đường dẫn '{feed}' phải nằm dưới một tiền tố cần đăng nhập trong 'routes.protected'")
+    if isinstance(routes, dict):
+        errors += _agent_errors(data, routes)
+    # The id decides the app's private network, so the flag and the prefix must agree (M13).
+    is_gen_id = isinstance(app_id, str) and app_id.startswith("gen-")
+    if data.get("generated") is True and not (isinstance(app_id, str) and GENERATED_ID_RE.match(app_id)):
+        errors.append("'generated': app do AI xây phải có id dạng gen-<tên> (gen-, rồi 3 đến 30 ký tự a-z, 0-9, -)")
+    elif is_gen_id and data.get("generated") is not True:
+        errors.append("'id': id bắt đầu bằng gen- chỉ dành cho app do AI xây, cần 'generated: true'")
     requires = data.get("requires")
     core = requires.get("core") if isinstance(requires, dict) else None
     match = _CORE_RE.match(core) if isinstance(core, str) else None

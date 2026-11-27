@@ -220,3 +220,14 @@ def test_llm_summary_is_recorded_with_its_provider() -> None:
 
     assert gateway.posted[0]["summary_vi"] == "Một việc cần duyệt."
     assert gateway.runs_finished[-1]["provider"] == "replay"
+
+
+def test_app_actions_sort_after_the_production_work_and_before_unknown_kinds() -> None:
+    from dxos_agent.agents.daily_campaign import plan_campaign
+
+    def row(n: int, kind: str) -> dict[str, Any]:
+        return {"id": f"p{n}", "kind": kind, "created_at": "2026-11-26T01:00:00Z", "goal_key": "other", "target": 1,
+                "title_vi": "x"}
+
+    candidates = {"proposals": [row(1, "future.kind"), row(2, "app.tea-shop.promotion.create"), row(3, "bulletin.publish")]}
+    assert [r["id"] for r in plan_campaign(candidates).items] == ["p3", "p2", "p1"]

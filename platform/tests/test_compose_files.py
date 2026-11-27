@@ -38,7 +38,7 @@ def test_user_routes_refuse_agent_telegram_and_staff_tokens():
     for route_id in ("workflow", "disease", "llm-chat"):
         schema = routes[route_id]["plugins"]["openid-connect"]["claim_schema"]
         assert schema["properties"]["realm_access"]["properties"]["roles"] == {
-            "not": {"contains": {"enum": ["agent", "telegram", "staff-sync"]}}
+            "not": {"contains": {"enum": ["agent", "telegram", "staff-sync", "web-service"]}}
         }, route_id
 
 
@@ -72,6 +72,26 @@ def test_telegram_route_needs_the_relay_client_and_role_on_the_internal_port():
     assert schema["properties"]["realm_access"]["properties"]["roles"]["contains"] == {"enum": ["telegram"]}
     assert route["plugins"]["limit-count"]["key"] == "$http_authorization"
     assert "X-Dxos-Gateway" in route["plugins"]["proxy-rewrite"]["headers"]["set"]
+
+
+def test_web_disease_route_takes_only_the_web_service_client_on_the_internal_port():
+    route = load_routes()["internal-web-disease"]
+    assert route["uri"] == "/api/internal/web/disease/*"
+    assert route["upstream_id"] == "disease" and route["methods"] == ["POST"]
+    assert route["vars"] == [["server_port", "==", "9081"]]
+    schema = route["plugins"]["openid-connect"]["claim_schema"]
+    assert schema["required"] == ["aud", "azp", "realm_access"]
+    assert schema["properties"]["azp"] == {"enum": ["dxos-web-service"]}
+    assert schema["properties"]["aud"]["anyOf"][0] == {"enum": ["dx-os-core"]}
+    assert schema["properties"]["realm_access"]["properties"]["roles"]["contains"] == {"enum": ["web-service"]}
+    assert route["plugins"]["proxy-rewrite"]["regex_uri"] == ["^/api/internal/web/disease/(.*)", "/$1"]
+    assert route["plugins"]["limit-count"]["key"] == "$http_authorization"
+
+
+def test_web_disease_route_is_not_served_on_the_public_port_and_has_no_user_route_twin():
+    routes = load_routes()
+    assert routes["internal-web-disease"]["vars"] == [["server_port", "==", "9081"]]
+    assert routes["disease"]["uri"] == "/api/ai/disease/*" and "web-service" in str(routes["disease"]["plugins"]["openid-connect"]["claim_schema"])
 
 
 def test_agent_route_refuses_telegram_tokens_by_claims():
@@ -249,7 +269,7 @@ def test_mcp_route_takes_only_the_bridge_client_and_no_service_role():
     assert schema["properties"]["azp"] == {"enum": ["dxos-mcp"]}
     assert schema["properties"]["aud"]["anyOf"][0] == {"enum": ["dx-os-core"]}
     assert schema["properties"]["realm_access"]["properties"]["roles"] == {
-        "not": {"contains": {"enum": ["agent", "telegram", "staff-sync"]}}
+        "not": {"contains": {"enum": ["agent", "telegram", "staff-sync", "web-service"]}}
     }
 
 
@@ -273,9 +293,49 @@ def test_mini_app_settings_reach_the_web_and_the_relay_but_the_token_never_reach
     assert "DXOS_WEB_PUBLIC_URL" in services["dxos-telegram"]["environment"]
 
 
+def test_stt_service_is_pinned_private_and_in_the_voice_group():
+    services = load_compose(COMPOSE)
+    stt = services["dxos-stt"]
+    assert stt["image"].startswith("ghcr.io/ggml-org/whisper.cpp:main-") and len(stt["image"].rsplit("main-", 1)[1]) == 40
+    assert "ports" not in stt and stt["networks"] == ["agrimarket-net"]
+    assert stt["mem_limit"] == "2g" and stt["read_only"] is True and stt["cap_drop"] == ["ALL"]
+    assert "/models/ggml-${DXOS_STT_MODEL:-small}.bin -l vi --convert" in stt["command"][0]
+    assert stt["volumes"] == ["stt_models:/models:ro"]
+    assert "stt_models" in load_document(COMPOSE)["volumes"]
+    makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
+    assert "EXTRAS_VOICE := piper dxos-stt" in makefile
+
+
+def test_stt_init_checks_the_model_digest_in_the_tools_profile():
+    init = load_compose(COMPOSE)["stt-init"]
+    assert init["profiles"] == ["tools"] and init["image"] == load_compose(COMPOSE)["dxos-stt"]["image"]
+    script = init["entrypoint"][-1]
+    for model in ("base", "small", "medium"):
+        assert f"{model}) sha=" in script
+    assert "sha256sum -c" in script and "huggingface.co/ggerganov/whisper.cpp/resolve/" in script and "/resolve/main/" not in script
+
+
+def test_relay_gets_the_stt_url_with_the_internal_default():
+    assert load_compose(COMPOSE)["dxos-telegram"]["environment"]["DXOS_STT_URL"] == "${DXOS_STT_URL:-http://dxos-stt:8080}"
+    assert "DXOS_STT_URL" not in load_compose(COMPOSE)["web"]["environment"]
+
+
+def test_stt_stub_is_test_only_loopback_published_and_takes_the_stt_alias():
+    stub = load_compose(COMPOSE)["stt-test-stub"]
+    # The relay posts to the port of its default DXOS_STT_URL; the stub takes the dxos-stt name, so it must listen there.
+    relay_default = load_compose(COMPOSE)["dxos-telegram"]["environment"]["DXOS_STT_URL"]
+    port = relay_default.rsplit(":", 1)[1].rstrip("}")
+    assert port == "8080"
+    assert stub["profiles"] == ["stt-test"] and stub["ports"] == [f"127.0.0.1:8083:{port}"]
+    assert stub["environment"]["DXOS_STT_STUB_PORT"] == port
+    assert stub["read_only"] is True and stub["cap_drop"] == ["ALL"] and stub["user"] == "65534:65534"
+    assert stub["networks"] == {"agrimarket-net": {"aliases": ["dxos-stt"]}}
+    assert "stt-test-stub" not in load_compose(RELEASE)
+
+
 def test_only_the_staff_route_is_internal_and_served_on_the_public_port():
     # The staff app runs outside the compose network (D14); the agent and relay routes stay on 9081 only.
     routes = load_routes()
     assert "vars" not in routes["internal-staff"]
-    for route_id in ("internal-agent", "internal-agent-llm", "internal-telegram"):
+    for route_id in ("internal-agent", "internal-agent-llm", "internal-telegram", "internal-web-disease"):
         assert routes[route_id]["vars"] == [["server_port", "==", "9081"]], route_id

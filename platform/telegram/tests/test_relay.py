@@ -214,6 +214,73 @@ def test_location_is_forwarded_with_its_coordinates_and_nothing_else():
     }
 
 
+class PhotoBot(FakeBot):
+    """Records multipart sends too: the bot answers a group with a list of messages, a single photo with one."""
+
+    def call_files(self, method, params, files, timeout=30.0):
+        self.calls.append((method, dict(params), {k: v[1] for k, v in files.items()}))
+        if method in self.fail_on:
+            raise self.fail_on[method]
+        return [{"message_id": 700}, {"message_id": 701}] if method == "sendMediaGroup" else {"message_id": 702}
+
+
+class PhotoWeb(FakeWeb):
+    def __init__(self, media=None):
+        super().__init__()
+        self.media = media if media is not None else {}
+        self.fetched = []
+
+    def fetch_media(self, build, name):
+        self.fetched.append((build, name))
+        if name not in self.media:
+            raise GatewayError("GET media answered 404")
+        return self.media[name]
+
+
+NAMES = ["desktop-light.png", "desktop-dark.png", "mobile-light.png", "mobile-dark.png"]
+PHOTO_ITEM = {"id": "o9", "op": "send", "chat_id": 5, "text": 'App "Kho phân bón" đã xây xong, qua 7 cổng kiểm tra.',
+              "photos": [{"build_id": "b1", "name": n} for n in NAMES]}
+
+
+def test_item_with_photos_goes_out_as_one_media_group_with_the_text_as_caption():
+    web, bot = PhotoWeb({n: n.encode() for n in NAMES}), PhotoBot()
+    assert make_relay(bot, web).deliver([PHOTO_ITEM]) == 0.0
+    assert web.fetched == [("b1", n) for n in NAMES]
+    method, params, files = bot.calls[0]
+    assert method == "sendMediaGroup" and params["chat_id"] == 5
+    assert [m["media"] for m in params["media"]] == ["attach://p0", "attach://p1", "attach://p2", "attach://p3"]
+    assert params["media"][0]["caption"] == PHOTO_ITEM["text"] and all("caption" not in m for m in params["media"][1:])
+    assert files == {f"p{i}": n.encode() for i, n in enumerate(NAMES)}
+    assert web.results == [("o9", {"ok": True, "telegram_message_id": 700})]
+
+
+def test_a_photo_the_web_cannot_serve_is_left_out_and_one_left_is_sent_as_a_photo():
+    web, bot = PhotoWeb({"desktop-light.png": b"x"}), PhotoBot()
+    make_relay(bot, web).deliver([PHOTO_ITEM])
+    assert bot.calls[0][0] == "sendPhoto" and bot.calls[0][1]["caption"] == PHOTO_ITEM["text"]
+    assert web.results == [("o9", {"ok": True, "telegram_message_id": 702})]
+
+
+def test_with_no_photo_to_send_the_text_still_reaches_the_manager():
+    web, bot = PhotoWeb(), PhotoBot()
+    make_relay(bot, web).deliver([PHOTO_ITEM])
+    assert [c[0] for c in bot.calls] == ["sendMessage"] and bot.calls[0][1]["text"] == PHOTO_ITEM["text"]
+    assert web.results[0][1]["ok"] is True
+
+
+def test_caption_is_cut_to_the_1024_characters_telegram_allows():
+    web, bot = PhotoWeb({n: b"x" for n in NAMES}), PhotoBot()
+    make_relay(bot, web).deliver([{**PHOTO_ITEM, "text": "a" * 2000}])
+    assert len(bot.calls[0][1]["media"][0]["caption"]) == 1024
+
+
+def test_media_group_failure_is_reported_like_any_send():
+    web = PhotoWeb({n: b"x" for n in NAMES})
+    bot = PhotoBot(fail_on={"sendMediaGroup": BotApiError("Too Many Requests", code=429, retry_after=7)})
+    assert make_relay(bot, web).deliver([PHOTO_ITEM]) == 7.0
+    assert web.results == [("o9", {"ok": False, "error": "Too Many Requests", "retry_after_seconds": 7})]
+
+
 def test_menu_button_is_set_to_the_open_page_when_the_url_is_https():
     bot = FakeBot()
     Relay(bot, FakeWeb(), "t", web_public_url="https://dx.example.org/").set_menu_button()
@@ -234,3 +301,57 @@ def test_menu_button_is_skipped_without_https(url, caplog):
 def test_menu_button_failure_is_logged_not_raised():
     bot = FakeBot(fail_on={"setChatMenuButton": BotApiError("Bad Request", permanent=True)})
     Relay(bot, FakeWeb(), "t", web_public_url="https://dx.example.org").set_menu_button()
+
+
+class AudioBot(PhotoBot):
+    def call_files(self, method, params, files, timeout=30.0):
+        self.calls.append((method, dict(params), {k: (v[0], v[1], v[2]) for k, v in files.items()}))
+        if method in self.fail_on:
+            raise self.fail_on[method]
+        return {"message_id": 710}
+
+
+class AudioWeb(FakeWeb):
+    def __init__(self, audio=b"RIFFwav", fail=False, reply=None):
+        super().__init__(reply=reply)
+        self.audio, self.fail, self.fetched = audio, fail, []
+
+    def fetch_bulletin_audio(self, bulletin_id):
+        self.fetched.append(bulletin_id)
+        if self.fail:
+            raise GatewayError("GET media answered 503")
+        return self.audio
+
+
+AUDIO_REPLY = {"op": "send", "chat_id": 5, "text": "Bản tin 25/11/2026", "audio": {"kind": "bulletin", "id": "b-1"}}
+UPDATE = {"update_id": 1, "callback_query": {"id": "cq", "from": {"id": 5}, "message": {"message_id": 4, "chat": {"id": 5, "type": "private"}}, "data": "v2"}}
+
+
+def test_an_audio_reply_is_fetched_from_the_web_and_sent_as_the_file_ban_tin_wav_with_its_caption():
+    web, bot = AudioWeb(reply={"replies": [AUDIO_REPLY]}), AudioBot()
+    assert make_relay(bot, web).process_update(UPDATE) is True
+    assert web.fetched == ["b-1"]
+    method, params, files = bot.calls[0]
+    assert method == "sendDocument" and params == {"chat_id": 5, "caption": "Bản tin 25/11/2026"}
+    assert files == {"document": ("ban-tin.wav", b"RIFFwav", "audio/wav")}
+    assert [c[0] for c in bot.calls] == ["sendDocument"]
+
+
+def test_when_the_web_cannot_make_the_audio_the_person_gets_the_plain_line():
+    web, bot = AudioWeb(fail=True, reply={"replies": [AUDIO_REPLY]}), AudioBot()
+    assert make_relay(bot, web).process_update(UPDATE) is True
+    assert [c[0] for c in bot.calls] == ["sendMessage"]
+    assert bot.calls[0][1]["text"] == "Chưa đọc được bản tin lúc này."
+
+
+def test_a_failed_document_send_is_logged_and_does_not_stop_the_other_replies():
+    web = AudioWeb(reply={"replies": [AUDIO_REPLY, {"op": "send", "chat_id": 5, "text": "tiếp"}]})
+    bot = AudioBot(fail_on={"sendDocument": BotApiError("Bad Request", code=400, permanent=True)})
+    assert make_relay(bot, web).process_update(UPDATE) is True
+    assert [c[0] for c in bot.calls] == ["sendDocument", "sendMessage"]
+
+
+def test_an_audio_kind_the_relay_does_not_know_is_sent_as_its_text_only():
+    web, bot = AudioWeb(reply={"replies": [{**AUDIO_REPLY, "audio": {"kind": "other", "id": "x"}}]}), AudioBot()
+    make_relay(bot, web).process_update(UPDATE)
+    assert [c[0] for c in bot.calls] == ["sendMessage"] and web.fetched == []

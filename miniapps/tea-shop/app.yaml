@@ -4,7 +4,7 @@ apiVersion: dxos/v1
 id: tea-shop
 name: Cửa hàng chè
 description: Giới thiệu sản phẩm chè, nhận đơn đặt hàng và theo dõi đơn.
-version: 0.2.0
+version: 0.3.0
 license: MIT
 publisher: OpenTea Developers
 requires: { core: ">=1.10.0" }
@@ -18,6 +18,24 @@ routes:
   public: [/public/]
   protected:
     /: [manager]
+agent:
+  suggestions: /agent/suggestions
+  actions:
+    - name: promotion.create
+      title_vi: Tạo khuyến mãi
+      risk: medium
+      approver_roles: [manager]
+      money: true
+      path: /agent/actions/promotion-create
+      payload:
+        type: object
+        required: [product_id, discount_pct, days]
+        additionalProperties: false
+        properties:
+          product_id: { type: string, maxLength: 64 }
+          discount_pct: { type: integer, minimum: 5, maximum: 30 }
+          days: { type: integer, minimum: 1, maximum: 14 }
+      preview_vi: "Giảm {discount_pct}% cho sản phẩm {product_name} trong {days} ngày"
 menu:
   - { label: Cửa hàng chè, path: /, roles: [manager] }
 store:
@@ -28,12 +46,16 @@ store:
 
     Trưởng HTX thêm và sửa sản phẩm (quy cách, giá, tồn kho, mã lô), xem đơn, chuyển đơn qua từng bước xác nhận, giao hàng, hoàn tất hoặc huỷ. Khách chọn số lượng, để lại tên, số điện thoại, địa chỉ rồi nhận một mã đơn để tra lại đơn.
 
+    Trưởng HTX đặt khuyến mãi theo phần trăm cho từng sản phẩm, trang đặt hàng hiện giá đã giảm và đơn tính theo giá đó. Trợ lý đề xuất giảm giá cho sản phẩm tồn kho nhiều mà lâu chưa bán được; chỉ khi trưởng HTX đồng ý thì khuyến mãi mới được tạo.
+
     Đơn mới trừ tồn kho ngay, đơn huỷ trả lại tồn kho. Sản phẩm có mã lô sẽ có đường dẫn xem nguồn gốc.
   data:
     - "Sản phẩm: tên, quy cách, giá, tồn kho, mã lô, đang bán hay ngừng"
     - "Đơn hàng: mã đơn, tên khách, số điện thoại, địa chỉ, ghi chú, tổng tiền, tình trạng"
     - "Dòng đơn: sản phẩm, quy cách, giá và số lượng tại lúc đặt"
+    - "Khuyến mãi: sản phẩm, phần trăm giảm, ngày bắt đầu và kết thúc, người tạo"
   personal_data: "Lưu tên, số điện thoại, địa chỉ và ghi chú của khách đặt hàng. Chỉ trưởng HTX xem được. Khách chỉ tra được đơn của mình khi nhập đúng mã đơn và số điện thoại."
   screenshots:
     - { file: store/manager-orders.png, caption: "Trưởng HTX theo dõi đơn hàng, lọc, in phiếu giao và tải CSV" }
+    - { file: store/promotions.png, caption: "Trưởng HTX xem khuyến mãi đang chạy và kết thúc sớm khi cần" }
     - { file: store/public-order.png, caption: "Khách đặt hàng trên điện thoại, không cần đăng nhập" }

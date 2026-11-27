@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 import { TelegramUpdateHandler, type TelegramUpdateInput } from '@/application/telegram/TelegramUpdateHandler'
-import type { ChatTool } from '@/application/telegram/chat/types'
+import { z } from 'zod'
+import type { ChatAction, ChatTool } from '@/application/telegram/chat/types'
 import { TELEGRAM_TEXT } from '@/application/telegram/messages'
 import { signCallbackDataV2 } from '@/domain/telegram/callback-data'
 import type { LiveRoleReader } from '@/domain/telegram/ports/LiveRoleReader'
@@ -40,8 +41,8 @@ function fakeRepo(links: TelegramLink[]) {
       return row && row.expiresAt > now ? row : null
     }),
     conversationOf: jest.fn(async (tg: string) => conversations.get(tg) ?? null),
-    setFlow: jest.fn(async (f: { telegramUserId: string; flow: string; step: number | null; state: Record<string, unknown>; token: string | null; cardMessageId: string | null; expiresAt: Date }) => {
-      conversations.set(f.telegramUserId, { ...f, kind: 'flow', proposalId: null })
+    setFlow: jest.fn(async (f: { telegramUserId: string; kind?: 'flow' | 'voice'; flow: string; step: number | null; state: Record<string, unknown>; token: string | null; cardMessageId: string | null; expiresAt: Date }) => {
+      conversations.set(f.telegramUserId, { ...f, kind: f.kind ?? 'flow', proposalId: null })
     }),
     deleteConversation: jest.fn(async (tg: string) => {
       conversations.delete(tg)
@@ -73,6 +74,22 @@ const nearby = {
   run: jest.fn(async () => ({ lines: ['Thửa TC-A1 cách 0.4 km'], source: 'Vùng trồng' })),
 } as unknown as ChatTool
 
+const photoStore = { put: jest.fn(async () => undefined), get: jest.fn(async () => Buffer.alloc(0)), delete: jest.fn(async () => undefined) }
+
+const diseasePhoto = {
+  name: 'disease.report',
+  titleVi: 'Chẩn đoán bệnh',
+  risk: 'medium',
+  roles: ['manager'],
+  routes: [],
+  args: [],
+  steps: [{ kind: 'photo', slot: 'photo_key', promptVi: 'Gửi ảnh', optional: false, photoKey: () => 'k/disease.jpg' }],
+  payloadSchema: z.object({ photo_key: z.string() }),
+  consequenceVi: null,
+  preview: async () => [],
+  execute: async () => '',
+} as unknown as ChatAction
+
 function build(links: TelegramLink[] = [link({})]) {
   const repo = fakeRepo(links)
   const handler = new TelegramUpdateHandler({
@@ -85,8 +102,8 @@ function build(links: TelegramLink[] = [link({})]) {
     callbackKey: KEY,
     chat: {
       tools: [nearby],
-      actions: [],
-      photos: { put: jest.fn(async () => undefined), get: jest.fn(async () => Buffer.alloc(0)) },
+      actions: [diseasePhoto],
+      photos: photoStore,
       requests: {} as never,
       householdId: async () => null,
       proposalMessages: async () => [],
@@ -158,6 +175,95 @@ describe('TelegramUpdateHandler: chat routes', () => {
   test('a farmer without a household still gets the menu and no manager buttons', async () => {
     const { handler } = build([link({ userId: 'u-farmer', role: 'farmer', telegramUserId: String(FARMER_TG), chatId: String(FARMER_TG) })])
     const res = await handler.handle(message({ text: '/menu' }, FARMER_TG))
-    expect(res.replies[0].buttons!.flat().map((b) => b.text)).toEqual(['Hôm nay', 'Ghi nhật ký', 'Hỏi'])
+    expect(res.replies[0].buttons!.flat().map((b) => b.text)).toEqual(['Hôm nay', 'Ghi nhật ký', 'Báo bệnh', 'Hỏi'])
   })
 })
+
+describe('TelegramUpdateHandler: voice messages (M15)', () => {
+  test('a forwarded voice text is echoed with the three buttons and held as a voice conversation', async () => {
+    const { handler, repo } = build()
+    const res = await handler.handle(message({ voice_text: 'giá chè hôm nay', voice_duration: 4 }))
+    expect(res.replies[0].text).toBe('Em nghe được: “giá chè hôm nay”')
+    expect(res.replies[0].buttons!.flat().map((b) => b.text)).toEqual(['Đúng', 'Sửa', 'Huỷ'])
+    expect(repo.conversations.get(String(MANAGER_TG))).toMatchObject({ kind: 'voice', state: { text: 'giá chè hôm nay' } })
+  })
+
+  test('while A12 waits for an answer, a voice message asks for typed text and keeps the waiting conversation', async () => {
+    const { handler, repo } = build()
+    const waiting = {
+      telegramUserId: String(MANAGER_TG), kind: 'app_answer' as const, proposalId: null, flow: null, step: null,
+      state: { request_id: 'req-1' }, token: null, cardMessageId: null, expiresAt: new Date(Date.now() + 3_600_000),
+    }
+    repo.conversations.set(String(MANAGER_TG), waiting)
+    for (const voice of [{ voice_text: 'cho cán bộ dùng', voice_duration: 3 }, { voice_error: 'stt_unavailable' as const }]) {
+      const res = await handler.handle(message(voice))
+      expect(res.replies).toEqual([expect.objectContaining({ text: TELEGRAM_TEXT.voiceTypeAnswer })])
+      expect(res.replies[0].buttons).toBeUndefined()
+    }
+    expect(repo.conversations.get(String(MANAGER_TG))).toEqual(waiting)
+  })
+
+  test('voice_error and empty text map to their copy', async () => {
+    const { handler } = build()
+    expect((await handler.handle(message({ voice_error: 'too_long', voice_duration: 75 }))).replies[0].text).toBe(TELEGRAM_TEXT.voiceTooLong)
+    expect((await handler.handle(message({ voice_error: 'stt_unavailable' }))).replies[0].text).toBe(TELEGRAM_TEXT.voiceUnavailable)
+    expect((await handler.handle(message({ voice_text: '  ', voice_duration: 2 }))).replies[0].text).toBe(TELEGRAM_TEXT.voiceUnclear)
+  })
+
+  test('a voice message in a group or from an unlinked user starts nothing', async () => {
+    const { handler, repo } = build()
+    const group = await handler.handle({
+      update_id: ++nextId,
+      message: { chat: { id: -100, type: 'supergroup' }, from: { id: MANAGER_TG }, voice_text: 'hôm nay' } as TelegramUpdateInput['message'],
+    })
+    expect(group).toEqual({ replies: [] })
+    const stranger = await handler.handle(message({ voice_text: 'hôm nay' }, 9999))
+    expect(stranger).toEqual({ replies: [] })
+    expect(repo.conversations.size).toBe(0)
+  })
+})
+
+describe('TelegramUpdateHandler: photos, captions and orphans (issue #80, C5)', () => {
+  const b64 = (bytes: number[]) => Buffer.from(bytes).toString('base64')
+  const jpeg = (fields: Record<string, unknown> = {}) =>
+    message({ photo: { mime_type: 'image/jpeg', data_base64: b64([0xff, 0xd8, 0xff, 1]), file_unique_id: 'u1' }, ...fields })
+
+  beforeEach(() => jest.clearAllMocks())
+
+  test('a caption on a photo is read as text when no photo is awaited', async () => {
+    const { handler } = build()
+    const res = await handler.handle(jpeg({ caption: '/menu' }))
+    expect(res.replies[0].text).toBe(TELEGRAM_TEXT.menuPrompt)
+  })
+
+  test('a photo in a photo step is stored, a PNG keeps its type, and bytes that are neither are refused', async () => {
+    const { handler } = build()
+    await handler.handle(message({ text: '/benh' }))
+    const refused = await handler.handle(message({ photo: { mime_type: 'image/jpeg', data_base64: b64([1, 2, 3, 4]), file_unique_id: 'u0' } }))
+    expect(refused.replies[0].text).toBe(TELEGRAM_TEXT.photoFailed)
+    expect(photoStore.put).not.toHaveBeenCalled()
+
+    const png = await handler.handle(message({ photo: { mime_type: 'image/jpeg', data_base64: b64([0x89, 0x50, 0x4e, 0x47, 9]), file_unique_id: 'u2' } }))
+    expect(png.replies[0].text).toContain('Chẩn đoán bệnh')
+    expect(photoStore.put).toHaveBeenCalledWith('k/disease.jpg', Buffer.from([0x89, 0x50, 0x4e, 0x47, 9]), 'image/png')
+  })
+
+  test('/huy deletes the photo the flow stored', async () => {
+    const { handler } = build()
+    await handler.handle(message({ text: '/benh' }))
+    await handler.handle(jpeg())
+    const res = await handler.handle(message({ text: '/huy' }))
+    expect(res.replies[0].text).toBe(TELEGRAM_TEXT.flowCancelled)
+    expect(photoStore.delete).toHaveBeenCalledWith('k/disease.jpg')
+  })
+
+  test('/stop deletes the photo the flow stored', async () => {
+    const { handler, repo } = build()
+    await handler.handle(message({ text: '/benh' }))
+    await handler.handle(jpeg())
+    await handler.handle(message({ text: '/stop' }))
+    expect(photoStore.delete).toHaveBeenCalledWith('k/disease.jpg')
+    expect(repo.conversations.size).toBe(0)
+  })
+})
+

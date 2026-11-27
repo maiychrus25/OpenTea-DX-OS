@@ -4,10 +4,10 @@
 import type { CampaignRepository } from '@/domain/agent/ports/CampaignRepository'
 import type { ProposalRepository } from '@/domain/agent/ports/ProposalRepository'
 import type { ImprovementRepository, ImprovementSettlement } from '@/domain/agent/ports/ImprovementRepository'
-import type { DecisionChannel, ProposalStatus } from '@/domain/agent/proposal'
+import type { DecisionChannel, Proposal, ProposalStatus } from '@/domain/agent/proposal'
 import { DomainError, ForbiddenError, NotFoundError, ValidationError } from '@/domain/errors'
 import type { Tenant } from '@/lib/api/tenant'
-import { getAction, type ActionDefinition, type ApproverRole } from './action-catalog'
+import { ensureAppActions, getAction, type ActionDefinition, type ApproverRole } from './action-catalog'
 import type { EvidenceLoaders } from './actions/journal-evidence'
 
 const GENERIC_EXECUTION_FAILURE = 'Không thể thực hiện đề xuất. Vui lòng thử lại sau.'
@@ -99,8 +99,11 @@ export class DecideProposalUseCase {
       throw new NotFoundError('Không tìm thấy đề xuất')
     }
 
-    const definition = getAction(proposal.kind)
+    await ensureAppActions(proposal.kind)
+    const definition = getAction(proposal.kind, input.tenant.htxCode)
     if (!definition) {
+      // The app was removed or disabled for this cooperative: its open proposal is over, and the app is not called.
+      if (proposal.kind.startsWith('app.')) return this.expireOfGoneApp(input, proposal)
       throw new ValidationError('UNKNOWN_KIND')
     }
 
@@ -214,6 +217,17 @@ export class DecideProposalUseCase {
       console.error('[DecideProposal] could not record execution of proposal', proposal.id, err)
     }
     return { outcome: 'executed', result }
+  }
+
+  private async expireOfGoneApp(input: DecideProposalInput, proposal: Proposal): Promise<DecideProposalOutcome> {
+    // The catalogue load may have expired it just now: that is still the answer, not "someone decided it".
+    if (proposal.status === 'expired') return { outcome: 'expired' }
+    if (proposal.status !== 'proposed') {
+      return { outcome: 'already_decided', by: proposal.decidedByName, at: proposal.decidedAt, status: proposal.status }
+    }
+    if (await this.repo.markExpired(input.tenant.htxCode, proposal.id, { actorId: input.tenant.userId })) return { outcome: 'expired' }
+    const latest = await this.readConflict(input.tenant.htxCode, proposal.id)
+    return latest.outcome === 'already_decided' && latest.status === 'expired' ? { outcome: 'expired' } : latest
   }
 
   private async readConflict(htxCode: string, proposalId: string): Promise<DecideProposalOutcome> {

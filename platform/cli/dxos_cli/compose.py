@@ -20,14 +20,19 @@ def render_app_compose(manifest: dict, app_dir: Path) -> dict:
     shortcut: healthcheck assumes python in the image, upgrade when a non-Python mini-app appears
     """
     app_id, runtime = manifest["id"], manifest["runtime"]
+    project = os.environ.get("DXOS_RUNTIME_SUBDIR", "docker")  # compose's default project for docker/
+    if app_dir.parts[:3] == ("docker", "runtime", "generated"):
+        # Inside dxos-cli the project folder is the mount; on the host (where compose builds) it is part of the path.
+        app_dir = Path("docker", "runtime", project, *app_dir.parts[2:])
     service = {}
     if "image" in runtime:
         service["image"] = runtime["image"]
     else:
         service["build"] = {"context": posixpath.normpath(posixpath.join("..", app_dir.as_posix(), runtime["build"]))}
     if "database" in manifest:
-        project = os.environ.get("DXOS_RUNTIME_SUBDIR", "docker")  # compose's default project for docker/
         service["env_file"] = [f"runtime/{project}/apps/{app_id}.env"]
+    generated = app_id.startswith("gen-")
+    network = f"dxos-gen-{app_id}" if generated else "dxos-apps-net"
     health_url = f"http://127.0.0.1:{runtime['port']}{runtime['health']}"
     service.update({
         "restart": "unless-stopped",
@@ -39,7 +44,7 @@ def render_app_compose(manifest: dict, app_dir: Path) -> dict:
         "mem_limit": "256m",
         "cpus": 0.5,
         # Defined in docker-compose.yml: internal, shared with apisix and postgres only. No ports, ever.
-        "networks": ["dxos-apps-net"],
+        "networks": [network],
         "healthcheck": {
             "test": ["CMD", "python", "-c", f"import urllib.request; urllib.request.urlopen({health_url!r}, timeout=3)"],
             "interval": "10s",
@@ -48,4 +53,8 @@ def render_app_compose(manifest: dict, app_dir: Path) -> dict:
             "start_period": "10s",
         },
     })
+    if generated:
+        # An app the AI wrote sees only apisix and postgres (spec 12.7); ./dxos connects the running containers too.
+        return {"services": {f"app-{app_id}": service, "apisix": {"networks": [network]}, "postgres": {"networks": [network]}},
+                "networks": {network: {"internal": True}}}
     return {"services": {f"app-{app_id}": service}}

@@ -23,7 +23,7 @@ function proposal(id: string, kind: string, payload: Record<string, unknown>, st
     requestedBy: null,
     dedupeKey: id,
     createdAt: new Date('2026-11-26T01:00:00Z'),
-    expiresAt: new Date('2026-12-31T00:00:00Z'),
+    expiresAt: new Date('2099-12-31T00:00:00Z'),
     decidedBy: null,
     decidedByName: null,
     decidedAt: null,

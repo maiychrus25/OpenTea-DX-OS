@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Farmer pages (`apps/web`)**: overview, journal grouped by date, harvest calendar with withdrawal periods and day details, farming handbook linking to real articles, a bulletin page with article pages, account page, disease diagnosis with a care plan after the AI names a disease (the product and dose stay with the officer), and a side menu with counts, an account menu and a folded rail
+- **Maps (`apps/web`)**: street and labelled satellite layers centred on Tân Cương, clearer partner, parcel and parcel-drawing maps
+- **Sign-in and registration (`apps/web`)**: new two-panel layout; the name typed on the sign-in page pre-fills Keycloak, which still takes the password
+- Sample content, such as the camera watch, tea prices and handbook counts, is marked "Mẫu" until a data source exists
 - **Cooperative head pages follow the new design (`apps/web`)**: journal approval gains headline figures (waiting, overdue, approved this month, to be corrected), filters, a detail view and CSV export. Members lists join requests first, with land columns and export; lots show the chosen lot beside the list; the calendar lists unscheduled parcels; farm zones add a parcel table and GeoJSON export; the inbox separates today; the dashboard adds notices, the coming days' weather and approval of chosen journals. Where there is no data yet (weekly yield, partners, apps, notices, parcel positions) the design's example is shown with a "Mẫu" tag.
 - **Officer web design (`apps/web`)**: the officer pages take the new look (path line, underlined page headers, striped tables, grouped menu), with new Products, Orders, Revenue, Tours and Tour bookings screens. These five show fixed sample content and cannot be edited; they do not read from the shop or tour mini-apps. The headline figures on each officer page can be pressed to filter or order the list below, and the dashboard figures open the list behind them.
 - **Weather in the farmer's greeting banner (`apps/web`)**: the dashboard banner shows the live temperature, humidity and rainfall over the parcels, rain falls across it when it is raining there, and it replaces the separate weather panel.
@@ -20,6 +24,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Officer summaries and cards (`apps/web`)**: shared icon summary strips derived from loaded data, hill-decorated headers and reference-style household/lot/disease cards; preserve existing actions and tables, scope journal/document counts to visible results, and leave manager/farmer styling unchanged.
 - Farmer web screens follow the new design, with the handbook showing fixed placeholder content until the feature exists. Farmers' Q&A uses the same full-window chat as staff; the AI is not open to farmers yet and says so.
 - **New web interface (`apps/web`)**: new colour tokens, a grouped sidebar, a breadcrumb top bar and a bottom bar for farmers on phones; new dashboards for the three roles; page headers, filters, tables and cards restyled across the role pages; a rebuilt login page and cooperative profile page. The profile page now shows the cooperative's own parcel and household figures instead of fixed sample numbers.
+
+## [1.17.0] - 2026-11-27
+
+The agentic layer is complete. Agents now hand work to staff, plan the season, and can run approved kinds of work on their own inside hard limits, with a stop button and a full audit trail. A manager can ask for a new mini-app in chat and an AI builds it behind seven gates. Everything a role can do on the web can now be done through the Telegram bot: in chat, by voice, or in the Mini App.
+
+### Added
+
+- **Agentic layer milestone M10: staff tasks (`platform/agent`, `apps/web`, `apps/staff-desktop`):**
+  - **05:50 tasks.** Agent A8 proposes up to 10 staff tasks from the work approved in the last 24 hours: picking after an approved harvest, a disease inspection, watering when the soil is dry. It suggests the person with the fewest open tasks and uses no model.
+  - **Hand-over.** An approved task waits as "Đã gửi app nhân sự". The staff app pulls it every minute, creates the task and reports its id back.
+  - **Head count.** The staff app reports who is present today, and the daily campaign uses that number for its people limit.
+  - **One client per cooperative.** `./dxos staff enable <HTX>` creates the client and prints what to enter in the staff app. Staff desktop 1.4.0.
+- **Agentic layer milestone M6: Telegram Mini App (`apps/web`, `platform/telegram`):**
+  - **`Mở ứng dụng`.** The bot's menu button opens the web inside Telegram when the web has an HTTPS address (`DXOS_WEB_PUBLIC_URL`). Without HTTPS the button is not set and chat works as before.
+  - **Sign-in.** A person signs in with Keycloak inside Telegram once. The web then ties the Telegram account to the session only when `initData` has a valid signature, is under 24 hours old and names the linked account.
+  - **Buttons in chat.** `Sửa` on a farmer's journal card opens the form already filled in, and `Mở chi tiết` opens a high-risk proposal.
+- **Agentic layer milestone M12: autonomous mode (`apps/web`, `platform/agent`, `platform/telegram`):**
+  - **Off by default.** A manager turns it on in the AI settings after signing in again within 5 minutes and accepting responsibility. The screen shown at that moment is stored in the audit log.
+  - **Veto window.** An eligible proposal is scheduled, then runs after a wait by risk: the next cycle for low, 15 minutes for medium, 2 hours for high. Anyone who could decide it can press `Chặn` meanwhile.
+  - **Same checks.** The web runs the proposal through the same use case as a human approval, under the name of the person who turned the mode on, with the channel `autopilot`.
+  - **Stops.** `/dung` on Telegram or `Dừng ngay` on the web stops it. It also stops by itself when the enabler loses the manager role, when no manager has interacted for 7 days, or when a brake trips (3 failed runs in an hour, the daily cap, more than 30% blocked, or 3 times the usual number of proposals).
+  - **Shadow runs.** In normal mode every proposal records whether it would have run, and the enable screen shows the 30-day match rate of each kind.
+  - **Farmers.** A message sent by an automatic run says "(Tin do AI của HTX gửi)", and a household gets at most 2 automatic messages a day.
+- **Agentic layer milestone M9: mini-app actions (`platform/cli`, `platform/agent`, `apps/web`, `miniapps/tea-shop`):**
+  - **`agent` block in `app.yaml`.** A mini-app declares a suggestions path and up to 10 actions. `dxos validate` checks the block.
+  - **Suggestions become proposals.** The agent asks each enabled app every 30 minutes and files its suggestions as `app.<app>.<action>` proposals, decided like every other kind.
+  - **Execution.** The web calls the app through the internal gateway with the client `dxos-apps-actor` and three headers naming the approver. The gateway strips those headers on every other route.
+  - **`tea-shop` promotions.** The shop suggests a promotion for stock of 20 packs or more unsold for 21 days. `promotion.create` involves money, so it runs on its own only when unlocked, after a 2-hour window.
+- **Agentic layer milestone M11: season plan (`platform/agent`, `apps/web`):**
+  - **Quarterly draft.** Agent A11 drafts the quarter's plan on its first day at 06:15. Targets follow fixed rules against the same quarter last year; the model only writes priorities.
+  - **Adoption.** A manager adopts it with `strategy.adopt`. The daily campaign then puts work that serves a target first, and the Monday report compares real figures with last year.
+  - **Low targets.** A plan with a target below last year carries a warning and never runs on its own.
+- **Agentic layer milestone M13: mini-app factory (`platform/builder`, `platform/agent`, `apps/web`, `platform/cli`):**
+  - **Request.** A manager asks in chat ("cần app …") or at `/manager/ai/apps`. Agent A12 picks the cheapest answer: enable an existing app, draft a book in Sổ tự tạo, or ask up to 5 questions and write a spec for the manager to approve.
+  - **Build.** `./dxos builder` builds from the approved spec in single-use containers. The build container sees only its workspace, reaches the network through an allowlist proxy and holds no core secret. The gate container has no network.
+  - **Seven gates.** Manifest, markup (no script, no inline style), kit, tests, dependencies, files, and a trial run with screenshots. An app gets at most 3 repair rounds.
+  - **Install.** A passing app is tagged in its own git repository, listed in the store as "App do AI xây" for the requesting cooperative only, and installed after the manager approves `miniapp.install`. It runs on a private network that reaches only the gateway and the database.
+- **Agentic layer milestone M15: voice messages (`platform/telegram`, `apps/web`, new service `dxos-stt`):**
+  - **On the cooperative's server.** A voice message of up to 60 seconds is turned into text by whisper.cpp (`make up-voice`). The audio stays in memory and is dropped once the text exists.
+  - **Confirm first.** The bot answers "Em nghe được: “…”" with `Đúng`, `Sửa` and `Huỷ`. Only `Đúng` sends the sentence on, as if typed, so a write still needs its confirmation card.
+  - **Model choice.** `make stt-measure` measures the word error rate of each model on the cooperative's own recordings.
+- **The rest of the Telegram chat operations (`apps/web`, `platform/telegram`, Keycloak, gateway, #80):**
+  - **Every in-chat row is served.** Ten more read tools (search, certificate, soil, photo, households, members, disease reports, profile, documents, partners) and sixteen more actions with a confirmation card. Deletes, announcements, member approval and QR export take two cards. Inviting a member stays in the app, because it makes an account with a password.
+  - **Disease photo in chat.** A farmer picks a parcel and sends a photo. The web calls the disease API with the token of its own client `dxos-web-service`, on a route that exists only on the internal gateway port. An officer still confirms the result.
+  - **`Nghe`.** The bulletin has a `Nghe` button: the web reads it with Piper and the relay sends the audio file `ban-tin.wav`.
+  - **Captions and photos.** A photo's caption is read as text. The photos of cancelled, replaced or expired cards are deleted.
+
+### Changed
+
+- **`./dxos telegram enable`** now also creates the client `dxos-web-service` and writes its secret, next to the Mini App key, into the web's `roles.env`. `./dxos telegram disable` removes them.
+
+### Fixed
+
+- **A farmer with no household (`apps/web`).** `GET /api/journal` answers an empty list for a farmer whose account has no household, instead of every entry the role can read.
+- **Tests on the real clock (`apps/web`).** Proposal fixtures no longer expire on a fixed date, which made the unit tests fail from 2026-11-27.
+- **Throwaway test databases (`platform/cli`).** The CLI tests remove their Postgres container with its volume, so a test run no longer leaves a volume behind.
 
 ---
 

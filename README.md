@@ -160,7 +160,7 @@ make stop-extras   # dừng (không xoá) mọi nhóm tuỳ chọn; dữ liệu 
 | `make up-docs` | seaweedfs, clamav, dxos-scanner, dxos-lifecycle | Kho tài liệu P.A.R.A mở được nhưng tải lên báo "Không thể tạo URL tải lên" (có nút Thử lại); ảnh nhật ký và chứng nhận không tải được | 1,2–1,4 GiB (ClamAV chiếm phần lớn) |
 | `make up-sensors` | mosquitto, dxos-ingest | Dữ liệu cảm biến không được nhận; các trang vẫn mở, không có số đo mới | khoảng 40 MiB |
 | `make up-ai` | disease-api, ollama | Chẩn đoán bệnh báo "Internal server error" khi gửi ảnh; Chatbot trả lời "Dịch vụ AI hiện không khả dụng" | 0,4–1,0 GiB (ollama thêm khoảng 0,6 GiB khi đã nạp mô hình) |
-| `make up-voice` | piper | Không có giọng đọc cho bản tin | khoảng 40 MiB |
+| `make up-voice` | piper, dxos-stt | Không có giọng đọc cho bản tin; tin thoại Telegram trả lời "Chưa nghe được tin thoại lúc này" (lần đầu tải mô hình khoảng 0,5 GB, kiểm SHA-256) | piper khoảng 40 MiB, dxos-stt tới 2 GiB khi đang nghe |
 | `make up-workflow` | n8n | Các workflow (báo cáo thị trường, đẩy sự kiện) không chạy; các trang vẫn mở | khoảng 0,4 GiB |
 | `make up-chat` | mattermost | Không nhận được thông báo đẩy sang Mattermost (không có build arm64, chỉ chạy trên máy x86) | chưa đo |
 | `make up-agent` | dxos-agent, dxos-telegram | Lớp AI vận hành: agent đề xuất việc, dxos-telegram chỉ chạy khi có `TELEGRAM_BOT_TOKEN` và `./dxos telegram enable`; tắt không ảnh hưởng chức năng nào | khoảng 35 MiB |
@@ -339,6 +339,7 @@ Repo có bảy app:
 - `miniapps/custom-books` ("Sổ tự tạo", 0.1.0): trưởng HTX tự tạo sổ ghi chép (chấm công, phun thuốc, thu chi...) từ mẫu có sẵn, không cần lập trình; mỗi sổ hiện trong menu của đúng những vai được dùng. Xem mục **Tự tạo sổ ghi chép** bên dưới.
 - `miniapps/htx-dashboard` ("Bảng điều hành HTX", 0.2.0): app chỉ đọc cho trưởng HTX, không có database; số liệu hiện bằng biểu đồ do máy chủ vẽ. **Tổng quan** nêu việc cần chú ý (nhật ký chờ duyệt quá 3 ngày, báo cáo bệnh chờ xử lý, cảm biến im lặng quá 6 giờ, vụ sắp hoặc đã quá ngày thu hoạch, lần chuyển dữ liệu sang kho lạnh bị lỗi), dải chỉ số, lưới các thửa, nhật ký theo tuần, lô chè và giá chè mới nhất; các tab **Sản xuất**, **Vùng trồng**, **Sức khoẻ cây**, **Lô chè** và **Dữ liệu** có tệp CSV và bản in; mỗi thửa có trang bản sao số (số đo mới nhất và biểu đồ theo ngày của từng cảm biến, vụ, thời tiết, nhật ký, báo cáo bệnh, lô). Mọi số được đọc từ lõi qua Hasura bằng token của người xem. Giới hạn: mỗi danh sách lấy tối đa 5.000 dòng mới nhất (trang nói rõ khi bị cắt), biểu đồ cảm biến tối đa 30 ngày (kho nóng không giữ lâu hơn), trang không tự cập nhật, giá thị trường chỉ có chè, chưa có số liệu kinh doanh của các app khác (hướng ở đặc tả §10). Cần lõi `>=1.13.0` (view `telemetry_sensor_daily`). Xem [README của app](./miniapps/htx-dashboard/README.md).
 - `miniapps/hello`: app mẫu tối giản để bắt đầu.
+- **Xưởng mini-app (M13)**: trưởng HTX gõ "cần app theo dõi kho phân bón" trên Telegram hoặc web. Trợ lý A12 chọn cách rẻ nhất (bật app có sẵn, Sổ tự tạo, hoặc viết app mới), hỏi tối đa 5 câu, viết đặc tả để trưởng HTX duyệt, rồi `./dxos builder` (cần `make builder-image` và khoá Claude hoặc Codex) xây app trong buồng cách ly, qua bảy cổng kiểm tra và tối đa 3 vòng sửa. Trưởng HTX nhận bốn ảnh chụp qua Telegram và duyệt `miniapp.install`; app chỉ bật cho HTX đó và chạy trên mạng riêng chỉ thấy `apisix` và `postgres`. Chi tiết: `docs/miniapps.md` §7 và `docs/rules-and-limits.md` §3.14. Kiểm thử: `bash platform/tests/smoke-builder.sh`.
 
 ### Tự tạo sổ ghi chép
 
@@ -408,16 +409,17 @@ make apps-smoke                         # kiểm thử tích hợp (sau npm run 
 Telegram là tuỳ chọn. Đặt `TELEGRAM_BOT_TOKEN` (token BotFather tạo) và `TELEGRAM_BOT_USERNAME` trong `docker/.env.local`, rồi chạy:
 
 ```bash
-./dxos telegram enable                  # tạo client dxos-telegram (vai telegram) và dxos-web-roles (đọc vai trò người dùng), ghi secret vào volume
-./dxos telegram disable                 # xoá hai client và hai tệp secret; dxos-telegram trở về trạng thái chờ
+./dxos telegram enable                  # tạo client dxos-telegram (vai telegram), dxos-web-roles (đọc vai trò người dùng) và dxos-web-service (chẩn đoán ảnh bệnh gửi qua chat), ghi secret vào volume
+./dxos telegram disable                 # xoá ba client và các secret; dxos-telegram trở về trạng thái chờ
 ```
 
-- `dxos-telegram` chỉ là rơle: nhận tin nhắn của bot qua long polling, chuyển sang web và gửi lại phản hồi. Mọi quyết định (liên kết, kiểm tra vai trò, chữ ký nút bấm, nội dung tin) nằm ở web. Tin nhắn đi qua máy chủ của Telegram, nên không gửi dữ liệu cá nhân (tên hộ, số điện thoại, địa chỉ) vào đó.
+- `dxos-telegram` chỉ là rơle: nhận tin nhắn của bot qua long polling, chuyển sang web và gửi lại phản hồi. Mọi quyết định (liên kết, kiểm tra vai trò, chữ ký nút bấm, nội dung tin) nằm ở web. Tin nhắn đi qua máy chủ của Telegram: báo cáo tự động không chứa dữ liệu cá nhân (tên hộ, số điện thoại, địa chỉ); câu trả lời tra cứu trong chat riêng thì có thể chứa tên và số điện thoại nông hộ, đúng với những gì vai trò của người hỏi đọc được trên web (docs/rules-and-limits.md, mục 3.18b).
 - Khi chưa có token hoặc chưa chạy `enable`, dxos-telegram chỉ ghi nhịp tim và chờ; web vẫn hoạt động như trước.
 - Bản phát hành bắt buộc `DXOS_TELEGRAM_CALLBACK_KEY` (khoá ký nút bấm) khác giá trị mặc định công khai.
 - Trợ lý trong chat riêng (không hoạt động trong nhóm): gửi `/menu` để mở menu theo vai trò (Hôm nay, Việc cần duyệt, Ghi nhật ký, Báo bệnh, Hỏi), hoặc nhắn câu hỏi bằng tiếng Việt. Lệnh: `/menu`, `/huy` (huỷ việc đang làm dở), `/tomtat`, `/cho`, `/nhatky`, `/benh`, `/hoi`.
 - Ghi nhật ký bằng ảnh: bấm Ghi nhật ký (hoặc `/nhatky`), chọn thửa, hoạt động, nhập thuốc, liều và số ngày cách ly, gửi một ảnh rồi bấm Xác nhận. Nhật ký vào trạng thái chờ duyệt. Không bấm Xác nhận thì không có gì được ghi.
 - Mini App (M6): nút menu của bot mở web ngay trong Telegram (vẽ thửa, tải tài liệu, App Store, hộp thư duyệt đầy đủ, cài đặt AI). Telegram chỉ cho mở Mini App qua HTTPS, nên cần một tên miền HTTPS trỏ tới web (D17). Đặt `DXOS_WEB_PUBLIC_URL=https://<tên miền>` trong `docker/.env.local` rồi chạy lại `./dxos telegram enable` và `docker compose up -d dxos-telegram`; rơle đặt nút menu `Mở ứng dụng` lúc khởi động. `enable` ghi khoá dẫn xuất `DXOS_TELEGRAM_WEBAPP_KEY` (HMAC của token, không phải token) cho web để kiểm chữ ký `initData`; web không bao giờ giữ token bot. Chưa có HTTPS thì rơle bỏ qua nút menu và ghi một dòng nhật ký; chat, nút duyệt và mọi tính năng web vẫn chạy bình thường. Quy tắc: [docs/rules-and-limits.md](./docs/rules-and-limits.md), mục 3.15.
+- Tin thoại (M15): gửi một tin thoại tối đa 60 giây, ví dụ "ghi nhật ký bón phân thửa A3". Bot trả lời `Em nghe được: “…”` kèm `Đúng`, `Sửa`, `Huỷ`; chỉ `Đúng` đưa câu đi tiếp như bạn tự gõ, và việc ghi dữ liệu vẫn chờ thẻ Xác nhận. Nghe chữ chạy ngay trên máy chủ của HTX bằng whisper.cpp (không gửi âm thanh ra ngoài). Bật bằng `make up-voice` (tải mô hình `small` một lần; đổi bằng `DXOS_STT_MODEL`), đo mô hình hợp giọng HTX bằng `make stt-measure DIR=<thư mục .ogg kèm .txt>`. Giới hạn: mục 3.16 trong [docs/rules-and-limits.md](./docs/rules-and-limits.md).
 - Gửi vị trí trong chat riêng để xem thửa gần nhất và thời tiết tại đó. Giới hạn và hạn hiệu lực xem [docs/rules-and-limits.md](./docs/rules-and-limits.md), mục 3.11.
 
 ### Các agent của lớp AI
@@ -431,6 +433,8 @@ Telegram là tuỳ chọn. Đặt `TELEGRAM_BOT_TOKEN` (token BotFather tạo) v
 
 **Cải tiến hằng tuần (A10).** Mỗi thứ Hai lúc 06:30 A10 xem số liệu agent và chiến dịch trong vài tuần qua, rồi đề xuất tối đa 5 cải tiến, mỗi cải tiến kèm bằng chứng. Ví dụ: nếu quản lý thường từ chối cảnh báo cảm biến im lặng, A10 đề xuất nới ngưỡng im lặng và quản lý duyệt như mọi đề nghị khác trên Telegram hoặc trang AI. Sau 2 và 4 tuần, báo cáo 07:00 cho biết cải tiến đã giúp hay chưa. Quy tắc và giới hạn: mục 3.13 trong [docs/rules-and-limits.md](./docs/rules-and-limits.md).
 
+**Kế hoạch mùa vụ (A11).** Đầu mỗi quý lúc 06:15 A11 soạn kế hoạch quý: mục tiêu đo được lấy từ cùng kỳ năm trước (tăng 5% hoặc giảm 10%, mục nào thiếu số liệu thì bỏ), cùng tối đa 5 ưu tiên và 5 sáng kiến phát triển bằng tiếng Việt. Quản lý duyệt bằng đề xuất `strategy.adopt` trên Telegram hoặc trang AI; kế hoạch có mục tiêu thấp hơn cùng kỳ năm trước mang cảnh báo và không bao giờ tự chạy. Khi đã duyệt, chiến dịch ngày xếp việc phục vụ mục tiêu lên trước, cải tiến hằng tuần báo mục tiêu đang chậm, và báo cáo thứ Hai so với cùng kỳ năm trước. Quy tắc và giới hạn: mục 3.16 trong [docs/rules-and-limits.md](./docs/rules-and-limits.md)
+
 Ngưỡng và quy tắc mẫu tin: mục 3.10 trong [docs/rules-and-limits.md](./docs/rules-and-limits.md).
 
 **Giao việc nhân sự (A8).** Mỗi sáng lúc 05:50 A8 đề xuất việc cho nhân sự từ các đề xuất đã duyệt trong 24 giờ qua (hái chè, kiểm tra bệnh, tưới), kèm người nhận gợi ý. Quản lý duyệt trên Telegram hoặc trang AI; app nhân sự kéo việc về mỗi phút và báo lại mã việc. Kết nối app: `./dxos staff enable <HTX>` (bên dưới). Quy tắc và giới hạn: mục 3.15 trong [docs/rules-and-limits.md](./docs/rules-and-limits.md).
@@ -438,6 +442,8 @@ Ngưỡng và quy tắc mẫu tin: mục 3.10 trong [docs/rules-and-limits.md](.
 **Client MCP (M14).** Claude Desktop, Claude Code hoặc Codex có thể nối vào trợ lý qua MCP, bằng tài khoản Keycloak của chính người dùng. Client chỉ đọc được những gì người dùng đọc được và chỉ tạo được đề xuất; mọi đề xuất vẫn chờ người có quyền xác nhận trên web hoặc Telegram. Hướng dẫn đăng nhập và cấu hình: [platform/mcp/README.md](./platform/mcp/README.md). Giới hạn và quy tắc dòng kiểm chứng lô: mục 3.14 trong [docs/rules-and-limits.md](./docs/rules-and-limits.md).
 
 **Tự vận hành (M12).** Trưởng HTX có thể bật chế độ tự vận hành trên trang cài đặt AI (cần đăng nhập lại): các đề xuất đủ điều kiện tự chạy sau một cửa sổ chặn theo rủi ro, mọi người duyệt đều chặn được bằng nút `Chặn` trên Telegram, và `/dung` hoặc nút `Dừng ngay` dừng chế độ tức thì. Chế độ tắt mặc định, có năm giới hạn cứng, giới hạn ngày và bốn phanh tự động. Quy tắc và giới hạn: mục 3.15 trong [docs/rules-and-limits.md](./docs/rules-and-limits.md).
+
+**Hành động của mini-app (M9).** Mini-app khai trong `app.yaml` điều agent được gợi ý và hành động nào có thể chạy (ví dụ `tea-shop` tạo khuyến mãi cho sản phẩm tồn kho lâu). Gợi ý của app thành đề xuất như mọi đề xuất khác và chỉ chạy sau khi người có quyền duyệt; hành động động tới tiền chỉ tự chạy khi chế độ tự vận hành mở khoá riêng. Chạy `./dxos apps actor enable` một lần để web có quyền gọi app thay người duyệt. Cách khai: [docs/miniapps.md](./docs/miniapps.md); quy tắc và giới hạn: mục 3.16 trong [docs/rules-and-limits.md](./docs/rules-and-limits.md).
 
 **Đo lường agent (M14).** `make benchmark PROVIDER=<replay|ollama|anthropic|openai> MODEL=<id>` chạy các bộ kịch bản của agent với một nhà cung cấp và ghi bảng kết quả vào [docs/benchmark.md](./docs/benchmark.md).
 

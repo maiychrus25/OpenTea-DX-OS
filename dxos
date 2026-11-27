@@ -17,7 +17,7 @@ ID_RE='^[a-z][a-z0-9-]{1,30}$'  # same as "id" in platform/apps/manifest.schema.
 HTX_RE='^[A-Z0-9_-]{1,20}$'
 
 usage() {
-  echo "Dùng: ./dxos install <dir> | upgrade <dir> | remove <id> [--purge] | list | validate <dir>... | worker | agent <enable|disable> <HTX> | staff <enable|disable> <HTX> | telegram <enable|disable>" >&2
+  echo "Dùng: ./dxos install <dir> | upgrade <dir> | remove <id> [--purge] | list | validate <dir>... | worker | builder [--once] | agent <enable|disable> <HTX> | staff <enable|disable> <HTX> | telegram <enable|disable> | apps actor enable" >&2
   exit 2
 }
 
@@ -59,6 +59,28 @@ gateway_guard() {
   exit 1
 }
 
+# A generated app's private network (spec 12.7) holds the app, apisix and postgres. The compose file creates it with the
+# app and names apisix and postgres, but only a recreate would apply that, so the running containers are joined here.
+# The alias is the service name: a plain connect gives only the container name, and the app's database URL says postgres.
+# shortcut: recreating apisix or postgres drops the join; ./dxos worker, install and upgrade put it back.
+gen_network_connect() {  # <id>
+  case "$1" in gen-*) ;; *) return 0 ;; esac
+  local svc cid
+  for svc in apisix postgres; do
+    cid="$(compose ps -q "$svc" 2>/dev/null)" || continue
+    [ -z "$cid" ] || docker network connect --alias "$svc" "${PROJECT}_dxos-gen-$1" "$cid" 2>/dev/null || true  # "already exists" is fine
+  done
+}
+gen_network_drop() {  # <id>
+  case "$1" in gen-*) ;; *) return 0 ;; esac
+  local svc cid
+  for svc in apisix postgres; do
+    cid="$(compose ps -q "$svc" 2>/dev/null)" || continue
+    [ -z "$cid" ] || docker network disconnect "${PROJECT}_dxos-gen-$1" "$cid" 2>/dev/null || true
+  done
+  docker network rm "${PROJECT}_dxos-gen-$1" >/dev/null 2>&1 || true
+}
+
 # Host directory (relative to the caller's cwd) -> the same directory inside dxos-cli, where the repo is /repo.
 to_container() {
   local abs
@@ -87,6 +109,7 @@ install() {  # <dir> [all|htx]: "htx" leaves enabling to the store worker, "all"
   if grep -qxF "$id" <<<"$(cut -f1 <<<"$listing")"; then
     echo "$id đã được cài; chỉ bảo đảm container đang chạy"
     app "$id" up -d --wait "app-$id"
+    gen_network_connect "$id"
     return
   fi
   # Ctrl-C (or TERM) from here to commit must not leave a journal, route, schema or container behind. Set before
@@ -100,7 +123,7 @@ install() {  # <dir> [all|htx]: "htx" leaves enabling to the store worker, "all"
   cli prepare "$dir" || { cli abort "$id" || true; exit 1; }
   progress build
   # shellcheck disable=SC2086  # flag is empty or one option
-  if app "$id" up -d --build --wait "app-$id" && { progress register; cli commit "$id" $flag; }; then
+  if app "$id" up -d --build --wait "app-$id" && { gen_network_connect "$id"; progress register; cli commit "$id" $flag; }; then
     trap - INT TERM
     echo "Đã cài $id"
     return
@@ -115,7 +138,7 @@ upgrade() {  # <dir>
   local dir="$1" id old new
   id="$(cli manifest-id "$dir")" || exit 1
   old="$(cli list | awk -F'\t' -v id="$id" '$1 == id { print $2 }')"
-  if cli upgrade-prepare "$dir" && app "$id" up -d --build --wait "app-$id" && cli upgrade-commit "$id"; then
+  if cli upgrade-prepare "$dir" && app "$id" up -d --build --wait "app-$id" && { gen_network_connect "$id"; cli upgrade-commit "$id"; }; then
     new="$(cli list | awk -F'\t' -v id="$id" '$1 == id { print $2 }')"
     echo "Đã nâng cấp $id lên $new"
     return
@@ -128,6 +151,7 @@ remove() {
   local id="$1"; shift
   [[ "$id" =~ $ID_RE ]] || { echo "id '$id' không hợp lệ" >&2; exit 1; }
   remove_container "$id"
+  gen_network_drop "$id"
   cli remove "$id" "$@"
 }
 
@@ -166,7 +190,7 @@ worker() {
   fi
   echo $$ >"$WORKER_LOCK/pid"
   trap worker_release EXIT
-  local stop=0 claim_pid="" claim_out id job action app htx installed rc dir remaining
+  local stop=0 claim_pid="" claim_out id job action app htx installed version rc dir remaining
   claim_out="$(mktemp)"
   # A signal between jobs ends the loop at once (the claim is killed); during a job it ends the loop afterwards.
   on_signal() { stop=1; [ -z "$claim_pid" ] || kill "$claim_pid" 2>/dev/null || true; }
@@ -179,6 +203,7 @@ worker() {
     cli abort "$id" >/dev/null 2>&1 || true
     worker_log "recovered half install of $id"
   done <<<"$(cli worker-start)"
+  for id in $(cli list | awk -F'\t' '$1 ~ /^gen-/ { print $1 }'); do gen_network_connect "$id"; done
   worker_log "worker started (pid $$, project $PROJECT)"
 
   while [ "$stop" = 0 ]; do
@@ -189,11 +214,12 @@ worker() {
     claim_pid=""
     [ "$stop" = 0 ] || break
     if [ "$rc" != 0 ]; then worker_log "worker-claim failed (code $rc); retrying in 5 s"; sleep 5; continue; fi
-    IFS=$'\t' read -r job action app htx installed <"$claim_out" || continue
+    version=""
+    IFS=$'\t' read -r job action app htx installed version <"$claim_out" || continue
     if [ "$action" = ENABLE ] && [ "$installed" = 0 ]; then
       # set -e is off inside a condition, so run the install in its own subshell with it switched on again.
       set +e
-      ( set -e; DXOS_JOB="$job"; dir="$(to_container "miniapps/$app")" || exit 1; install "$dir" htx )
+      ( set -e; DXOS_JOB="$job"; if [ -n "$version" ]; then dir="/repo/docker/runtime/generated/$app/$version"; else dir="$(to_container "miniapps/$app")" || exit 1; fi; install "$dir" htx )
       rc=$?
       set -e
       if [ "$rc" = 130 ] || [ "$rc" = 143 ]; then  # interrupted: install undid itself; worker-start fails the request
@@ -223,6 +249,30 @@ worker() {
   done
   rm -f "$claim_out"
   worker_log "worker stopped"
+}
+
+# Mini-app factory loop (plan M13): runs approved build requests, one at a time, in throwaway containers (platform/builder/loop.py).
+# One per compose project, held by the directory $BUILDER_LOCK, like the store worker.
+BUILDER_LOCK="$RUNTIME/builder.lock"
+builder_release() { rm -rf "$BUILDER_LOCK"; }
+
+builder() {
+  gateway_guard
+  command -v python3 >/dev/null || { echo "./dxos builder cần python3 trên máy chủ" >&2; exit 1; }
+  mkdir -p "$RUNTIME"
+  if ! mkdir "$BUILDER_LOCK" 2>/dev/null; then
+    local old
+    old="$(cat "$BUILDER_LOCK/pid" 2>/dev/null || true)"
+    if [[ "$old" =~ ^[0-9]+$ ]] && kill -0 "$old" 2>/dev/null; then
+      echo "Một vòng xây khác đang chạy (pid $old)." >&2
+      exit 1
+    fi
+    rm -rf "$BUILDER_LOCK"
+    mkdir "$BUILDER_LOCK" || { echo "Không tạo được $BUILDER_LOCK" >&2; exit 1; }
+  fi
+  echo $$ >"$BUILDER_LOCK/pid"
+  trap builder_release EXIT
+  COMPOSE_PROJECT_NAME="$PROJECT" python3 platform/builder/loop.py "$@"
 }
 
 kc_exec() {
@@ -391,6 +441,15 @@ telegram_restart() {
   if [ -n "$(compose ps -q dxos-telegram 2>/dev/null)" ]; then compose restart dxos-telegram >/dev/null; fi
 }
 
+# roles.env holds one web credential per feature (the roles client, the apps actor), so a feature changes only its own keys.
+roles_env_read() { compose --profile tools run --rm -T --no-deps dxos-telegram-env sh -c 'cat /run/dxos-web/roles.env 2>/dev/null || true' </dev/null; }
+roles_env_update() {  # <KEY>...: drops these keys from roles.env, then adds the lines on stdin; an empty result removes the file
+  local added rest
+  added="$(cat)"
+  rest="$({ roles_env_read | grep -Ev "^($(IFS='|'; echo "$*"))=|^$" || true; printf '%s\n' "$added"; } | grep -v '^$' || true)"
+  if [ -n "$rest" ]; then printf '%s\n' "$rest" | telegram_env_write /run/dxos-web roles.env; else telegram_env_remove /run/dxos-web roles.env; fi
+}
+
 # C1: the web validates Mini App initData with HMAC_SHA256(key="WebAppData", msg=<bot token>), never with the token itself.
 # The token comes from the environment or docker/.env.local; prints nothing when there is none (Telegram stays chat-only).
 telegram_webapp_key() {
@@ -401,13 +460,14 @@ telegram_webapp_key() {
 }
 
 telegram_enable() {
-  local secrets telegram_secret roles_secret webapp_key
-  # One Keycloak script makes both clients; it prints the telegram client secret, then the roles client secret.
+  local secrets telegram_secret roles_secret web_service_secret webapp_key
+  # One Keycloak script makes the three clients; it prints the telegram, roles and web-service client secrets, in that order.
   secrets="$(kc_exec '
     set -eu
     K=/opt/keycloak/bin/kcadm.sh
     TG_SCOPES="$1"
     RL_SCOPES="$2"
+    WS_SCOPES="$3"
     "$K" config credentials --server http://localhost:8080 --realm master --user "$KEYCLOAK_ADMIN" --password "$KEYCLOAK_ADMIN_PASSWORD" >/dev/null
     if ! "$K" get roles/telegram -r agrimarket >/dev/null 2>&1; then
       "$K" create roles -r agrimarket -s name=telegram -s "description=Rơle Telegram (client credentials, chỉ gọi /api/internal/telegram/*)" >/dev/null
@@ -433,16 +493,48 @@ telegram_enable() {
     RL_CID="$(ensure_client dxos-web-roles "$RL_SCOPES")"
     "$K" add-roles -r agrimarket --uusername service-account-dxos-web-roles --cclientid realm-management --rolename view-users >/dev/null
     client_secret dxos-web-roles "$RL_CID"
-  ' '["roles","dx-os-core"]' '["roles"]')"
+    # The web calls the disease API with this client when a farmer sends a photo in chat (issue #80).
+    if ! "$K" get roles/web-service -r agrimarket >/dev/null 2>&1; then
+      "$K" create roles -r agrimarket -s name=web-service -s "description=Web của lõi (client credentials, chỉ gọi /api/internal/web/disease/*)" >/dev/null
+    fi
+    WS_CID="$(ensure_client dxos-web-service "$WS_SCOPES")"
+    "$K" add-roles -r agrimarket --uusername service-account-dxos-web-service --rolename web-service >/dev/null
+    client_secret dxos-web-service "$WS_CID"
+  ' '["roles","dx-os-core"]' '["roles"]' '["roles","dx-os-core"]')"
   telegram_secret="$(sed -n 1p <<<"$secrets")"
   roles_secret="$(sed -n 2p <<<"$secrets")"
-  [ -n "$telegram_secret" ] && [ -n "$roles_secret" ] || { echo "Không lấy được client secret của Telegram" >&2; exit 1; }
+  web_service_secret="$(sed -n 3p <<<"$secrets")"
+  [ -n "$telegram_secret" ] && [ -n "$roles_secret" ] && [ -n "$web_service_secret" ] || { echo "Không lấy được client secret của Telegram" >&2; exit 1; }
   printf 'DXOS_TELEGRAM_CLIENT_ID=dxos-telegram\nDXOS_TELEGRAM_CLIENT_SECRET=%s\n' "$telegram_secret" | telegram_env_write /run/dxos-telegram telegram.env
   webapp_key="$(telegram_webapp_key)"
   { printf 'DXOS_ROLES_CLIENT_ID=dxos-web-roles\nDXOS_ROLES_CLIENT_SECRET=%s\n' "$roles_secret"
-    [ -z "$webapp_key" ] || printf 'DXOS_TELEGRAM_WEBAPP_KEY=%s\n' "$webapp_key"; } | telegram_env_write /run/dxos-web roles.env
+    printf 'DXOS_WEB_SERVICE_SECRET=%s\n' "$web_service_secret"
+    [ -z "$webapp_key" ] || printf 'DXOS_TELEGRAM_WEBAPP_KEY=%s\n' "$webapp_key"; } \
+    | roles_env_update DXOS_ROLES_CLIENT_ID DXOS_ROLES_CLIENT_SECRET DXOS_TELEGRAM_WEBAPP_KEY DXOS_WEB_SERVICE_SECRET
   telegram_restart
-  echo "Đã bật Telegram: client dxos-telegram và dxos-web-roles (cần TELEGRAM_BOT_TOKEN trong docker/.env.local để rơle nhận tin)"
+  echo "Đã bật Telegram: client dxos-telegram, dxos-web-roles và dxos-web-service (cần TELEGRAM_BOT_TOKEN trong docker/.env.local để rơle nhận tin)"
+}
+
+# The web runs an approved mini-app action as the approver with this client's token (M9). Safe to repeat: the client is kept.
+apps_actor_enable() {
+  local secret
+  secret="$(kc_exec '
+    set -eu
+    K=/opt/keycloak/bin/kcadm.sh
+    "$K" config credentials --server http://localhost:8080 --realm master --user "$KEYCLOAK_ADMIN" --password "$KEYCLOAK_ADMIN_PASSWORD" >/dev/null
+    CID="$("$K" get clients -r agrimarket -q "clientId=dxos-apps-actor" --fields id --format csv --noquotes | head -n 1)"
+    if [ -z "$CID" ]; then
+      "$K" create clients -r agrimarket \
+        -s clientId=dxos-apps-actor -s enabled=true -s publicClient=false -s serviceAccountsEnabled=true \
+        -s standardFlowEnabled=false -s implicitFlowEnabled=false -s directAccessGrantsEnabled=false \
+        -s "defaultClientScopes=[\"dx-os-core\"]" -s "optionalClientScopes=[]" >/dev/null
+      CID="$("$K" get clients -r agrimarket -q "clientId=dxos-apps-actor" --fields id --format csv --noquotes | head -n 1)"
+    fi
+    "$K" get "clients/$CID/client-secret" -r agrimarket --fields value --format csv --noquotes | head -n 1
+  ')"
+  [ -n "$secret" ] || { echo "Không lấy được client secret của dxos-apps-actor" >&2; exit 1; }
+  printf 'DXOS_APPS_ACTOR_SECRET=%s\n' "$secret" | roles_env_update DXOS_APPS_ACTOR_SECRET
+  echo "Đã bật hành động của mini-app: client dxos-apps-actor (web đọc secret từ roles.env, không cần khởi động lại)"
 }
 
 telegram_disable() {
@@ -450,7 +542,7 @@ telegram_disable() {
     set -eu
     K=/opt/keycloak/bin/kcadm.sh
     "$K" config credentials --server http://localhost:8080 --realm master --user "$KEYCLOAK_ADMIN" --password "$KEYCLOAK_ADMIN_PASSWORD" >/dev/null
-    for CLIENT_ID in dxos-telegram dxos-web-roles; do
+    for CLIENT_ID in dxos-telegram dxos-web-roles dxos-web-service; do
       CID="$("$K" get clients -r agrimarket -q "clientId=$CLIENT_ID" --fields id --format csv --noquotes | head -n 1)"
       if [ -n "$CID" ]; then
         "$K" delete "clients/$CID" -r agrimarket >/dev/null
@@ -458,9 +550,9 @@ telegram_disable() {
     done
   '
   telegram_env_remove /run/dxos-telegram telegram.env
-  telegram_env_remove /run/dxos-web roles.env
+  roles_env_update DXOS_ROLES_CLIENT_ID DXOS_ROLES_CLIENT_SECRET DXOS_TELEGRAM_WEBAPP_KEY DXOS_WEB_SERVICE_SECRET </dev/null
   telegram_restart
-  echo "Đã tắt Telegram: đã xoá client dxos-telegram và dxos-web-roles"
+  echo "Đã tắt Telegram: đã xoá client dxos-telegram, dxos-web-roles và dxos-web-service"
 }
 
 [ $# -ge 1 ] || usage
@@ -485,6 +577,9 @@ case "$cmd" in
   worker)
     [ $# -eq 0 ] || usage
     cd "$ROOT"; worker ;;
+  builder)
+    [ $# -le 1 ] && { [ $# -eq 0 ] || [ "$1" = --once ]; } || usage
+    cd "$ROOT"; builder "$@" ;;
   agent)
     [ $# -eq 2 ] || usage
     subcmd="$1"; htx="$2"
@@ -509,5 +604,8 @@ case "$cmd" in
       disable) cd "$ROOT"; telegram_disable ;;
       *) usage ;;
     esac ;;
+  apps)
+    [ $# -eq 2 ] && [ "$1" = actor ] && [ "$2" = enable ] || usage
+    cd "$ROOT"; apps_actor_enable ;;
   *) usage ;;
 esac

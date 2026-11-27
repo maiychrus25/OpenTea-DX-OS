@@ -125,8 +125,12 @@ class FakeHasuraGateway:
     def get_settings(self):
         return {}
 
+    def get_enabled_apps(self):
+        self.app_polls = getattr(self, "app_polls", 0) + 1
+        return []
+
     def heartbeat(self, version, providers):
-        del providers
+        self.heartbeat_providers = list(providers)
         self.heartbeats.append(version)
 
     def get_campaign_candidates(self, day):
@@ -497,3 +501,43 @@ def test_a_failed_autopilot_tick_is_logged_and_the_loop_goes_on(cooperative, cap
 
     assert gateway.ticks == 2
     assert "autopilot tick failed" in caplog.text
+
+
+def test_app_suggestions_run_on_the_first_cycle_then_every_half_hour(cooperative):
+    cfg, gateway = cooperative
+    runtimes: dict = {}
+    t0 = datetime(2026, 11, 24, 3, 0, tzinfo=timezone.utc)
+
+    agent_main.run_once(cfg, runtimes, now=t0)
+    agent_main.run_once(cfg, runtimes, now=t0 + timedelta(minutes=29))
+    agent_main.run_once(cfg, runtimes, now=t0 + timedelta(minutes=30))
+
+    assert gateway.app_polls == 2
+
+
+def test_a_failing_app_list_is_logged_retried_and_stops_nothing_else(monkeypatch, cooperative, caplog):
+    cfg, gateway = cooperative
+    harvest_runs = []
+    monkeypatch.setattr(gateway, "get_enabled_apps", lambda: (_ for _ in ()).throw(RuntimeError("hasura down")))
+    monkeypatch.setattr(agent_main.harvest_ready, "run_harvest_ready", lambda *a, **k: harvest_runs.append(a))
+    runtimes: dict = {}
+    t0 = datetime(2026, 11, 24, 3, 0, tzinfo=timezone.utc)
+
+    agent_main.run_once(cfg, runtimes, now=t0)
+
+    assert len(harvest_runs) == 1 and "app suggestions failed" in caplog.text
+    assert runtimes["TC01"].app_suggestions.is_due(t0 + timedelta(seconds=30))  # not recorded, so the next cycle retries
+
+
+def test_replay_mode_still_reports_the_providers_whose_keys_are_set(cooperative, tmp_path):
+    """Replay answers every model call, but the keys are still on the machine: the web offers the code tools from this list."""
+    from dataclasses import replace
+
+    cfg, gateway = cooperative
+    replayed = replace(cfg, provider_name="replay", replay_dir=tmp_path, openai_api_key="sk-test")
+    agent_main.run_once(replayed, {}, now=datetime(2026, 11, 24, 3, 0, tzinfo=timezone.utc))
+    assert gateway.heartbeat_providers == ["ollama", "openai"]
+
+    plain = replace(cfg, provider_name="replay", replay_dir=tmp_path)
+    agent_main.run_once(plain, {}, now=datetime(2026, 11, 24, 3, 0, tzinfo=timezone.utc))
+    assert gateway.heartbeat_providers == ["ollama"]

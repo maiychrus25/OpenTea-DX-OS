@@ -2,7 +2,9 @@
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 import { randomBytes } from 'node:crypto'
+import { formatVnDate } from '@/application/agent/actions/journal-labels'
 import { DomainError } from '@/domain/errors'
+import { logger } from '@/lib/logger'
 import { signCallbackDataV2 } from '@/domain/telegram/callback-data'
 import type { TelegramConversation, TelegramRepository } from '@/domain/telegram/ports/TelegramRepository'
 import { TELEGRAM_BUTTON, TELEGRAM_TEXT } from '../messages'
@@ -12,6 +14,7 @@ import { menuKeyboard, MENU_LABEL, type MenuKey } from './menu'
 import { editButton } from './mini-app'
 import { normalizeText } from './normalize'
 import { commandOf, routeText } from './router'
+import type { BulletinSpeech } from './speech'
 import type {
   ActionName,
   ArgHint,
@@ -64,8 +67,12 @@ export interface ChatEngineDeps {
   tools: readonly ChatTool[]
   actions: readonly ChatAction[]
   photos: PhotoStore
+  /** Read-aloud of the bulletin (`Nghe`). Absent: the button answers that it cannot read now. */
+  speech?: BulletinSpeech
   requests: AssistantSubmitter
   callbackKey: string
+  /** Mini-app requests by chat (M13): a manager's sentence that asks for an app. Absent: the sentence goes to the assistant. */
+  appRequests?: { submit(user: ChatUser, text: string): Promise<string> }
   /** Approver messages of open proposals, for the tool `pending` (built the way the notifier builds them). */
   proposalMessages: (htxCode: string, proposalIds: string[]) => Promise<ProposalMessage[]>
 }
@@ -81,8 +88,12 @@ export interface CallbackPress {
 }
 
 export type IncomingPhoto =
-  | { kind: 'image'; bytes: Buffer; mimeType: 'image/jpeg' }
+  | { kind: 'image'; bytes: Buffer; mimeType: 'image/jpeg' | 'image/png' }
   | { kind: 'error'; reason: 'too_large' | 'download_failed' }
+
+export type IncomingVoice =
+  | { kind: 'text'; text: string }
+  | { kind: 'error'; reason: 'too_long' | 'stt_unavailable' }
 
 const send = (chatId: number, text: string, buttons?: Buttons): OutboxReply =>
   buttons ? { op: 'send', chat_id: chatId, text, buttons } : { op: 'send', chat_id: chatId, text }
@@ -101,6 +112,18 @@ const callbackOnly = (replies: OutboxReply[], answer = '', alert = false): Updat
 
 const newToken = (): string => randomBytes(8).toString('base64url')
 const expired = (row: TelegramConversation, now: Date): boolean => row.expiresAt.getTime() <= now.getTime()
+/** State key of a heard sentence waiting inside a flow, and the ops of its buttons (M15). */
+const VOICE_IN_FLOW = '__voice'
+const VOICE_IN_FLOW_OPS = ['vok', 'vedit', 'vno']
+const flowInputOf = (row: TelegramConversation) => ({
+  telegramUserId: row.telegramUserId,
+  flow: row.flow ?? '',
+  step: row.step,
+  state: row.state,
+  token: row.token,
+  cardMessageId: row.cardMessageId,
+  expiresAt: row.expiresAt,
+})
 const withoutMeta = (state: Meta): Meta => Object.fromEntries(Object.entries(state).filter(([key]) => !key.startsWith('__')))
 /** The action's payload: no meta keys, and a skipped step (stored as null so it is not asked again) left out. */
 const payloadOf = (state: Meta): Meta =>
@@ -133,7 +156,7 @@ export class ChatEngine {
   constructor(private readonly deps: ChatEngineDeps) {}
 
   async menu(user: ChatUser): Promise<UpdateResponse> {
-    await this.deps.repo.deleteConversation(user.telegramUserId)
+    await this.discard(user.telegramUserId)
     return only([send(user.chatId, TELEGRAM_TEXT.menuPrompt, menuKeyboard(user.tenant.role, this.deps.callbackKey))])
   }
 
@@ -145,34 +168,43 @@ export class ChatEngine {
     if (open?.kind === 'flow') {
       if (command) {
         // A command replaces the flow it interrupts.
-        await this.deps.repo.deleteConversation(user.telegramUserId)
+        await this.discard(user.telegramUserId)
       } else if (expired(open, now)) {
-        await this.deps.repo.deleteConversation(user.telegramUserId)
+        await this.discard(user.telegramUserId)
         return only([send(user.chatId, TELEGRAM_TEXT.flowExpired)])
       } else {
         return this.textInFlow(user, open, text, now)
       }
     }
 
+    // A typed message replaces a heard sentence that is still waiting, so its old Đúng button goes stale.
+    if (open?.kind === 'voice') await this.deps.repo.deleteConversation(user.telegramUserId)
+
     if (command) return this.command(user, command, text, now)
     const route = routeText(text)
-    if (route?.kind === 'tool') return this.runTool(user, route.name, {}, now)
+    if (route?.kind === 'tool') return this.runTool(user, route.name, route.args ?? {}, now)
     if (route?.kind === 'action') return this.startAction(user, route.name, {}, now)
+    if (route?.kind === 'app_request' && user.tenant.role === 'manager' && this.deps.appRequests) {
+      return only([send(user.chatId, await this.deps.appRequests.submit(user, text))])
+    }
     return this.askAssistant(user, text, now)
   }
 
-  async onPhoto(user: ChatUser, photo: IncomingPhoto, now: Date): Promise<UpdateResponse> {
+  /** A photo's caption is the message text unless a flow waits for this photo: inside a photo step the photo wins. */
+  async onPhoto(user: ChatUser, photo: IncomingPhoto, now: Date, caption = ''): Promise<UpdateResponse> {
     const chat = user.chatId
     const open = await this.deps.repo.conversationOf(user.telegramUserId)
+    const text = caption.trim()
+    if (text && !this.waitsForPhoto(open, now)) return this.onText(user, text, now)
     if (open?.kind !== 'flow' || open.flow === null) return only([send(chat, TELEGRAM_TEXT.photoOutsideFlow)])
     if (expired(open, now)) {
-      await this.deps.repo.deleteConversation(user.telegramUserId)
+      await this.discard(user.telegramUserId)
       return only([send(chat, TELEGRAM_TEXT.flowExpired)])
     }
     if (open.flow === 'ask') return only([send(chat, TELEGRAM_TEXT.expectText)])
     const action = this.actionNamed(open.flow)
     if (!action || open.step === null) {
-      await this.deps.repo.deleteConversation(user.telegramUserId)
+      await this.discard(user.telegramUserId)
       return only([send(chat, TELEGRAM_TEXT.flowExpired)])
     }
     if (open.step < 0) return only([send(chat, TELEGRAM_TEXT.expectChoice)])
@@ -191,6 +223,49 @@ export class ChatEngine {
     return this.advance(user, action, { ...open.state, [step.slot]: key }, open.step + 1, now)
   }
 
+  /** A voice message the relay turned into text (or could not). Nothing runs until the person presses Đúng. */
+  async onVoice(user: ChatUser, voice: IncomingVoice, now: Date): Promise<UpdateResponse> {
+    const chat = user.chatId
+    if (voice.kind === 'error') {
+      return only([send(chat, voice.reason === 'too_long' ? TELEGRAM_TEXT.voiceTooLong : TELEGRAM_TEXT.voiceUnavailable)])
+    }
+    const text = voice.text.trim()
+    if (!text) return only([send(chat, TELEGRAM_TEXT.voiceUnclear)])
+
+    // In the middle of a flow the heard sentence waits inside it (a `__` key never reaches the payload), so a spoken
+    // answer such as "hai lít" does not throw away the half-filled card. Its buttons carry the flow's own token.
+    const open = await this.deps.repo.conversationOf(user.telegramUserId)
+    if (open?.kind === 'flow' && open.flow !== null && open.token && !expired(open, now)) {
+      await this.deps.repo.setFlow({ ...flowInputOf(open), state: { ...open.state, [VOICE_IN_FLOW]: text } })
+      const inFlow: Buttons = [[
+        this.button(open.token, 'vok', TELEGRAM_BUTTON.voiceOk),
+        this.button(open.token, 'vedit', TELEGRAM_BUTTON.voiceEdit),
+        this.button(open.token, 'vno', TELEGRAM_BUTTON.voiceDrop),
+      ]]
+      return only([send(chat, TELEGRAM_TEXT.voiceHeard(text), inFlow)])
+    }
+
+    // The heard sentence replaces a flow that could not take it (expired), and so its photos.
+    if (open?.kind === 'flow') await this.dropPhotos(open)
+    const token = newToken()
+    await this.deps.repo.setFlow({
+      telegramUserId: user.telegramUserId,
+      kind: 'voice',
+      flow: 'voice',
+      step: null,
+      state: { text },
+      token,
+      cardMessageId: null,
+      expiresAt: new Date(now.getTime() + CARD_TTL_MS),
+    })
+    const buttons: Buttons = [[
+      this.button(token, 'vok', TELEGRAM_BUTTON.voiceOk),
+      this.button(token, 'vedit', TELEGRAM_BUTTON.voiceEdit),
+      this.button(token, 'cancel', TELEGRAM_BUTTON.cancel),
+    ]]
+    return only([send(chat, TELEGRAM_TEXT.voiceHeard(text), buttons)])
+  }
+
   onLocation(user: ChatUser, latitude: number, longitude: number, now: Date): Promise<UpdateResponse> {
     return this.runTool(user, 'nearby', { latitude, longitude }, now)
   }
@@ -207,6 +282,10 @@ export class ChatEngine {
     }
 
     const row = await this.deps.repo.conversationOf(press.telegramUserId)
+    if (row?.kind === 'voice' && row.token === press.c) return this.voicePress(user, row, press, now)
+    if (row?.kind === 'flow' && row.token === press.c && VOICE_IN_FLOW_OPS.includes(press.s)) {
+      return this.voiceInFlowPress(user, row, press, now)
+    }
     if (!row || row.kind !== 'flow' || row.token !== press.c) return callbackOnly([], TELEGRAM_TEXT.staleButton, true)
     const action = this.actionNamed(row.flow)
     if (!action) return callbackOnly([], TELEGRAM_TEXT.staleButton, true)
@@ -216,16 +295,48 @@ export class ChatEngine {
 
     const isCard = row.step !== null && row.step < 0
     if (expired(row, now)) {
-      await this.deps.repo.deleteConversation(press.telegramUserId)
+      await this.discard(press.telegramUserId)
       const text = isCard ? TELEGRAM_TEXT.cardExpired : TELEGRAM_TEXT.flowExpired
       return callbackOnly([edit(chat, press.messageId, text)], text, true)
     }
     if (press.s === 'cancel') {
-      await this.deps.repo.deleteConversation(press.telegramUserId)
+      await this.discard(press.telegramUserId)
       return callbackOnly([edit(chat, press.messageId, TELEGRAM_TEXT.flowCancelled)])
     }
     if (isCard) return this.cardPress(user, row, action, press, now)
     return this.stepPress(user, row, action, press, now)
+  }
+
+  /** Đúng replays the heard text as if typed; Sửa and Huỷ drop it. Expired, or a user without a role, sends nothing on. */
+  private async voicePress(user: ChatUser | null, row: TelegramConversation, press: CallbackPress, now: Date): Promise<UpdateResponse> {
+    const chat = press.chatId
+    const text = typeof row.state.text === 'string' ? row.state.text : ''
+    if (!user) return callbackOnly([], TELEGRAM_TEXT.noPermission('Trợ lý Telegram'), true)
+    await this.deps.repo.deleteConversation(press.telegramUserId)
+    if (expired(row, now) || !text || !['vok', 'vedit', 'cancel'].includes(press.s)) {
+      return callbackOnly([], TELEGRAM_TEXT.staleButton, true)
+    }
+    if (press.s === 'cancel') return callbackOnly([edit(chat, press.messageId, TELEGRAM_TEXT.flowCancelled)])
+    const heard = edit(chat, press.messageId, TELEGRAM_TEXT.voiceHeard(text))
+    if (press.s === 'vedit') return callbackOnly([heard, send(chat, TELEGRAM_TEXT.voiceRetype)])
+    const next = await this.onText(user, text, now)
+    return callbackOnly([heard, ...next.replies])
+  }
+
+  /** A heard sentence waiting inside a flow: Đúng answers the flow's step with it, Sửa and Bỏ câu này keep the flow. */
+  private async voiceInFlowPress(user: ChatUser | null, row: TelegramConversation, press: CallbackPress, now: Date): Promise<UpdateResponse> {
+    const chat = press.chatId
+    const text = typeof row.state[VOICE_IN_FLOW] === 'string' ? (row.state[VOICE_IN_FLOW] as string) : ''
+    if (!user) return callbackOnly([], TELEGRAM_TEXT.noPermission('Trợ lý Telegram'), true)
+    if (!text || expired(row, now)) return callbackOnly([], TELEGRAM_TEXT.staleButton, true)
+    const rest = { ...row.state }
+    delete rest[VOICE_IN_FLOW]
+    await this.deps.repo.setFlow({ ...flowInputOf(row), state: rest })
+    if (press.s === 'vno') return callbackOnly([edit(chat, press.messageId, TELEGRAM_TEXT.voiceDropped)])
+    const heard = edit(chat, press.messageId, TELEGRAM_TEXT.voiceHeard(text))
+    if (press.s === 'vedit') return callbackOnly([heard, send(chat, TELEGRAM_TEXT.voiceRetype)])
+    const next = await this.onText(user, text, now)
+    return callbackOnly([heard, ...next.replies])
   }
 
   /** Runs an intent the assistant returned (contract C7). The caller sends the replies through the outbox. */
@@ -262,7 +373,7 @@ export class ChatEngine {
     }
     const action = this.actionNamed(row.flow)
     if (!action || row.step === null) {
-      await this.deps.repo.deleteConversation(user.telegramUserId)
+      await this.discard(user.telegramUserId)
       return only([send(chat, TELEGRAM_TEXT.flowExpired)])
     }
     if (row.step < 0) return only([send(chat, TELEGRAM_TEXT.expectChoice)])
@@ -374,12 +485,15 @@ export class ChatEngine {
     await this.deps.repo.deleteConversation(press.telegramUserId)
     const payload = action.payloadSchema.safeParse(payloadOf(row.state))
     if (!payload.success) {
+      await this.dropPhotos(row)
       return callbackOnly([edit(chat, press.messageId, TELEGRAM_TEXT.executeFailed('Thiếu thông tin'))], '', true)
     }
     let line: string
     try {
       line = await action.execute(payload.data, user, { photos: this.deps.photos }, now)
     } catch (err) {
+      // Nothing was made from the photo, so it is an orphan (an executed action keeps its photo).
+      await this.dropPhotos(row)
       const message = err instanceof DomainError ? err.message : SYSTEM_FAILURE_VI
       return callbackOnly([edit(chat, press.messageId, TELEGRAM_TEXT.executeFailed(message))], '', true)
     }
@@ -391,9 +505,24 @@ export class ChatEngine {
     return callbackOnly([edit(chat, press.messageId, line)])
   }
 
+  /** `Nghe`: the latest bulletin goes to the relay as an audio reply; nothing is sent when the voice is not running. */
+  private async listenPress(user: ChatUser): Promise<UpdateResponse> {
+    const chat = user.chatId
+    const tool = this.toolNamed('bulletin')
+    if (!tool || !tool.roles.includes(user.tenant.role)) {
+      return callbackOnly([], TELEGRAM_TEXT.noPermission(tool?.titleVi ?? 'Bản tin'), true)
+    }
+    const speech = this.deps.speech
+    if (!speech || !(await speech.ready())) return callbackOnly([send(chat, TELEGRAM_TEXT.listenUnavailable)])
+    const bulletin = await speech.latest(user.tenant.htxCode)
+    if (!bulletin) return callbackOnly([send(chat, NO_DATA_VI)])
+    return callbackOnly([{ op: 'send', chat_id: chat, text: `Bản tin ${formatVnDate(bulletin.createdAt) ?? ''}`.trim(), audio: { kind: 'bulletin', id: bulletin.id } }])
+  }
+
   private async menuPress(user: ChatUser, press: CallbackPress, now: Date): Promise<UpdateResponse> {
+    if (press.s === 'listen') return this.listenPress(user)
     if (!(MENU_KEYS as string[]).includes(press.s)) return callbackOnly([], TELEGRAM_TEXT.staleButton, true)
-    await this.deps.repo.deleteConversation(press.telegramUserId)
+    await this.discard(press.telegramUserId)
     let result: UpdateResponse
     switch (press.s as MenuKey) {
       case 'today':
@@ -442,7 +571,9 @@ export class ChatEngine {
 
     const result = await tool.run(user, args, now)
     const body = result.lines.length ? result.lines.slice(0, TOOL_LINE_MAX) : [NO_DATA_VI]
-    const replies: OutboxReply[] = [send(chat, [...body, `Nguồn: ${result.source}`].join('\n'))]
+    const text = [...body, `Nguồn: ${result.source}`].join('\n')
+    const listen = result.listen ? [[this.button('menu', 'listen', TELEGRAM_BUTTON.listen)]] : undefined
+    const replies: OutboxReply[] = [send(chat, text, listen)]
     if (result.proposalIds?.length) {
       const messages = await this.deps.proposalMessages(user.tenant.htxCode, result.proposalIds)
       for (const message of messages) replies.push(send(chat, message.text, message.buttons))
@@ -456,7 +587,7 @@ export class ChatEngine {
     if (!action) return only([send(chat, TELEGRAM_TEXT.notYet)])
     if (!action.roles.includes(user.tenant.role)) return only([send(chat, TELEGRAM_TEXT.noPermission(action.titleVi))])
 
-    await this.deps.repo.deleteConversation(user.telegramUserId)
+    await this.discard(user.telegramUserId)
     const started = action.start ? await action.start(user, now) : { state: {} }
     if ('replyVi' in started) return only([send(chat, started.replyVi)])
     return this.promptFrom(user, action, started.state, 0, now, prefilled)
@@ -529,7 +660,7 @@ export class ChatEngine {
     const chat = user.chatId
     const payload = action.payloadSchema.safeParse(payloadOf(state))
     if (!payload.success) {
-      await this.deps.repo.deleteConversation(user.telegramUserId)
+      await this.discard(user.telegramUserId)
       return only([send(chat, TELEGRAM_TEXT.executeFailed('Thiếu thông tin'))])
     }
     const preview = await action.preview(payload.data, user)
@@ -570,6 +701,36 @@ export class ChatEngine {
       default:
         return undefined
     }
+  }
+
+  /** True when the open flow is at an unexpired photo step. */
+  private waitsForPhoto(row: TelegramConversation | null, now: Date): boolean {
+    if (row?.kind !== 'flow' || expired(row, now) || row.step === null || row.step < 0) return false
+    return this.actionNamed(row.flow)?.steps[row.step]?.kind === 'photo'
+  }
+
+  /** The photos a flow holds: the answers of its photo steps. */
+  private photoKeysOf(row: TelegramConversation): string[] {
+    const steps = this.actionNamed(row.flow)?.steps ?? []
+    return steps.flatMap((step) => (step.kind === 'photo' && typeof row.state[step.slot] === 'string' ? [row.state[step.slot] as string] : []))
+  }
+
+  /** Deletes the stored photos of a dropped flow. A photo that cannot be deleted is logged and never blocks the reply. */
+  private async dropPhotos(row: TelegramConversation): Promise<void> {
+    for (const key of this.photoKeysOf(row)) {
+      try {
+        await this.deps.photos.delete(key)
+      } catch (err) {
+        logger.error('Telegram: could not delete an orphan photo', { err })
+      }
+    }
+  }
+
+  /** Ends a person's open conversation. A flow's stored photos go with it: they belong to no executed action. */
+  async discard(telegramUserId: string): Promise<void> {
+    const row = await this.deps.repo.conversationOf(telegramUserId)
+    if (row?.kind === 'flow') await this.dropPhotos(row)
+    await this.deps.repo.deleteConversation(telegramUserId)
   }
 
   private notUnderstood(user: ChatUser): OutboxReply {

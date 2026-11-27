@@ -39,7 +39,7 @@ def db(app_db_url, monkeypatch):
     """Empty tables and DXOS_APP_DB_URL set; yields a connection as the app role."""
     monkeypatch.setenv("DXOS_APP_DB_URL", app_db_url)
     with store.connect(app_db_url) as conn:
-        conn.execute("TRUNCATE order_items, orders, products")
+        conn.execute("TRUNCATE order_items, orders, promotions, products")
         yield conn
 
 
@@ -55,3 +55,11 @@ def bearer(sub="kc-manager-tc", htx="TC", roles=("manager",), name="Quản trị
     claims = {"sub": sub, "name": name, "htx_code": htx, "realm_access": {"roles": list(roles)}}
     payload = base64.urlsafe_b64encode(json.dumps(claims).encode()).decode().rstrip("=")
     return {"Authorization": f"Bearer h.{payload}.s"}
+
+
+def acting(sub="kc-approver", htx="TC", role="manager") -> dict:
+    """What the web's executor sends: the apps actor's token plus the three acting headers."""
+    claims = {"sub": "service-account-dxos-apps-actor", "azp": "dxos-apps-actor"}
+    payload = base64.urlsafe_b64encode(json.dumps(claims).encode()).decode().rstrip("=")
+    return {"Authorization": f"Bearer h.{payload}.s", "X-DXOS-Acting-Sub": sub, "X-DXOS-Acting-Role": role,
+            "X-DXOS-Acting-Htx": htx}

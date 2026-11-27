@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 -->
 # Đặc tả thiết kế — Lớp AI vận hành có người duyệt
 
-> **Trạng thái:** Bản định hướng (2026-11-24, bản 6). Triển khai theo issue #55: M0 tới M4 đã vào `main` (M0 và M1 PR #66, M2 PR #70, M3 PR #71, M4 PR #78, 2026-11-25); M5 đã vào `main` (PR #81, 2026-11-26), phần còn lại của M5 ở issue #80; M7 ở PR #83, M8 ở PR #84 và M14 ở nhánh `feat/55-agentic-m14` (2026-11-26); v1.15.0 phát hành M4 và M5. Mã khác đặc tả ở đâu thì xem §21. Bản 2 thêm hai yêu cầu chủ dự án đưa ra cùng ngày: mọi thông tin và thao tác làm được qua Telegram (D6), và chiến dịch hằng ngày cùng đề xuất cải tiến (D7). Bản 3 thêm chế độ tự vận hành tuỳ chọn (D8, §11). Bản 4 ghi các câu trả lời của chủ dự án (D9 tới D12) và thêm xưởng mini-app (§12). Bản 5 đưa vào kết quả một lượt đánh giá độc lập và các cải tiến: bốn nguyên lý của đề thi (§5.4), MCP (§8.5), kiểm chứng trên trang lô, bộ đo công khai và kịch bản trình diễn (§15). Bản 6 ghi câu trả lời cho các câu hỏi mở (D13 tới D18, issue #56 tới #61).
+> **Trạng thái:** Bản định hướng (2026-11-24, bản 6). Triển khai theo issue #55: mọi mốc M0 tới M15 đã vào `main` (M0 tới M5: PR #66, #70, #71, #78, #81; M7, M8, M14: PR #83, #84, #85; M10, M6, M12: PR #88, #87, #89; M9, M11, M13, M15: PR #95; phần còn lại của M5 ở issue #80: PR #97; xong ngày 2026-11-27). Các bản phát hành: v1.14.0 (M0 tới M3), v1.15.0 (M4, M5), v1.16.0 (M7, M8, M14), v1.17.0 (M6, M9 tới M13, M15, issue #80). Mã khác đặc tả ở đâu thì xem §21. Bản 2 thêm hai yêu cầu chủ dự án đưa ra cùng ngày: mọi thông tin và thao tác làm được qua Telegram (D6), và chiến dịch hằng ngày cùng đề xuất cải tiến (D7). Bản 3 thêm chế độ tự vận hành tuỳ chọn (D8, §11). Bản 4 ghi các câu trả lời của chủ dự án (D9 tới D12) và thêm xưởng mini-app (§12). Bản 5 đưa vào kết quả một lượt đánh giá độc lập và các cải tiến: bốn nguyên lý của đề thi (§5.4), MCP (§8.5), kiểm chứng trên trang lô, bộ đo công khai và kịch bản trình diễn (§15). Bản 6 ghi câu trả lời cho các câu hỏi mở (D13 tới D18, issue #56 tới #61).
 > **Yêu cầu của chủ dự án (2026-11-23):** thêm một lớp AI vận hành trên hệ thống, luôn còn người phê duyệt. Làm đầy đủ, không cắt phạm vi theo hạn nộp bài. Được gọi provider bên ngoài như Claude và Codex. Báo cáo, hỏi đáp và phê duyệt được qua Telegram, để không phụ thuộc hoàn toàn vào website.
 > **Người đọc:** người sẽ xây lớp này (thành viên nhóm hoặc một phiên AI lập trình). Tài liệu nói cần gì, vì sao, và chốt các quyết định kiến trúc. Chi tiết cài đặt do người làm quyết, trong khuôn khổ ở đây. Mỗi lần gộp vào `main` vẫn hỏi chủ dự án.
 
@@ -774,6 +774,8 @@ Theo `AGENTS.md`:
 - Các dòng còn lại của hai nhóm "trong chat" ở §13.7.
 - Đưa chú thích ảnh vào bộ định tuyến, và dọn ảnh của thẻ đã huỷ hoặc hết hạn.
 
+Bốn việc này đã làm ở issue #80 (2026-11-27); xem ghi chú "M5, phần còn lại" ở cuối mục này.
+
 ### M7: chiến dịch ngày (2026-11-26)
 
 **Đã làm:**
@@ -924,3 +926,126 @@ Theo `AGENTS.md`:
 - duyệt thành viên;
 - cài và gỡ mini-app (M13);
 - `strategy.adopt` (M11).
+
+### M9: hành động của mini-app (2026-11-27)
+
+**Đã làm:**
+- **Khối `agent` trong `app.yaml`.** Mini-app khai đường gợi ý và các hành động của mình trong khối này. `dxos validate` kiểm khối này và từ chối app do AI xây có khai hành động (kiểm thử 29).
+- **Gợi ý thành đề xuất.** `dxos-agent` hỏi từng app đang bật cho hợp tác xã, rồi gửi gợi ý thành đề xuất loại `app.<app>.<hành động>`. Đề xuất đi qua cùng đường tạo và duyệt như mọi loại khác.
+- **Thực hiện khi được duyệt.** Web gọi app qua cổng nội bộ bằng client `dxos-apps-actor`, kèm ba header nêu người duyệt.
+  - Gateway xoá ba header này ở mọi route khác của app.
+  - App chỉ tin ba header khi token là của `dxos-apps-actor`.
+- **Gỡ hoặc tắt app** thì đề xuất đang mở của app đó hết hạn (kiểm thử 16).
+- **`tea-shop` có khuyến mãi.**
+  - Có bảng khuyến mãi, và giá công khai trừ khuyến mãi.
+  - Trưởng HTX xem và kết thúc khuyến mãi.
+  - Luật gợi ý: hàng còn từ 20 gói và 21 ngày chưa bán được.
+  - Hành động `promotion.create` liên quan đến tiền, nên chỉ tự chạy khi được mở, sau khoảng chờ 2 giờ.
+
+**Khác với đặc tả:**
+- **Agent biết app nào đang bật bằng cách đọc qua Hasura.** Vai trò `agent` được đọc `platform.installed_apps` và `platform.app_enablements` của chính hợp tác xã.
+- **`./dxos remove` cho đề xuất hết hạn ngay trong cơ sở dữ liệu.** Web cũng cho hết hạn ở lần nạp danh mục kế tiếp, nên có thể trễ tối đa 60 giây.
+- **Route ghi lượt chạy nhận tên agent `app:<id>`,** giống route tạo đề xuất.
+- **`roles.env` của web được ghi theo từng khoá,** để bật hoặc tắt Telegram không xoá secret của `dxos-apps-actor`.
+- **Bảng khuyến mãi có thêm `htx_code` và `ended_at`.** Đơn hàng tính theo giá đã giảm.
+- **Hành động về tiền của app chưa hiện trong màn hình bật tự vận hành.** Vì vậy chúng không thể tự chạy cho tới khi màn hình này liệt kê được chúng.
+
+**Chưa làm:** hành động của `tea-tour` ("mở thêm chỗ") và `leaf-purchase` ("báo giá thu mua"). Chúng theo cùng mẫu và để PR sau.
+
+### M13: xưởng mini-app A12 (2026-11-27)
+
+**Đã làm:**
+- **Nhận yêu cầu.** Trưởng HTX gửi yêu cầu qua chat ("cần app …") hoặc ở trang `/manager/ai/apps`. Mỗi hợp tác xã chỉ có một yêu cầu đang làm. A12 chọn cách rẻ nhất:
+  1. bật app sẵn có;
+  2. tạo một sổ nháp trong Sổ tự tạo (hành động `book.create`);
+  3. hoặc hỏi tối đa 5 câu, rồi viết đặc tả để trưởng HTX duyệt (`app.spec.approve`).
+- **Dựng app.** `./dxos builder` nhận đặc tả đã duyệt. Mỗi vòng dựng chạy ba container dùng một lần:
+  - **`build`:** công cụ viết mã. Container này chỉ thấy `/work`, chỉ ra mạng qua proxy có danh sách cho phép, và không có biến hay khoá nào của lõi (kiểm thử 30);
+  - **`gates`:** không có mạng, đọc `/work` ở chế độ chỉ đọc, và lấy mã kiểm tra từ ảnh, không từ workspace;
+  - **`review`:** một AI thứ hai đọc mã tìm lỗi bảo mật.
+
+  Có bảy cổng: manifest, markup (không script, không style inline), kit, tests, deps, files, và chạy thử có chụp màn hình. Mỗi app được sửa tối đa 3 vòng.
+- **App qua mọi cổng:**
+  - được gắn tag git trong `generated-apps/<htx>/<app>`;
+  - vào kho ứng dụng với nhãn "App do AI xây", chỉ hợp tác xã yêu cầu thấy;
+  - A12 báo kèm bốn ảnh qua Telegram và tạo đề xuất `miniapp.install`.
+- **Không có đường cài** cho bản chưa qua cổng hoặc chưa được duyệt đặc tả (kiểm thử 26 và 28).
+- **Mạng riêng.** App do AI xây chạy trên mạng riêng, chỉ thấy `apisix` và `postgres` (kiểm thử 27).
+- **Kiểm thử 29.** App do AI xây không được khai hành động.
+
+**Khác với đặc tả:**
+- **Thông báo bản dựng xong.** A12 gọi route `announce` của web. Web gửi tin, kèm ảnh nếu bản dựng qua, và tạo đề xuất cài, chỉ một lần cho mỗi bản dựng.
+- **Mã app do AI xây** có dạng `gen-` cộng tối đa 27 ký tự, vì manifest giới hạn mã ở 31 ký tự.
+- **Cổng `review` chỉ hiện trong bảng cổng khi trượt.** Bản dựng qua hiện đúng 7 cổng xanh.
+- **Ảnh chụp sáng và tối giống nhau,** vì container cổng không có `dxos-app.css` của khung web.
+- **A12 thử lại một yêu cầu lỗi** sau 15 phút, nhân đôi mỗi lần, tối đa 6 giờ, để không gọi model liên tục.
+- **Mạng riêng của app** phải được nối lại khi `apisix` hoặc `postgres` bị tạo lại. Worker, lệnh cài và lệnh nâng cấp tự nối lại.
+- **Chế độ replay vẫn báo provider có khoá.** Khi agent chạy bằng bản ghi phát lại, heartbeat vẫn nêu các provider có khoá trên máy. Nhờ vậy web vẫn coi là có công cụ viết mã, và A12 đi được đường xây app trong buổi trình diễn và trên CI.
+- **Yêu cầu không bị kẹt khi tạo đề xuất hỏng.** Nếu web không tạo được đề xuất sau khi chuyển yêu cầu sang `routed` hoặc `spec_proposed`, yêu cầu trở về trạng thái trước đó để A12 xử lý lại.
+- **Claude Code không phải mã nguồn mở.** Nó chỉ được cài vào ảnh khi `DXOS_BUILDER_TOOLS` có nó. CI dựng ảnh không kèm công cụ nào và dùng bản ghi phát lại.
+
+**Chưa làm:**
+- dùng thử bản xem trước trong Mini App, trên dữ liệu mẫu (cần tên miền HTTPS, D17);
+- nâng cấp app theo góp ý;
+- A11 đề xuất xây app mới từ kế hoạch mùa vụ.
+
+### M11: kế hoạch mùa vụ A11 (2026-11-27)
+
+**Đã làm:**
+- **A11 soạn bản nháp kế hoạch của quý.** Agent chạy ngày đầu mỗi quý lúc 06:15, và chạy ở lượt đầu tiên nếu quý hiện tại chưa có kế hoạch.
+  - Mục tiêu đặt theo luật, so với cùng kỳ năm trước: tăng 5% cho chỉ số càng cao càng tốt, giảm 10% cho chỉ số càng thấp càng tốt.
+  - LLM chỉ viết ưu tiên và việc phát triển, tối đa 5 mỗi loại. Không có LLM thì dùng ưu tiên theo luật.
+- **Các chỉ số** gồm sản lượng, nhật ký đúng hạn, tỉ lệ thửa có bệnh, và doanh thu cửa hàng (chỉ khi `tea-shop` được bật cho hợp tác xã).
+- **Áp dụng.** Quản lý áp dụng kế hoạch bằng `strategy.adopt`, và kế hoạch mới thay kế hoạch cũ của cùng quý. Khi kế hoạch đang áp dụng:
+  - A9 đặt các việc phục vụ mục tiêu lên trước;
+  - A10 báo mục tiêu đang chậm, khi chậm từ 20% sau ít nhất 4 tuần;
+  - báo cáo thứ Hai so số liệu thật với cùng kỳ năm trước.
+- **Kiểm thử 37.** Kế hoạch có mục tiêu thấp hơn cùng kỳ mang cảnh báo và không bao giờ tự chạy.
+
+**Khác với đặc tả:**
+- **`strategy.adopt` chỉ tự chạy khi đọc được cảnh báo của kế hoạch** trong dòng evidence và danh sách cảnh báo rỗng. Thiếu dòng hoặc thiếu giá trị thì luôn chờ người duyệt.
+- **Bản nháp có đề xuất đã bị từ chối, hết hạn hoặc lỗi thời** nhường chỗ cho bản nháp mới của cùng quý, và chuyển sang `superseded`.
+- **Web tự điền nhãn, đơn vị, chiều và mốc cùng kỳ của từng mục tiêu.** Agent chỉ gửi khoá và mục tiêu. Mục tiêu không có số cùng kỳ bị từ chối.
+- **Chỉ sản lượng và doanh thu tính mục tiêu theo phần quý đã qua.** Các chỉ số tỉ lệ giữ nguyên mục tiêu.
+- **Chỉ số `season_goal:<khoá>`** trong cải tiến của A10 chỉ đo được khi quý hiện tại có kế hoạch đang áp dụng.
+
+**Chưa làm:** A11 đề xuất xây mini-app mới từ việc phát triển loại `miniapp`. Việc này làm cùng M13.
+
+### M15: tin nhắn thoại (2026-11-27)
+
+**Đã làm:**
+- **Chuyển giọng nói thành chữ ngay trên máy chủ của hợp tác xã.** Tin thoại dài tối đa 60 giây được whisper.cpp chuyển thành chữ, qua dịch vụ `dxos-stt` trong nhóm voice (`make up-voice`).
+  - Relay giữ âm thanh trong bộ nhớ và chỉ gửi tới máy chủ STT nội bộ.
+  - Có chữ rồi thì âm thanh bị bỏ ngay (kiểm thử 41).
+- **Xác nhận trước khi làm.** Bot trả lời "Em nghe được: “…”" với ba nút Đúng, Sửa và Huỷ. Chỉ nút Đúng gửi câu đi, như khi gõ, nên thao tác ghi vẫn cần thẻ xác nhận (kiểm thử 40).
+- **Khi không nghe được.** Tin dài quá 60 giây, máy chủ STT không chạy, hoặc câu nghe không rõ: bot trả lời một câu hướng dẫn, và chat bằng chữ vẫn chạy.
+- **Chọn model.** `make stt-measure` đo tỉ lệ lỗi từ của từng model trên bản ghi của hợp tác xã, để chọn model. Mặc định là `small`.
+
+**Khác với đặc tả:**
+- **Tin thoại gửi giữa một luồng nhiều bước được giữ lại trong luồng đó.** Các nút là Đúng, Sửa và "Bỏ câu này". Bấm Đúng thì câu đi vào bước đang hỏi, và luồng không bị mất.
+- **Nút Đúng chỉ phát lại câu như khi gõ.** Ví dụ câu "ghi nhật ký bón phân thửa A3" mở luồng ghi nhật ký từ bước chọn thửa, chưa điền sẵn thửa.
+- **Người chưa liên kết vẫn được chuyển thành chữ.** Relay không biết người gửi đã liên kết hay chưa, nên vẫn chuyển giọng nói thành chữ trên máy chủ rồi bỏ âm thanh. Sau đó web trả lời như ở M2. Chỉ tin thoại trong nhóm là không được tải về.
+- **Ảnh whisper.cpp chính thức chỉ có bản amd64.** Trên máy arm, ảnh chạy bằng giả lập và rất chậm.
+- **`DXOS_STT_URL` phải trỏ vào mạng nội bộ.** Nếu trỏ ra ngoài, relay tắt phần thoại và ghi lỗi; chat bằng chữ vẫn chạy.
+
+**Còn chờ chủ dự án:** chạy `make stt-measure` với bản ghi thật của hợp tác xã thí điểm, để chọn model.
+
+### M5, phần còn lại: mọi thao tác trong chat (issue #80, 2026-11-27)
+
+**Đã làm:**
+- **Mọi dòng của hai nhóm "trong chat" ở §13.7 đều làm được trong chat.** Thêm 10 công cụ đọc và 16 hành động có thẻ xác nhận. Riêng việc mời thành viên làm trong Mini App (xem dưới). Kiểm thử 17 nay kiểm cả việc mỗi dòng có một công cụ hoặc hành động phục vụ.
+- **Gửi ảnh bệnh qua chat** (`disease.report`). Web gọi API chẩn đoán bằng token của client riêng `dxos-web-service`, qua route chỉ có ở cổng nội bộ. Kết quả vẫn chờ cán bộ xác nhận.
+- **Nút Nghe** dưới bản tin: web đọc bản tin bằng Piper và rơle gửi tệp âm thanh.
+- **Chú thích ảnh** được đọc như tin nhắn chữ. Ảnh của thẻ bị huỷ, bị thay hoặc hết hạn được xoá.
+- Danh sách câu nhắn, vai trò và mức rủi ro: `docs/rules-and-limits.md`, mục 3.18a và 3.18b.
+
+**Khác với đặc tả:**
+- **Vai trò theo route, không theo bảng của kế hoạch.** Ví dụ: xem và duyệt báo cáo bệnh chỉ dành cho cán bộ; sửa hồ sơ HTX chỉ dành cho quản lý.
+- **Âm thanh gửi dưới dạng tệp `ban-tin.wav`,** không phải tin thoại. Telegram chỉ nhận tin thoại OGG/Opus, MP3 hoặc M4A, và máy chủ chưa có bộ mã hoá.
+- **Nút Nghe không qua hàng đợi gửi tin.** Web trả yêu cầu âm thanh ngay trong câu trả lời cho rơle, vì bảng hàng đợi không có cột âm thanh. Piper không chạy thì bot trả lời một câu và không gửi gì.
+- **Gửi thông báo luôn có hai thẻ,** kể cả khi gửi cho một hộ. Mức rủi ro của một hành động là cố định, nên chọn mức cao hơn.
+- **Mời thành viên làm trong Mini App, không trong chat** (quyết định của chủ dự án, 2026-11-27). §13.7 xếp `members/invite` vào nhóm có thẻ xác nhận, nhưng route này tạo tài khoản kèm mật khẩu, và mật khẩu hiện trong chat sẽ đi qua máy chủ của Telegram. Dòng này nay thuộc nhóm Mini App của bảng phủ; trong chat, công cụ `members` chỉ chỗ mời.
+- **Tạo lô trong chat chỉ gồm một thửa,** ngày thu hoạch là hôm nay. Lô nhiều thửa, đóng gói và người mua làm trên web hoặc Mini App.
+- **Sửa nhật ký chỉ sửa ghi chú và ngày,** vì route chỉ lưu hai trường đó.
+- **Ảnh chẩn đoán của chat bị xoá sau khi báo cáo đã lưu,** vì báo cáo giữ bản sao riêng.
+- **Hai dòng đọc không có trong kế hoạch** được thêm khi ghép: chi tiết một lô (`lô hàng <mã lô>`) và các lứa chưa đặt ngày thu hoạch (dòng đầu của `lịch thu hoạch`, chỉ quản lý).

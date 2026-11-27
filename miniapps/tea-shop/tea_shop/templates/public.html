@@ -15,7 +15,7 @@
     <li class="card" aria-labelledby="product-{{ p.id }}">
       <h3 id="product-{{ p.id }}">{{ p.name }}</h3>
       <p>{{ p.pack }}</p>
-      <p><strong>{{ p.price_vnd | vnd }}</strong> · {{ pills.stock(p) }}</p>
+      <p>{% if p.discount_pct %}<s>{{ p.price_vnd | vnd }}</s> <strong>{{ p.sale_price_vnd | vnd }}</strong> <span class="pill warn">-{{ p.discount_pct }}%</span>{% else %}<strong>{{ p.price_vnd | vnd }}</strong>{% endif %} · {{ pills.stock(p) }}</p>
       {% if p.lot_code %}<p><a href="/lot/{{ p.lot_code }}">Xem nguồn gốc</a></p>{% endif %}
       {% if p.stock %}
       <input type="hidden" name="product_id" value="{{ p.id }}">

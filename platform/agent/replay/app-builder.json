@@ -1,0 +1,56 @@
+{
+  "responses": {
+    "kho phân bón": {
+      "spec": {
+        "app_id": "gen-fertiliser-stock",
+        "name_vi": "Kho phân bón",
+        "summary_vi": "Ghi nhập, xuất và tồn kho phân bón của hợp tác xã.",
+        "roles": [
+          {
+            "role": "manager",
+            "can_vi": "Xem tồn kho, ghi nhập và xuất kho phân bón"
+          }
+        ],
+        "screens": [
+          {
+            "path": "/",
+            "title_vi": "Tồn kho",
+            "purpose_vi": "Xem số lượng từng loại phân bón còn trong kho"
+          }
+        ],
+        "data": [
+          {
+            "table": "fertiliser_items",
+            "fields": [
+              {
+                "name": "name",
+                "type": "text",
+                "label_vi": "Tên phân bón"
+              },
+              {
+                "name": "quantity",
+                "type": "number",
+                "label_vi": "Số lượng"
+              },
+              {
+                "name": "unit",
+                "type": "choice",
+                "label_vi": "Đơn vị",
+                "choices": [
+                  "kg",
+                  "bao"
+                ]
+              }
+            ]
+          }
+        ],
+        "agent_reads": [
+          {
+            "name": "low_stock",
+            "description_vi": "Số loại phân bón sắp hết"
+          }
+        ]
+      }
+    }
+  }
+}

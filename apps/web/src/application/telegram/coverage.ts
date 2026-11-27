@@ -58,7 +58,6 @@ export const TELEGRAM_COVERAGE: TelegramCoverage = {
     'POST /api/notifications/announce',
     'PUT /api/notifications',
     'DELETE /api/notifications',
-    'POST /api/members/invite',
     'POST /api/members/[id]/approve',
     'DELETE /api/members/[id]',
     'PUT /api/profile',
@@ -68,6 +67,8 @@ export const TELEGRAM_COVERAGE: TelegramCoverage = {
     'POST /api/parcels/[id]/approve-harvest',
   ],
   miniApp: [
+    // Makes an account with a password: typed in the app, never sent in a Telegram message (owner's decision, 2026-11-27).
+    'POST /api/members/invite',
     'POST /api/farm/parcels',
     'PUT /api/farm/parcels/[id]',
     'POST /api/documents/upload',
@@ -89,6 +90,10 @@ export const TELEGRAM_COVERAGE: TelegramCoverage = {
     'GET /api/agent/autopilot',
     'POST /api/agent/autopilot/enable',
     'POST /api/agent/autopilot/stop',
+    'POST /api/agent/app-requests',
+    'POST /api/agent/app-requests/[id]/answer',
+    'POST /api/agent/app-requests/[id]/cancel',
+    'GET /api/agent/app-requests/[id]/files/[name]',
   ],
   none: [
     'GET /api/auth/[...nextauth]',

@@ -67,3 +67,29 @@ def test_compose_uses_image_and_skips_env_file_without_database(manifest):
     assert svc["image"] == IMAGE
     assert "build" not in svc
     assert "env_file" not in svc
+
+
+def generated(manifest, app_dir="docker/runtime/generated/gen-tea-log/0.1.0"):
+    manifest = {**manifest, "id": "gen-tea-log", "generated": True}
+    return render_app_compose(manifest, Path(app_dir))
+
+
+def test_generated_app_gets_a_private_network_shared_only_with_apisix_and_postgres(manifest):
+    # Test 27: no dxos-apps-net, so app-tea-shop is unreachable; the same file adds the network to apisix and postgres.
+    doc = generated(manifest)
+    assert doc["services"]["app-gen-tea-log"]["networks"] == ["dxos-gen-gen-tea-log"]
+    assert doc["networks"] == {"dxos-gen-gen-tea-log": {"internal": True}}
+    assert doc["services"]["apisix"] == {"networks": ["dxos-gen-gen-tea-log"]}
+    assert doc["services"]["postgres"] == {"networks": ["dxos-gen-gen-tea-log"]}
+
+
+def test_generated_build_context_names_the_project_runtime_folder_on_the_host(manifest, monkeypatch):
+    monkeypatch.setenv("DXOS_RUNTIME_SUBDIR", "dxos-clean")
+    svc = generated(manifest)["services"]["app-gen-tea-log"]
+    assert svc["build"] == {"context": "../docker/runtime/dxos-clean/generated/gen-tea-log/0.1.0"}
+    assert svc["env_file"] == ["runtime/dxos-clean/apps/gen-tea-log.env"]
+
+
+def test_a_store_app_keeps_the_shared_network_and_declares_no_network(manifest):
+    doc = render_app_compose(manifest, Path("miniapps/tea-tour"))
+    assert "networks" not in doc and set(doc["services"]) == {"app-tea-tour"}

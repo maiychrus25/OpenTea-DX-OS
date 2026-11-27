@@ -115,6 +115,10 @@
       {
         "name": "staff-sync",
         "description": "App nhân sự của HTX (client credentials, chỉ gọi /api/internal/staff/*)"
+      },
+      {
+        "name": "web-service",
+        "description": "Web của lõi (client credentials, chỉ gọi /api/internal/web/disease/*)"
       }
     ]
   },
@@ -880,6 +884,35 @@
       "attributes": {
         "oauth2.device.authorization.grant.enabled": "true"
       }
+    },
+    {
+      "clientId": "dxos-apps-actor",
+      "enabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "defaultClientScopes": [
+        "dx-os-core"
+      ],
+      "optionalClientScopes": []
+    },
+    {
+      "clientId": "dxos-web-service",
+      "enabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "defaultClientScopes": [
+        "roles",
+        "dx-os-core"
+      ],
+      "optionalClientScopes": []
     }
   ],
   "components": {

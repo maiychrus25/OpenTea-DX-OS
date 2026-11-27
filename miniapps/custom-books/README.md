@@ -14,6 +14,7 @@ Trưởng HTX tự tạo các sổ ghi chép (chấm công hái chè, sổ phun 
 | `/feed` | mọi vai | JSON `{"entries": [{label, path, icon, description}], "create": {...}}` cho menu và Kho ứng dụng của lõi; `create` chỉ cho trưởng HTX; tối đa 30 mục, sổ mới phát hành đứng đầu |
 | `/books`, `/books/new` | `manager` | Danh sách sổ (đang soạn, đang dùng, ngừng dùng); chọn một trong tám mẫu hoặc Sổ trắng |
 | `POST /books` | `manager` | `template=<picking, spraying, fertilising, cashbook, meeting, handover, pest, visitors, blank>`; 409 khi HTX đã có 50 sổ |
+| `GET /agent/suggestions`, `POST /agent/actions/book-create` | token `agent` / bộ thực thi của web | Khối `agent` (M13): không có gợi ý riêng. Hành động `book.create` (rủi ro thấp, không động tới tiền) nhận `{template, name_vi, description_vi?}`, tạo sổ nháp từ mẫu cho HTX của người duyệt và trả `{book_id, design_path}`; lỗi trả JSON `{message_vi}` (400 sai dữ liệu, 409 HTX đủ 50 sổ) |
 | `/books/<id>/design` | `manager` | Biểu mẫu thiết kế (tên, mô tả, biểu tượng, các ô, quyền cán bộ và nông dân, duyệt); lưu sai thì 400 và giữ những gì đã gõ |
 | `/books/<id>/preview` | `manager` | Biểu mẫu nhập đúng như người dùng sẽ thấy, không ghi gì |
 | `POST /books/<id>/publish`, `/archive`, `/delete` | `manager` | Phát hành (cần ít nhất một ô), ngừng dùng, xoá (chỉ khi chưa có dòng nào, ngược lại 409) |
