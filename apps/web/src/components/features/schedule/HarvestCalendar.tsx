@@ -3,34 +3,35 @@
 
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState } from 'react'
 import useSWR from 'swr'
-import { Calendar, ChevronLeft, ChevronRight, AlertTriangle, CheckCircle, ShieldAlert } from 'lucide-react'
-import { PageHeader } from '@/components/ui/PageHeader'
+import { AlertTriangle, Ban, Check, ChevronLeft, ChevronRight, CircleAlert, CircleCheck, Leaf, Plus } from 'lucide-react'
 import kit from '@/components/features/dashboard/page-kit.module.css'
-import styles from './HarvestCalendar.module.css'
-import { FarmerScheduleAside } from './FarmerScheduleAside'
-import { DayPanel } from './DayPanel'
 import farmer from '@/components/features/farmer-web/kit.module.css'
+import styles from './HarvestCalendar.module.css'
 import { Button } from '@/components/ui/Button/Button'
-
-export interface HarvestEvent {
-  cycleId: string
-  parcelId: string
-  parcelName: string | null
-  householdName: string
-  cropType: string
-  estimatedYieldKg: number | null
-  estimatedHarvestDate: string | null
-  safeHarvestDate: string | null
-  status: 'SAFE' | 'WARNING' | 'DANGER'
-}
+import type { HarvestEvent } from '@/domain/farm/entities/HarvestEvent'
+import { addDays, dayStart, spansOf, weekBars, weeksOf, type SpanKind } from './calendar-model'
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
+const KIND: Record<SpanKind, { label: string; icon: typeof Leaf }> = {
+  quarantine: { label: 'Cách ly', icon: Ban },
+  blocked: { label: 'Hẹn hái khi còn cách ly', icon: AlertTriangle },
+  ready: { label: 'Được hái', icon: Leaf },
+  harvested: { label: 'Đã hái', icon: Check },
+}
+
+const ACTIVITY: Record<string, string> = {
+  SOWING: 'Gieo trồng', FERTILIZING: 'Bón phân', SPRAYING: 'Phun thuốc BVTV', IRRIGATION: 'Tưới tiêu', HARVEST: 'Thu hoạch', OTHER: 'Khác',
+}
+
+const fullDay = (value: number | string) => new Date(value).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
+
 export function HarvestCalendar({ userRole }: { userRole: 'MANAGER' | 'OFFICER' | 'FARMER' }) {
-  const [currentDate, setCurrentDate] = useState(new Date())
-  const [selectedDate, setSelectedDate] = useState(new Date())
+  const [month, setMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1))
+  const [selectedDay, setSelectedDay] = useState(() => dayStart(new Date()))
+  const [selectedKey, setSelectedKey] = useState<string | null>(null)
   const [selectedEvent, setSelectedEvent] = useState<HarvestEvent | null>(null)
   const [newDateStr, setNewDateStr] = useState('')
 
@@ -38,50 +39,50 @@ export function HarvestCalendar({ userRole }: { userRole: 'MANAGER' | 'OFFICER' 
   const [selectedUnscheduledCycleId, setSelectedUnscheduledCycleId] = useState('')
   const [newAddDateStr, setNewAddDateStr] = useState('')
 
-  // First day of month, last day of month
-  const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
-  const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0)
-
-  const startDateIso = firstDay.toISOString()
-  const endDateIso = lastDay.toISOString()
-
   const isManager = userRole === 'MANAGER'
-  const isFarmer = userRole === 'FARMER'
+  const weeks = weeksOf(month.getFullYear(), month.getMonth())
+  // A withdrawal period may start before the grid or end after it, so a month is read on both sides.
+  const from = new Date(addDays(weeks[0][0], -31)).toISOString()
+  const to = new Date(addDays(weeks[weeks.length - 1][6], 32) - 1).toISOString()
 
-  const { data, mutate } = useSWR<{ data: HarvestEvent[] }>(
-    `/api/schedule/harvest?start_date=${startDateIso}&end_date=${endDateIso}`,
-    fetcher
-  )
-
-  const { data: unscheduledData, mutate: mutateUnscheduled } = useSWR<{ data: HarvestEvent[] }>(
-    isManager ? '/api/schedule/unscheduled' : null,
-    fetcher
-  )
+  const { data, mutate } = useSWR<{ data: HarvestEvent[] }>(`/api/schedule/harvest?start_date=${from}&end_date=${to}`, fetcher)
+  const { data: unscheduledData, mutate: mutateUnscheduled } = useSWR<{ data: HarvestEvent[] }>(isManager ? '/api/schedule/unscheduled' : null, fetcher)
 
   const events = data?.data ?? []
-  const eventsOn = (date: Date) => events.filter(ev => ev.estimatedHarvestDate && new Date(ev.estimatedHarvestDate).toDateString() === date.toDateString())
-  const todayKey = new Date().toDateString()
+  const spans = spansOf(events)
+  const today = dayStart(new Date())
+  const monthStart = month.getTime()
+  const monthEnd = dayStart(new Date(month.getFullYear(), month.getMonth() + 1, 0))
+  const inMonth = (value: string | null | undefined) => !!value && dayStart(value) >= monthStart && dayStart(value) <= monthEnd
+  const stats = [
+    { label: 'Lứa trong tháng', value: events.filter(e => inMonth(e.estimatedHarvestDate)).length, icon: Leaf, tone: styles.green },
+    { label: 'Thửa cách ly', value: new Set(spans.filter(x => x.kind === 'quarantine' && x.to >= monthStart && x.from <= monthEnd).map(x => x.event.parcelId)).size, icon: Ban, tone: styles.red },
+    { label: 'Lứa đã hái', value: events.filter(e => inMonth(e.harvestedAt)).length, icon: CircleCheck, tone: styles.green },
+  ]
 
-  // Đổi tháng thì khung bên phải theo sang tháng đó: tháng hiện tại chọn hôm nay, tháng khác chọn mùng 1
-  const showMonth = (year: number, month: number) => {
-    const first = new Date(year, month, 1)
+  const dayItems = spans.filter(x => x.from <= selectedDay && x.to >= selectedDay)
+  const selected = dayItems.find(x => x.key === selectedKey) ?? dayItems[0] ?? null
+  const unsafe = dayItems.some(x => x.kind === 'quarantine' || x.kind === 'blocked')
+
+  /** Another month shows today when it is the current one, otherwise its first day. */
+  const showMonth = (year: number, index: number) => {
+    const first = new Date(year, index, 1)
     const now = new Date()
-    setCurrentDate(first)
-    setSelectedDate(now.getFullYear() === first.getFullYear() && now.getMonth() === first.getMonth() ? now : first)
+    setMonth(first)
+    setSelectedDay(now.getFullYear() === first.getFullYear() && now.getMonth() === first.getMonth() ? dayStart(now) : first.getTime())
   }
-  const handlePrevMonth = () => showMonth(currentDate.getFullYear(), currentDate.getMonth() - 1)
-  const handleNextMonth = () => showMonth(currentDate.getFullYear(), currentDate.getMonth() + 1)
-  const handleToday = () => showMonth(new Date().getFullYear(), new Date().getMonth())
+  const choose = (day: number, key: string | null = null) => { setSelectedDay(day); setSelectedKey(key) }
 
   // yyyy-mm-dd theo giờ máy, cho ô nhập ngày
-  const toInputDate = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  const toInputDate = (time: number) => {
+    const date = new Date(time)
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  }
   const addOnSelectedDay = () => {
-    setNewAddDateStr(toInputDate(selectedDate))
+    setNewAddDateStr(toInputDate(selectedDay))
     setIsAddModalOpen(true)
   }
-
-  const handleEventClick = (event: HarvestEvent) => {
-    if (!isManager) return
+  const edit = (event: HarvestEvent) => {
     setSelectedEvent(event)
     setNewDateStr(event.estimatedHarvestDate ? event.estimatedHarvestDate.split('T')[0] : '')
   }
@@ -128,93 +129,130 @@ export function HarvestCalendar({ userRole }: { userRole: 'MANAGER' | 'OFFICER' 
     }
   }
 
-  const daysInMonth = lastDay.getDate()
-  const startDayOfWeek = firstDay.getDay() // 0 = Sunday
-  const daysArray = useMemo(() => Array.from({ length: daysInMonth }, (_, i) => i + 1), [daysInMonth])
-  const emptyDays = useMemo(() => Array.from({ length: startDayOfWeek }, (_, i) => i), [startDayOfWeek])
-  const trailingDays = (7 - ((startDayOfWeek + daysInMonth) % 7)) % 7
-
   return (
-    <div className={kit.page}>
-      <PageHeader
-        icon={<Calendar size={28} />}
-        title={isFarmer ? 'Lịch dự kiến thu hoạch' : 'Lịch thu hái'}
-        description={isFarmer ? 'Ngày hái dự kiến từng thửa — màu cho biết đã đủ thời gian cách ly hay chưa' : isManager ? 'Lên kế hoạch thu hoạch cho các vùng chè của hợp tác xã.' : 'Lịch dự kiến thu hoạch theo thửa, có cảnh báo thời gian cách ly'}
-        actions={isManager ? <Button onClick={() => setIsAddModalOpen(true)}>+ Thêm lịch</Button> : undefined}
-      />
+    <div className={`${kit.page} ${styles.page}`}>
+      <div className={styles.top}>
+        <div>
+          <h1>Lịch thu hái</h1>
+          <p>Theo dõi ngày hái của từng thửa, tránh thu hái trong thời gian cách ly.</p>
+        </div>
+        {isManager && <Button onClick={() => setIsAddModalOpen(true)}><Plus size={16} aria-hidden="true" />Thêm lứa hái</Button>}
+      </div>
 
       <div className={styles.layout}>
-        <div className={styles.calendarContainer}>
-          <div className={styles.header}>
-            <button type="button" className={styles.nav} onClick={handlePrevMonth} aria-label="Tháng trước"><ChevronLeft size={18} aria-hidden="true" /></button>
-            <h2 className={styles.title}>Tháng {currentDate.getMonth() + 1}, {currentDate.getFullYear()}</h2>
-            <button type="button" className={styles.nav} onClick={handleNextMonth} aria-label="Tháng sau"><ChevronRight size={18} aria-hidden="true" /></button>
-            <button type="button" className={styles.todayButton} onClick={handleToday}>Hôm nay</button>
-          </div>
+        <div className={styles.main}>
+          <dl className={styles.stats}>
+            {stats.map(({ label, value, icon: Icon, tone }) => (
+              <div key={label}>
+                <span className={tone}><Icon size={20} aria-hidden="true" /></span>
+                <dd>{value}</dd>
+                <dt>{label}</dt>
+              </div>
+            ))}
+          </dl>
 
-          <div className={styles.gridScroll}>
-            <div className={styles.grid}>
-              {['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'].map(day => (
-                <div key={day} className={styles.dayHeader}>{day}</div>
-              ))}
+          <div className={styles.calendar}>
+            <div className={styles.header}>
+              <button type="button" className={styles.nav} onClick={() => showMonth(month.getFullYear(), month.getMonth() - 1)} aria-label="Tháng trước"><ChevronLeft size={16} aria-hidden="true" /></button>
+              <h2>Tháng {month.getMonth() + 1}, {month.getFullYear()}</h2>
+              <button type="button" className={styles.nav} onClick={() => showMonth(month.getFullYear(), month.getMonth() + 1)} aria-label="Tháng sau"><ChevronRight size={16} aria-hidden="true" /></button>
+              <button type="button" className={styles.todayButton} onClick={() => showMonth(new Date().getFullYear(), new Date().getMonth())}>Hôm nay</button>
+              <ul className={styles.legend} aria-label="Chú thích">
+                <li><i className={styles.ready} />Được hái</li>
+                <li><i className={styles.quarantine} />Cách ly</li>
+                <li><i className={styles.harvested} />Đã hái</li>
+              </ul>
+            </div>
 
-              {emptyDays.map(empty => (
-                <div key={`empty-${empty}`} className={`${styles.cell} ${styles.blank}`} />
-              ))}
-
-              {daysArray.map(day => {
-                const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day)
-                const isToday = date.toDateString() === todayKey
-                const isSelected = date.toDateString() === selectedDate.toDateString()
-
-                return (
-                  <div
-                    key={day}
-                    className={`${styles.cell} ${isToday ? styles.today : ''} ${isSelected ? styles.selected : ''}`}
-                    onClick={() => setSelectedDate(date)}
-                  >
-                    <button type="button" className={styles.cellDate} aria-pressed={isSelected} aria-label={`Ngày ${day}/${date.getMonth() + 1}`}>{day}</button>
-                    <div className="flex flex-col gap-1 overflow-y-auto">
-                      {eventsOn(date).map(ev => (
-                        <div
-                          key={ev.cycleId}
-                          onClick={() => handleEventClick(ev)}
-                          className={`
-                            ${styles.event}
-                            ${isManager ? styles.eventInteractive : ''}
-                            ${ev.status === 'SAFE' ? styles.eventSafe : ''}
-                            ${ev.status === 'WARNING' ? styles.eventWarning : ''}
-                            ${ev.status === 'DANGER' ? styles.eventDanger : ''}
-                          `}
-                          title={`Thửa: ${ev.parcelName}\nGiống: ${ev.cropType}\nHộ: ${ev.householdName}\nSL dự kiến: ${ev.estimatedYieldKg || 0} kg`}
-                        >
-                          {ev.status === 'SAFE' && <CheckCircle size={12} aria-hidden="true" />}
-                          {ev.status === 'WARNING' && <AlertTriangle size={12} aria-hidden="true" />}
-                          {ev.status === 'DANGER' && <ShieldAlert size={12} aria-hidden="true" />}
-                          <span className="truncate">{ev.parcelName || 'N/A'}</span>
+            <div className={styles.scroll}>
+              <div className={styles.grid}>
+                <div className={styles.weekdays}>
+                  {['Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy', 'Chủ Nhật'].map(day => <span key={day}>{day}</span>)}
+                </div>
+                {weeks.map(week => {
+                  const bars = weekBars(week, spans)
+                  const rows = Math.max(0, ...bars.map(bar => bar.row)) + 1
+                  return (
+                  <div key={week[0]} className={styles.week}>
+                    {week.map((day, index) => {
+                      const date = new Date(day)
+                      return (
+                        <div key={day} style={{ gridColumn: index + 1, gridRow: `1 / span ${rows}` }}
+                          className={`${styles.cell} ${date.getMonth() !== month.getMonth() ? styles.outside : ''} ${day === selectedDay ? styles.selected : ''}`}
+                          onClick={() => choose(day)}>
+                          <button type="button" className={`${styles.date} ${day === today ? styles.today : ''}`} aria-pressed={day === selectedDay} aria-label={`Ngày ${date.getDate()}/${date.getMonth() + 1}`}>{date.getDate()}</button>
                         </div>
-                      ))}
-                    </div>
+                      )
+                    })}
+                    {bars.map(({ span, column, width, row }) => {
+                      const Icon = KIND[span.kind].icon
+                      return (
+                        <button key={span.key} type="button" className={`${styles.bar} ${styles[span.kind]}`}
+                          style={{ gridColumn: `${column} / span ${width}`, gridRow: row + 1 }}
+                          title={`${span.event.parcelName} · ${KIND[span.kind].label}`}
+                          onClick={() => choose(Math.max(span.from, week[0]), span.key)}>
+                          <Icon size={12} aria-hidden="true" />
+                          <span>{span.event.parcelName}</span>
+                        </button>
+                      )
+                    })}
                   </div>
-                )
-              })}
-
-              {Array.from({ length: trailingDays }, (_, i) => (
-                <div key={`after-${i}`} className={`${styles.cell} ${styles.blank}`} />
-              ))}
+                  )
+                })}
+              </div>
             </div>
           </div>
         </div>
 
-        <DayPanel
-          date={selectedDate}
-          events={eventsOn(selectedDate)}
-          onAdd={isManager ? addOnSelectedDay : undefined}
-          onEdit={isManager ? handleEventClick : undefined}
-        />
+        <section className={styles.panel} aria-label="Chi tiết ngày">
+          <h2>Chi tiết ngày {fullDay(selectedDay)}</h2>
+          {unsafe && (
+            <p className={styles.warning}><CircleAlert size={18} aria-hidden="true" />Có thửa đang trong thời gian cách ly, không được thu hái.</p>
+          )}
+          <h3>Lịch thu hái trong ngày</h3>
+          {dayItems.length === 0 ? (
+            <p className={styles.muted}>Ngày này chưa có lịch thu hoạch.</p>
+          ) : (
+            <ul className={styles.items}>
+              {dayItems.map(item => {
+                const Icon = KIND[item.kind].icon
+                return (
+                  <li key={item.key}>
+                    <button type="button" className={styles[item.kind]} aria-pressed={item.key === selected?.key} onClick={() => setSelectedKey(item.key)}>
+                      <Icon size={16} aria-hidden="true" />
+                      <strong>{item.event.parcelName}</strong>
+                      <span>{KIND[item.kind].label}</span>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+
+          {selected && (
+            <>
+              <h3>Thông tin lứa {selected.event.parcelName}</h3>
+              <dl className={styles.rows}>
+                <div><dt>Nông hộ</dt><dd>{selected.event.householdName}</dd></div>
+                <div><dt>Giống chè</dt><dd>{selected.event.cropType}</dd></div>
+                {selected.event.estimatedHarvestDate && <div><dt>Ngày hái dự kiến</dt><dd>{fullDay(selected.event.estimatedHarvestDate)}</dd></div>}
+                {selected.event.estimatedYieldKg ? <div><dt>Sản lượng dự kiến</dt><dd>{selected.event.estimatedYieldKg.toLocaleString('vi-VN')} kg</dd></div> : null}
+                {selected.event.treatment && (
+                  <>
+                    <div><dt>Loại xử lý</dt><dd>{ACTIVITY[selected.event.treatment.activity] ?? selected.event.treatment.activity}{selected.event.treatment.product ? ` · ${selected.event.treatment.product}` : ''}</dd></div>
+                    {selected.event.treatment.date && <div><dt>Ngày xử lý</dt><dd>{fullDay(selected.event.treatment.date)}</dd></div>}
+                    {selected.event.treatment.withdrawalDays != null && <div><dt>Thời gian cách ly</dt><dd>{selected.event.treatment.withdrawalDays} ngày</dd></div>}
+                  </>
+                )}
+                {selected.event.safeHarvestDate && <div><dt>Ngày được hái</dt><dd>{fullDay(selected.event.safeHarvestDate)}</dd></div>}
+              </dl>
+              {isManager && !selected.event.harvestedAt && <Button variant="secondary" onClick={() => edit(selected.event)}>Đổi ngày</Button>}
+            </>
+          )}
+          {isManager && <Button variant="secondary" onClick={addOnSelectedDay}>+ Thêm lứa hái cho ngày này</Button>}
+        </section>
       </div>
 
-      {isFarmer && <div className={styles.below}><FarmerScheduleAside /></div>}
       {isManager && (
         <section className={farmer.pn} aria-label="Chưa xếp lịch">
           <div className={farmer.ph}>

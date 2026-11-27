@@ -40,6 +40,7 @@ export class PrismaCropCycleRepository implements CropCyclePort {
       // Note: we only consider journals that happened during this cycle. 
       // If cycle.sowed_at exists, entry_date >= cycle.sowed_at
       let latestSafeHarvestDate: Date | null = null
+      let treatment: HarvestEvent['treatment'] = null
       
       for (const entry of cycle.parcel.journal_entries) {
         if (cycle.sowed_at && entry.entry_date < cycle.sowed_at) {
@@ -50,6 +51,12 @@ export class PrismaCropCycleRepository implements CropCyclePort {
           if (activity.safe_harvest_date) {
             if (!latestSafeHarvestDate || activity.safe_harvest_date > latestSafeHarvestDate) {
               latestSafeHarvestDate = activity.safe_harvest_date
+              treatment = {
+                activity: entry.activity_type,
+                product: activity.product_name ?? null,
+                date: entry.entry_date?.toISOString() ?? '',
+                withdrawalDays: activity.withdrawal_days ?? null,
+              }
             }
           }
         }
@@ -77,6 +84,8 @@ export class PrismaCropCycleRepository implements CropCyclePort {
         estimatedHarvestDate: cycle.estimated_harvest_date ? cycle.estimated_harvest_date.toISOString() : null,
         safeHarvestDate: latestSafeHarvestDate ? latestSafeHarvestDate.toISOString() : null,
         status,
+        treatment,
+        harvestedAt: cycle.harvested_at ? cycle.harvested_at.toISOString() : null,
       }
     })
   }
