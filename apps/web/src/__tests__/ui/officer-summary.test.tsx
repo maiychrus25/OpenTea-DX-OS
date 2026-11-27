@@ -193,6 +193,26 @@ describe('household cards', () => {
   })
 })
 
+describe('dashboard journal links', () => {
+  it('opens an older tenant-loaded entry even when absent from the current list', async () => {
+    global.fetch = jest.fn().mockResolvedValue(response([]))
+    render(<OfficerJournalApproval selectedEntry={{ id: 'older', parcel_code: 'P-OLDER', status: 'APPROVED', notes: 'Older entry detail', performed_by: 'Recorded farmer' }} />)
+    expect(await screen.findByText('Chi tiết Nhật ký')).toBeInTheDocument()
+    expect(screen.getByText('Older entry detail')).toBeInTheDocument()
+    expect(screen.getByText('Recorded farmer')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Duyệt' })).not.toBeInTheDocument()
+  })
+
+  it('opens and cancels the existing create form from a dashboard deep link', async () => {
+    global.fetch = jest.fn().mockResolvedValue(response([]))
+    render(<OfficerJournalApproval createOnOpen />)
+    expect(await screen.findByRole('heading', { name: 'Ghi nhật ký mới' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Hủy' }))
+    expect(screen.queryByRole('heading', { name: 'Ghi nhật ký mới' })).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.getByRole('table')).toBeInTheDocument())
+  })
+})
+
 describe('pressing a figure', () => {
   it('shows only the journal entries it counts, and everything again', async () => {
     global.fetch = jest.fn().mockResolvedValue(response([

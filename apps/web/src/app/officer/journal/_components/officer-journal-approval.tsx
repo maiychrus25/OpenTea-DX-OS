@@ -12,7 +12,7 @@ import styles from '../journal.module.css'
 import { JournalForm } from './JournalForm'
 import { fetchJson, LOAD_FAILED_MESSAGE } from '@/lib/api/fetch-json'
 
-interface JournalEntry {
+export interface JournalEntry {
   id: string
   parcel_code?: string
   parcel_id?: string
@@ -56,9 +56,11 @@ function formatDetail(detail: string | null | undefined): string {
 
 interface OfficerJournalApprovalProps {
   householdId?: string
+  selectedEntry?: JournalEntry
+  createOnOpen?: boolean
 }
 
-export function OfficerJournalApproval({ householdId }: OfficerJournalApprovalProps) {
+export function OfficerJournalApproval({ householdId, selectedEntry, createOnOpen = false }: OfficerJournalApprovalProps) {
   const [entries, setEntries] = useState<JournalEntry[]>([])
   const [rejectEntryId, setRejectEntryId] = useState<string | null>(null)
   const [rejectReason, setRejectReason] = useState('')
@@ -72,9 +74,12 @@ export function OfficerJournalApproval({ householdId }: OfficerJournalApprovalPr
 
   // The dashboard links here with ?status=… to open on the entries it counted.
   useEffect(() => {
-    const status = new URLSearchParams(window.location.search).get('status')
+    const params = new URLSearchParams(window.location.search)
+    const status = params.get('status')
     if (status === 'PENDING_APPROVAL' || status === 'APPROVED') setOnly(status)
-  }, [])
+    if (createOnOpen) setIsCreating(true)
+    if (selectedEntry) setViewEntryId(selectedEntry.id)
+  }, [createOnOpen, selectedEntry])
 
   const load = useCallback(async () => {
     try {
@@ -285,8 +290,8 @@ export function OfficerJournalApproval({ householdId }: OfficerJournalApprovalPr
             </div>
             
             {(() => {
-              const entry = entries.find(e => e.id === viewEntryId)
-              if (!entry) return null
+              const entry = entries.find(e => e.id === viewEntryId) ?? (selectedEntry?.id === viewEntryId ? selectedEntry : undefined)
+              if (!entry) return <p>Không tìm thấy nhật ký trong danh sách đã tải.</p>
               
               return (
                 <div className={styles.detailContainer}>
