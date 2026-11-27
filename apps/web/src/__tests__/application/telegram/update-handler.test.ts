@@ -179,7 +179,7 @@ function build(options: {
     chat: {
       tools: [],
       actions: [],
-      photos: { put: jest.fn(async () => undefined), get: jest.fn(async () => Buffer.alloc(0)) },
+      photos: { put: jest.fn(async () => undefined), get: jest.fn(async () => Buffer.alloc(0)), delete: jest.fn(async () => undefined) },
       requests: { create: jest.fn(async () => 'req-1') } as never,
       householdId: async () => null,
       proposalMessages: proposalMessages,

@@ -3,6 +3,7 @@
 
 import { randomBytes } from 'node:crypto'
 import { DomainError } from '@/domain/errors'
+import { logger } from '@/lib/logger'
 import { signCallbackDataV2 } from '@/domain/telegram/callback-data'
 import type { TelegramConversation, TelegramRepository } from '@/domain/telegram/ports/TelegramRepository'
 import { TELEGRAM_BUTTON, TELEGRAM_TEXT } from '../messages'
@@ -83,7 +84,7 @@ export interface CallbackPress {
 }
 
 export type IncomingPhoto =
-  | { kind: 'image'; bytes: Buffer; mimeType: 'image/jpeg' }
+  | { kind: 'image'; bytes: Buffer; mimeType: 'image/jpeg' | 'image/png' }
   | { kind: 'error'; reason: 'too_large' | 'download_failed' }
 
 export type IncomingVoice =
@@ -151,7 +152,7 @@ export class ChatEngine {
   constructor(private readonly deps: ChatEngineDeps) {}
 
   async menu(user: ChatUser): Promise<UpdateResponse> {
-    await this.deps.repo.deleteConversation(user.telegramUserId)
+    await this.discard(user.telegramUserId)
     return only([send(user.chatId, TELEGRAM_TEXT.menuPrompt, menuKeyboard(user.tenant.role, this.deps.callbackKey))])
   }
 
@@ -163,9 +164,9 @@ export class ChatEngine {
     if (open?.kind === 'flow') {
       if (command) {
         // A command replaces the flow it interrupts.
-        await this.deps.repo.deleteConversation(user.telegramUserId)
+        await this.discard(user.telegramUserId)
       } else if (expired(open, now)) {
-        await this.deps.repo.deleteConversation(user.telegramUserId)
+        await this.discard(user.telegramUserId)
         return only([send(user.chatId, TELEGRAM_TEXT.flowExpired)])
       } else {
         return this.textInFlow(user, open, text, now)
@@ -185,18 +186,21 @@ export class ChatEngine {
     return this.askAssistant(user, text, now)
   }
 
-  async onPhoto(user: ChatUser, photo: IncomingPhoto, now: Date): Promise<UpdateResponse> {
+  /** A photo's caption is the message text unless a flow waits for this photo: inside a photo step the photo wins. */
+  async onPhoto(user: ChatUser, photo: IncomingPhoto, now: Date, caption = ''): Promise<UpdateResponse> {
     const chat = user.chatId
     const open = await this.deps.repo.conversationOf(user.telegramUserId)
+    const text = caption.trim()
+    if (text && !this.waitsForPhoto(open, now)) return this.onText(user, text, now)
     if (open?.kind !== 'flow' || open.flow === null) return only([send(chat, TELEGRAM_TEXT.photoOutsideFlow)])
     if (expired(open, now)) {
-      await this.deps.repo.deleteConversation(user.telegramUserId)
+      await this.discard(user.telegramUserId)
       return only([send(chat, TELEGRAM_TEXT.flowExpired)])
     }
     if (open.flow === 'ask') return only([send(chat, TELEGRAM_TEXT.expectText)])
     const action = this.actionNamed(open.flow)
     if (!action || open.step === null) {
-      await this.deps.repo.deleteConversation(user.telegramUserId)
+      await this.discard(user.telegramUserId)
       return only([send(chat, TELEGRAM_TEXT.flowExpired)])
     }
     if (open.step < 0) return only([send(chat, TELEGRAM_TEXT.expectChoice)])
@@ -237,6 +241,8 @@ export class ChatEngine {
       return only([send(chat, TELEGRAM_TEXT.voiceHeard(text), inFlow)])
     }
 
+    // The heard sentence replaces a flow that could not take it (expired), and so its photos.
+    if (open?.kind === 'flow') await this.dropPhotos(open)
     const token = newToken()
     await this.deps.repo.setFlow({
       telegramUserId: user.telegramUserId,
@@ -285,12 +291,12 @@ export class ChatEngine {
 
     const isCard = row.step !== null && row.step < 0
     if (expired(row, now)) {
-      await this.deps.repo.deleteConversation(press.telegramUserId)
+      await this.discard(press.telegramUserId)
       const text = isCard ? TELEGRAM_TEXT.cardExpired : TELEGRAM_TEXT.flowExpired
       return callbackOnly([edit(chat, press.messageId, text)], text, true)
     }
     if (press.s === 'cancel') {
-      await this.deps.repo.deleteConversation(press.telegramUserId)
+      await this.discard(press.telegramUserId)
       return callbackOnly([edit(chat, press.messageId, TELEGRAM_TEXT.flowCancelled)])
     }
     if (isCard) return this.cardPress(user, row, action, press, now)
@@ -363,7 +369,7 @@ export class ChatEngine {
     }
     const action = this.actionNamed(row.flow)
     if (!action || row.step === null) {
-      await this.deps.repo.deleteConversation(user.telegramUserId)
+      await this.discard(user.telegramUserId)
       return only([send(chat, TELEGRAM_TEXT.flowExpired)])
     }
     if (row.step < 0) return only([send(chat, TELEGRAM_TEXT.expectChoice)])
@@ -475,12 +481,15 @@ export class ChatEngine {
     await this.deps.repo.deleteConversation(press.telegramUserId)
     const payload = action.payloadSchema.safeParse(payloadOf(row.state))
     if (!payload.success) {
+      await this.dropPhotos(row)
       return callbackOnly([edit(chat, press.messageId, TELEGRAM_TEXT.executeFailed('Thiếu thông tin'))], '', true)
     }
     let line: string
     try {
       line = await action.execute(payload.data, user, { photos: this.deps.photos }, now)
     } catch (err) {
+      // Nothing was made from the photo, so it is an orphan (an executed action keeps its photo).
+      await this.dropPhotos(row)
       const message = err instanceof DomainError ? err.message : SYSTEM_FAILURE_VI
       return callbackOnly([edit(chat, press.messageId, TELEGRAM_TEXT.executeFailed(message))], '', true)
     }
@@ -494,7 +503,7 @@ export class ChatEngine {
 
   private async menuPress(user: ChatUser, press: CallbackPress, now: Date): Promise<UpdateResponse> {
     if (!(MENU_KEYS as string[]).includes(press.s)) return callbackOnly([], TELEGRAM_TEXT.staleButton, true)
-    await this.deps.repo.deleteConversation(press.telegramUserId)
+    await this.discard(press.telegramUserId)
     let result: UpdateResponse
     switch (press.s as MenuKey) {
       case 'today':
@@ -557,7 +566,7 @@ export class ChatEngine {
     if (!action) return only([send(chat, TELEGRAM_TEXT.notYet)])
     if (!action.roles.includes(user.tenant.role)) return only([send(chat, TELEGRAM_TEXT.noPermission(action.titleVi))])
 
-    await this.deps.repo.deleteConversation(user.telegramUserId)
+    await this.discard(user.telegramUserId)
     const started = action.start ? await action.start(user, now) : { state: {} }
     if ('replyVi' in started) return only([send(chat, started.replyVi)])
     return this.promptFrom(user, action, started.state, 0, now, prefilled)
@@ -630,7 +639,7 @@ export class ChatEngine {
     const chat = user.chatId
     const payload = action.payloadSchema.safeParse(payloadOf(state))
     if (!payload.success) {
-      await this.deps.repo.deleteConversation(user.telegramUserId)
+      await this.discard(user.telegramUserId)
       return only([send(chat, TELEGRAM_TEXT.executeFailed('Thiếu thông tin'))])
     }
     const preview = await action.preview(payload.data, user)
@@ -671,6 +680,36 @@ export class ChatEngine {
       default:
         return undefined
     }
+  }
+
+  /** True when the open flow is at an unexpired photo step. */
+  private waitsForPhoto(row: TelegramConversation | null, now: Date): boolean {
+    if (row?.kind !== 'flow' || expired(row, now) || row.step === null || row.step < 0) return false
+    return this.actionNamed(row.flow)?.steps[row.step]?.kind === 'photo'
+  }
+
+  /** The photos a flow holds: the answers of its photo steps. */
+  private photoKeysOf(row: TelegramConversation): string[] {
+    const steps = this.actionNamed(row.flow)?.steps ?? []
+    return steps.flatMap((step) => (step.kind === 'photo' && typeof row.state[step.slot] === 'string' ? [row.state[step.slot] as string] : []))
+  }
+
+  /** Deletes the stored photos of a dropped flow. A photo that cannot be deleted is logged and never blocks the reply. */
+  private async dropPhotos(row: TelegramConversation): Promise<void> {
+    for (const key of this.photoKeysOf(row)) {
+      try {
+        await this.deps.photos.delete(key)
+      } catch (err) {
+        logger.error('Telegram: could not delete an orphan photo', { err })
+      }
+    }
+  }
+
+  /** Ends a person's open conversation. A flow's stored photos go with it: they belong to no executed action. */
+  async discard(telegramUserId: string): Promise<void> {
+    const row = await this.deps.repo.conversationOf(telegramUserId)
+    if (row?.kind === 'flow') await this.dropPhotos(row)
+    await this.deps.repo.deleteConversation(telegramUserId)
   }
 
   private notUnderstood(user: ChatUser): OutboxReply {

@@ -106,6 +106,8 @@ export type FlowStep = ChoiceStep | TextStep | IntegerStep | PhotoStep
 export interface PhotoStore {
   put(key: string, bytes: Buffer, mimeType: 'image/jpeg' | 'image/png'): Promise<void>
   get(key: string): Promise<Buffer>
+  /** Removes a stored photo; used for photos whose card was cancelled or whose flow was dropped. */
+  delete(key: string): Promise<void>
 }
 
 export interface ChatActionDeps {

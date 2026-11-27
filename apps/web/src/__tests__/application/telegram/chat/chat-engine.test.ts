@@ -58,6 +58,9 @@ function fakePhotos() {
       stored.set(key, bytes)
     }),
     get: jest.fn(async (key: string) => stored.get(key) ?? Buffer.alloc(0)),
+    delete: jest.fn(async (key: string) => {
+      stored.delete(key)
+    }),
   }
   return store
 }
@@ -679,3 +682,132 @@ describe('ChatEngine: voice messages (M15)', () => {
     expect(repo.rows.has('42')).toBe(false)
   })
 })
+
+describe('ChatEngine: captions and orphan photos (issue #80, C5)', () => {
+  const jpeg = { kind: 'image', bytes: Buffer.from([0xff, 0xd8, 0xff]), mimeType: 'image/jpeg' } as const
+  const DISEASE_KEY = 'telegram/TC/2026/disease.jpg'
+  const buttonsOf = (res: { replies: { buttons?: ReplyButtons }[] }) => res.replies[0].buttons
+
+  async function diseaseCard(engine: ChatEngine) {
+    await engine.onText(FARMER, '/benh', NOW)
+    return engine.onPhoto(FARMER, jpeg, NOW)
+  }
+
+  test('a caption is handled as the message text when no flow waits for a photo', async () => {
+    const { engine } = build()
+    const res = await engine.onPhoto(FARMER, jpeg, NOW, 'thời tiết hôm nay')
+    expect(res.replies).toEqual([{ op: 'send', chat_id: 42, text: 'Trời nắng, 31 độ\nNguồn: Thời tiết' }])
+  })
+
+  test('a caption with no match goes to the assistant like typed text', async () => {
+    const { engine, requests } = build()
+    await engine.onPhoto(FARMER, jpeg, NOW, 'mai có nên đi hái không')
+    expect(requests.submit).toHaveBeenCalledWith(FARMER, 'mai có nên đi hái không', NOW)
+  })
+
+  test('a caption answers the text step of an open flow', async () => {
+    const { engine, repo } = build({ actions: [{ ...journal, steps: [{ kind: 'text', slot: 'parcel_id', promptVi: 'Mã thửa:', maxLength: 20 }], payloadSchema: z.object({ parcel_id: z.string() }) } as unknown as ChatAction] })
+    await engine.onText(FARMER, '/nhatky', NOW)
+    await engine.onPhoto(FARMER, jpeg, NOW, 'TC-A1')
+    expect(repo.rows.get('42')).toMatchObject({ step: -1, state: { parcel_id: 'TC-A1' } })
+  })
+
+  test('inside a photo step the photo wins and the caption is ignored', async () => {
+    const { engine, photos, requests } = build()
+    await engine.onText(FARMER, '/benh', NOW)
+    const res = await engine.onPhoto(FARMER, jpeg, NOW, 'thời tiết hôm nay')
+    expect(photos.put).toHaveBeenCalledWith(DISEASE_KEY, jpeg.bytes, 'image/jpeg')
+    expect(res.replies[0].text).toContain('Gửi ảnh bệnh')
+    expect(weather.run).not.toHaveBeenCalled()
+    expect(requests.submit).not.toHaveBeenCalled()
+  })
+
+  test('a photo without a caption keeps the old answers', async () => {
+    const { engine } = build()
+    expect((await engine.onPhoto(FARMER, jpeg, NOW, '  ')).replies[0].text).toBe(TELEGRAM_TEXT.photoOutsideFlow)
+  })
+
+  test('Cancel on the card deletes the stored photo', async () => {
+    const { engine, photos, repo } = build()
+    const card = await diseaseCard(engine)
+    await press(engine, FARMER, '42', 42, buttonFor(buttonsOf(card), 'Huỷ').c, buttonFor(buttonsOf(card), 'Huỷ').s)
+    expect(photos.delete).toHaveBeenCalledTimes(1)
+    expect(photos.delete).toHaveBeenCalledWith(DISEASE_KEY)
+    expect(repo.rows.has('42')).toBe(false)
+  })
+
+  test('Cancel at a step with no photo yet deletes nothing', async () => {
+    const { engine, photos } = build()
+    const start = await engine.onText(FARMER, '/nhatky', NOW)
+    await press(engine, FARMER, '42', 42, buttonFor(buttonsOf(start), 'Huỷ').c, buttonFor(buttonsOf(start), 'Huỷ').s)
+    expect(photos.delete).not.toHaveBeenCalled()
+  })
+
+  test('a flow replaced by a command (/menu, /hoi or another action) deletes the stored photo once each', async () => {
+    for (const next of ['/menu', '/nhatky', '/hoi']) {
+      const { engine, photos } = build()
+      await diseaseCard(engine)
+      await engine.onText(FARMER, next, NOW)
+      expect(photos.delete).toHaveBeenCalledTimes(1)
+      expect(photos.delete).toHaveBeenCalledWith(DISEASE_KEY)
+    }
+  })
+
+  test('a menu button that replaces the flow deletes the stored photo', async () => {
+    const { engine, photos } = build()
+    await diseaseCard(engine)
+    await press(engine, FARMER, '42', 42, 'menu', 'today')
+    expect(photos.delete).toHaveBeenCalledWith(DISEASE_KEY)
+  })
+
+  test('an expired flow found by text, a photo or a button deletes the stored photo', async () => {
+    const later = new Date(NOW.getTime() + 11 * 60 * 1000)
+    const found = {
+      text: (engine: ChatEngine) => engine.onText(FARMER, 'lá vàng', later),
+      photo: (engine: ChatEngine) => engine.onPhoto(FARMER, jpeg, later),
+      button: (engine: ChatEngine, card: { replies: { buttons?: ReplyButtons }[] }) =>
+        press(engine, FARMER, '42', 42, buttonFor(buttonsOf(card), 'Xác nhận').c, buttonFor(buttonsOf(card), 'Xác nhận').s, 9, later),
+    }
+    for (const [name, run] of Object.entries(found)) {
+      const { engine, photos } = build()
+      const card = await diseaseCard(engine)
+      await run(engine, card)
+      expect([name, (photos.delete as jest.Mock).mock.calls]).toEqual([name, [[DISEASE_KEY]]])
+    }
+  })
+
+  test('an executed action keeps its photo', async () => {
+    const { engine, photos } = build()
+    const card = await diseaseCard(engine)
+    const ok = buttonFor(buttonsOf(card), 'Xác nhận')
+    await press(engine, FARMER, '42', 42, ok.c, ok.s)
+    expect(disease.execute).toHaveBeenCalledTimes(1)
+    expect(photos.delete).not.toHaveBeenCalled()
+  })
+
+  test('an action that fails deletes its photo', async () => {
+    const { engine, photos } = build()
+    const card = await diseaseCard(engine)
+    ;(disease.execute as unknown as jest.Mock).mockRejectedValueOnce(new DomainError('Dịch vụ bận'))
+    const ok = buttonFor(buttonsOf(card), 'Xác nhận')
+    await press(engine, FARMER, '42', 42, ok.c, ok.s)
+    expect(photos.delete).toHaveBeenCalledWith(DISEASE_KEY)
+  })
+
+  test('a photo that cannot be deleted does not break the reply', async () => {
+    const { engine, photos } = build()
+    const card = await diseaseCard(engine)
+    ;(photos.delete as jest.Mock).mockRejectedValueOnce(new Error('minio down'))
+    const res = await press(engine, FARMER, '42', 42, buttonFor(buttonsOf(card), 'Huỷ').c, buttonFor(buttonsOf(card), 'Huỷ').s)
+    expect(res.replies[0]).toMatchObject({ op: 'edit', text: TELEGRAM_TEXT.flowCancelled })
+  })
+
+  test('dropping a conversation for the handler deletes its photo and the row', async () => {
+    const { engine, photos, repo } = build()
+    await diseaseCard(engine)
+    await engine.discard('42')
+    expect(photos.delete).toHaveBeenCalledWith(DISEASE_KEY)
+    expect(repo.rows.has('42')).toBe(false)
+  })
+})
+

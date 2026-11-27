@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 import { TelegramUpdateHandler, type TelegramUpdateInput } from '@/application/telegram/TelegramUpdateHandler'
-import type { ChatTool } from '@/application/telegram/chat/types'
+import { z } from 'zod'
+import type { ChatAction, ChatTool } from '@/application/telegram/chat/types'
 import { TELEGRAM_TEXT } from '@/application/telegram/messages'
 import { signCallbackDataV2 } from '@/domain/telegram/callback-data'
 import type { LiveRoleReader } from '@/domain/telegram/ports/LiveRoleReader'
@@ -73,6 +74,22 @@ const nearby = {
   run: jest.fn(async () => ({ lines: ['Thửa TC-A1 cách 0.4 km'], source: 'Vùng trồng' })),
 } as unknown as ChatTool
 
+const photoStore = { put: jest.fn(async () => undefined), get: jest.fn(async () => Buffer.alloc(0)), delete: jest.fn(async () => undefined) }
+
+const diseasePhoto = {
+  name: 'disease.report',
+  titleVi: 'Chẩn đoán bệnh',
+  risk: 'medium',
+  roles: ['manager'],
+  routes: [],
+  args: [],
+  steps: [{ kind: 'photo', slot: 'photo_key', promptVi: 'Gửi ảnh', optional: false, photoKey: () => 'k/disease.jpg' }],
+  payloadSchema: z.object({ photo_key: z.string() }),
+  consequenceVi: null,
+  preview: async () => [],
+  execute: async () => '',
+} as unknown as ChatAction
+
 function build(links: TelegramLink[] = [link({})]) {
   const repo = fakeRepo(links)
   const handler = new TelegramUpdateHandler({
@@ -85,8 +102,8 @@ function build(links: TelegramLink[] = [link({})]) {
     callbackKey: KEY,
     chat: {
       tools: [nearby],
-      actions: [],
-      photos: { put: jest.fn(async () => undefined), get: jest.fn(async () => Buffer.alloc(0)) },
+      actions: [diseasePhoto],
+      photos: photoStore,
       requests: {} as never,
       householdId: async () => null,
       proposalMessages: async () => [],
@@ -205,3 +222,48 @@ describe('TelegramUpdateHandler: voice messages (M15)', () => {
     expect(repo.conversations.size).toBe(0)
   })
 })
+
+describe('TelegramUpdateHandler: photos, captions and orphans (issue #80, C5)', () => {
+  const b64 = (bytes: number[]) => Buffer.from(bytes).toString('base64')
+  const jpeg = (fields: Record<string, unknown> = {}) =>
+    message({ photo: { mime_type: 'image/jpeg', data_base64: b64([0xff, 0xd8, 0xff, 1]), file_unique_id: 'u1' }, ...fields })
+
+  beforeEach(() => jest.clearAllMocks())
+
+  test('a caption on a photo is read as text when no photo is awaited', async () => {
+    const { handler } = build()
+    const res = await handler.handle(jpeg({ caption: '/menu' }))
+    expect(res.replies[0].text).toBe(TELEGRAM_TEXT.menuPrompt)
+  })
+
+  test('a photo in a photo step is stored, a PNG keeps its type, and bytes that are neither are refused', async () => {
+    const { handler } = build()
+    await handler.handle(message({ text: '/benh' }))
+    const refused = await handler.handle(message({ photo: { mime_type: 'image/jpeg', data_base64: b64([1, 2, 3, 4]), file_unique_id: 'u0' } }))
+    expect(refused.replies[0].text).toBe(TELEGRAM_TEXT.photoFailed)
+    expect(photoStore.put).not.toHaveBeenCalled()
+
+    const png = await handler.handle(message({ photo: { mime_type: 'image/jpeg', data_base64: b64([0x89, 0x50, 0x4e, 0x47, 9]), file_unique_id: 'u2' } }))
+    expect(png.replies[0].text).toContain('Chẩn đoán bệnh')
+    expect(photoStore.put).toHaveBeenCalledWith('k/disease.jpg', Buffer.from([0x89, 0x50, 0x4e, 0x47, 9]), 'image/png')
+  })
+
+  test('/huy deletes the photo the flow stored', async () => {
+    const { handler } = build()
+    await handler.handle(message({ text: '/benh' }))
+    await handler.handle(jpeg())
+    const res = await handler.handle(message({ text: '/huy' }))
+    expect(res.replies[0].text).toBe(TELEGRAM_TEXT.flowCancelled)
+    expect(photoStore.delete).toHaveBeenCalledWith('k/disease.jpg')
+  })
+
+  test('/stop deletes the photo the flow stored', async () => {
+    const { handler, repo } = build()
+    await handler.handle(message({ text: '/benh' }))
+    await handler.handle(jpeg())
+    await handler.handle(message({ text: '/stop' }))
+    expect(photoStore.delete).toHaveBeenCalledWith('k/disease.jpg')
+    expect(repo.conversations.size).toBe(0)
+  })
+})
+

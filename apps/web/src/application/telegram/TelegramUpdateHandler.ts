@@ -31,7 +31,7 @@ export interface TelegramMessageInput {
   chat: { id: number; type: string }
   from?: { id: number }
   text?: string
-  /** Text of a photo; not used for routing (a photo goes to the open photo step or is refused). */
+  /** Text of a photo: read as the message text unless a flow waits for the photo (then the photo wins). */
   caption?: string
   /** Set when the photo was downloaded: the largest size at most 5 MB, as base64 JPEG bytes (contract C1). */
   photo?: { mime_type: 'image/jpeg'; data_base64: string; file_unique_id: string }
@@ -142,11 +142,18 @@ const answer = (text: string, showAlert = false): UpdateResponse => ({
   answer_callback: { text, show_alert: showAlert },
 })
 
+const JPEG_MAGIC = [0xff, 0xd8, 0xff]
+const PNG_MAGIC = [0x89, 0x50, 0x4e, 0x47]
+const startsWith = (bytes: Buffer, magic: number[]) => magic.every((byte, i) => bytes[i] === byte)
+
+/** The relay says JPEG for every photo; the bytes decide, so only a real JPEG or PNG is stored. */
 function incomingPhoto(message: TelegramMessageInput): IncomingPhoto {
   if (message.photo_error) return { kind: 'error', reason: message.photo_error }
   const bytes = Buffer.from(message.photo!.data_base64, 'base64')
   if (bytes.length > PHOTO_MAX_BYTES) return { kind: 'error', reason: 'too_large' }
-  return { kind: 'image', bytes, mimeType: 'image/jpeg' }
+  if (startsWith(bytes, JPEG_MAGIC)) return { kind: 'image', bytes, mimeType: 'image/jpeg' }
+  if (startsWith(bytes, PNG_MAGIC)) return { kind: 'image', bytes, mimeType: 'image/png' }
+  return { kind: 'error', reason: 'download_failed' }
 }
 
 /**
@@ -257,7 +264,7 @@ export class TelegramUpdateHandler {
     if (!user) return { replies: [reply(chatId, TELEGRAM_TEXT.notLinked)] }
     if (message.voice_error) return this.chat.onVoice(user, { kind: 'error', reason: message.voice_error }, this.now())
     if (message.voice_text !== undefined) return this.chat.onVoice(user, { kind: 'text', text: message.voice_text }, this.now())
-    if (message.photo || message.photo_error) return this.chat.onPhoto(user, incomingPhoto(message), this.now())
+    if (message.photo || message.photo_error) return this.chat.onPhoto(user, incomingPhoto(message), this.now(), message.caption)
     if (message.location) {
       return this.chat.onLocation(user, message.location.latitude, message.location.longitude, this.now())
     }
@@ -298,7 +305,7 @@ export class TelegramUpdateHandler {
   }
 
   private async unlinkUser(telegramUserId: string, chatId: number): Promise<UpdateResponse> {
-    await this.deps.repo.deleteConversation(telegramUserId)
+    await this.chat.discard(telegramUserId)
     const removed = await this.deps.repo.unlinkUser({ telegramUserId })
     return { replies: [reply(chatId, removed ? TELEGRAM_TEXT.unlinked : TELEGRAM_TEXT.notLinked)] }
   }
@@ -314,7 +321,7 @@ export class TelegramUpdateHandler {
   private async cancelOpen(telegramUserId: string, chatId: number): Promise<UpdateResponse> {
     const open = await this.deps.repo.activeConversation(telegramUserId, this.now())
     if (!open) return { replies: [reply(chatId, TELEGRAM_TEXT.nothingToCancel)] }
-    await this.deps.repo.deleteConversation(telegramUserId)
+    await this.chat.discard(telegramUserId)
     const text = open.kind === 'reject_reason' ? TELEGRAM_TEXT.rejectCancelled : TELEGRAM_TEXT.flowCancelled
     return { replies: [reply(chatId, text)] }
   }
@@ -391,6 +398,7 @@ export class TelegramUpdateHandler {
       if (access.proposal.status !== 'proposed') {
         return answer(TELEGRAM_TEXT.alreadyDecided(access.proposal.decidedByName))
       }
+      await this.chat.discard(telegramUserId)
       await this.deps.repo.setConversation({
         telegramUserId,
         proposalId: parsed.proposalId,
