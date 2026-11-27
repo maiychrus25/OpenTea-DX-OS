@@ -93,7 +93,7 @@ describe('Story 1.3: Schema Validation', () => {
   test('seed file exists and uses upsert', () => {
     expect(fs.existsSync(seedPath)).toBe(true);
     const seedContent = fs.readFileSync(seedPath, 'utf8');
-    expect(seedContent).toMatch(/prisma\.\w+\.upsert/);
+    expect(seedContent).toMatch(/(prisma|tx)\.\w+\.upsert/);
   });
 
   // TC-1.3-09: Prisma client singleton exports prisma

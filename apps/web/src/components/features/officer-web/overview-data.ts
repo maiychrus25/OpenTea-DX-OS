@@ -4,7 +4,7 @@
 export const DAY = 86_400_000
 export const ACTIVITY_LABELS: Record<string, string> = {
   SPRAYING: 'Phun thuốc', FERTILIZING: 'Bón phân', IRRIGATION: 'Tưới tiêu',
-  HARVEST: 'Thu hoạch', SOWING: 'Gieo sạ', OTHER: 'Khác',
+  HARVEST: 'Thu hoạch', SOWING: 'Trồng mới', OTHER: 'Khác',
 }
 export const dayMonth = (date: Date) => date.toLocaleDateString('en-GB', {
   timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit',

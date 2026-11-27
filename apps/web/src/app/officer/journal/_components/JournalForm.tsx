@@ -31,7 +31,7 @@ const ACTIVITY_TYPES = [
   { value: 'FERTILIZING', label: 'Bón phân' },
   { value: 'IRRIGATION', label: 'Tưới tiêu' },
   { value: 'HARVEST', label: 'Thu hoạch' },
-  { value: 'SOWING', label: 'Gieo sạ' },
+  { value: 'SOWING', label: 'Trồng mới' },
   { value: 'OTHER', label: 'Khác' },
 ]
 
