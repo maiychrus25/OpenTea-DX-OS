@@ -4,7 +4,7 @@
 import { NextResponse } from 'next/server'
 import { ZodError } from 'zod'
 import { Prisma } from '@prisma/client'
-import { DomainError, NotFoundError, ValidationError, ForbiddenError, NoHtxError, UnauthorizedError, CoreUnauthorizedError, CoreUnavailableError, WithdrawalBelowFloorError } from '@/domain/errors'
+import { DomainError, NotFoundError, ValidationError, ForbiddenError, NoHtxError, UnauthorizedError, CoreUnauthorizedError, CoreUnavailableError, WithdrawalBelowFloorError, ConflictError } from '@/domain/errors'
 import { logger } from '@/lib/logger'
 
 type RouteHandler<TContext = any> = (req: Request, context: TContext) => Promise<NextResponse>
@@ -74,6 +74,12 @@ export function withErrorHandler<TContext = any>(handler: RouteHandler<TContext>
         return NextResponse.json(
           { error: { code: 'NOT_FOUND', message: err.message } },
           { status: 404 }
+        )
+      }
+      if (err instanceof ConflictError) {
+        return NextResponse.json(
+          { error: { code: err.code, message: err.message, ...err.details } },
+          { status: 409 }
         )
       }
       if (err instanceof WithdrawalBelowFloorError) {

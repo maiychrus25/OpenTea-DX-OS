@@ -269,6 +269,8 @@ export class PrismaJournalRepository implements JournalPort {
     let e
     try {
       e = await prisma.$transaction(async (tx) => {
+        // Same lock as the weighing ticket transaction: a spraying and a ticket of one parcel never pass each other.
+        await tx.$queryRaw`SELECT id FROM parcels WHERE id = ${data.parcel_id} FOR UPDATE`
         const cycleId = await assignCycle(tx, data.parcel_id, data.activity_type, data.entry_date)
         const entry = await tx.journalEntry.create({
           data: {

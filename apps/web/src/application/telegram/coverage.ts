@@ -67,6 +67,21 @@ export const TELEGRAM_COVERAGE: TelegramCoverage = {
     'POST /api/parcels/[id]/approve-harvest',
   ],
   miniApp: [
+    // The weighing station (S3): prices, tickets and the withdrawal light are web screens; chat never writes a ticket.
+    'GET /api/leaf-grades',
+    'POST /api/leaf-grades',
+    'PUT /api/leaf-grades/[id]',
+    'GET /api/leaf-prices/today',
+    'PUT /api/leaf-prices/today',
+    'GET /api/parcels/[id]/withdrawal-status',
+    'GET /api/leaf-tickets',
+    'POST /api/leaf-tickets',
+    'GET /api/leaf-tickets/[id]',
+    'POST /api/leaf-tickets/[id]/void',
+    'GET /api/leaf-tickets/export.csv',
+    'GET /api/leaf-tickets/mine',
+    'GET /api/cycles/[id]/weighing-summary',
+    'GET /api/households',
     // The pesticide catalogue and the HTX labels are picked and edited in the web forms.
     'GET /api/pesticides',
     'PUT /api/pesticides/[id]/label',
