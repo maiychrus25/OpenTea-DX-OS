@@ -36,3 +36,28 @@
 .advice > svg { flex: none; }
 .advice > span { flex: 1 1 160px; }
 .advice .forecast { margin-left: auto; }
+
+/* Compact banner: the greeting, three actions and the weather stay within one short strip. */
+.hero { min-height: 0; gap: 16px; padding: 14px 20px; }
+.content { flex-basis: 360px; }
+.eyebrow { margin-bottom: 8px; padding: 3px 10px; font-size: 11px; }
+.title { font-size: 24px; }
+.subtitle { margin-top: 4px; font-size: 13px; }
+.actions { gap: 8px; margin-top: 12px; }
+.actions .primary, .actions .secondary { min-height: 32px; padding: 0 12px; font-size: 12.5px; }
+.card { flex-basis: 300px; gap: 6px; padding: 10px 12px; }
+.place { font-size: 12px; }
+.now { gap: 10px; justify-content: flex-start; }
+.now > svg { width: 30px; height: 30px; }
+.now > span { flex-direction: row; align-items: baseline; gap: 8px; font-size: 12.5px; }
+.now strong { font-size: 22px; }
+.readings { padding-top: 6px; }
+.readings div { display: flex; align-items: center; gap: 8px; }
+.readings dt { font-size: 11.5px; }
+.readings dd { margin: 0; gap: 4px; font-size: 13px; }
+.readings dd svg { width: 13px; height: 13px; }
+.advice { padding: 6px 8px; font-size: 11.5px; }
+.advice > svg { width: 14px; height: 14px; }
+.advice .forecast, .footer .forecast { font-size: 11.5px; }
+.readings dd, .readings dt { white-space: nowrap; }
+.readings div + div { padding-left: 10px; }
