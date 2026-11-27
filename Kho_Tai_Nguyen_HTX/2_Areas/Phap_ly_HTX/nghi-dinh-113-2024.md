@@ -1,9 +1,36 @@
-# Nghị định 113/2024/NĐ-CP
+# Hỗ trợ cho hợp tác xã theo Nghị định 113/2024/NĐ-CP
 
-Hướng dẫn Luật Hợp tác xã. Ban hành 12/9/2024, hiệu lực 01/11/2024.
+Ban hành 12/9/2024, hiệu lực 01/11/2024. Tóm tắt từ bản ký số trên cổng Chính phủ, **đọc bằng nhận dạng chữ**: đối chiếu nguyên văn trước khi làm hồ sơ. Năm 2026 đang có tổng kết, dự thảo sửa đổi.
 
-- Điều 13: đầu tư công cho kết cấu hạ tầng, có trường hợp hỗ trợ tới 100%.
-- Điều 16: chính sách trong lĩnh vực nông nghiệp.
-- Năm 2026 có dự thảo sửa đổi.
+## Điều kiện được xem xét (Điều 6)
+- Đạt tiêu chí tại điểm a khoản 1 Điều 18 Luật Hợp tác xã, **và** một trong các điều sau:
+  - thành viên tăng 2 năm liền;
+  - tỷ lệ giao dịch nội bộ tăng;
+  - trích quỹ chung không chia cao hơn mức tối thiểu;
+  - tài sản chung không chia tăng;
+  - ít nhất 5% thành viên, người lao động được tập huấn (có chứng nhận hoặc danh sách đóng dấu);
+  - thành lập không quá 36 tháng ở địa bàn khó khăn.
+- Xin khoản hỗ trợ ngân sách từ 3 tỷ đồng trở lên: phải có báo cáo tài chính đã kiểm toán.
 
-Thông tin lấy từ trang tổng hợp văn bản, **chưa đối chiếu bản gốc**. Điều kiện hưởng hỗ trợ phải đọc nguyên văn.
+## Các nhóm hỗ trợ
+Mức ghi "tối đa 100%" là trần; mức thực tế do bộ, Hội đồng nhân dân quyết định.
+
+| Điều | Nội dung |
+| --- | --- |
+| 7 | Đào tạo, bồi dưỡng (học phí, tài liệu, ăn ở); trả lương người tốt nghiệp cao đẳng, đại học về làm việc |
+| 8 | Thông tin trên Cổng thông tin quốc gia về hợp tác xã |
+| 9 | Tư vấn nhân sự, tài chính, sản xuất, bán hàng, quản trị |
+| 10 | Nhân rộng mô hình hiệu quả, tham quan học tập |
+| 11 | Chuyển đổi số, sở hữu trí tuệ, chuyển giao công nghệ, trang thông tin điện tử |
+| 12 | Hội chợ, chứng nhận chất lượng, thương hiệu, truy xuất nguồn gốc, điểm bán, sàn thương mại điện tử |
+| 13 | Hạ tầng, trang thiết bị (vốn đầu tư công tối đa 100% dự án); tài sản được hỗ trợ là tài sản chung không chia |
+| 14 | Giao quản lý, sử dụng công trình công cộng làm trụ sở, kho, cửa hàng |
+| 15 | Kiểm toán, tư vấn tài chính, đánh giá rủi ro |
+| 16 | Riêng nông nghiệp: vốn, giống, thiết bị khi chuyển sang bền vững, hữu cơ; hạ tầng vùng nguyên liệu, thủy lợi, đường nội đồng |
+
+## Cách nộp (Điều 17)
+1. Gửi hồ sơ đăng ký nhu cầu đến UBND cấp xã nơi đặt trụ sở (trực tiếp, bưu điện hoặc trực tuyến).
+2. Hồ sơ: đơn theo Mẫu số 01, bản sao giấy tờ chứng minh tiêu chí. Xin hạ tầng, thiết bị thì thêm nghị quyết của Hội đồng quản trị hoặc Đại hội thành viên.
+3. UBND xã báo tiếp nhận trong 10 ngày; tổng hợp nhu cầu **trước 31/5 hằng năm**.
+
+> Nghị định viết quy trình qua UBND cấp huyện. Cấp huyện đã bỏ từ 7/2025: hỏi xã xem hiện chuyển cho cơ quan nào.
