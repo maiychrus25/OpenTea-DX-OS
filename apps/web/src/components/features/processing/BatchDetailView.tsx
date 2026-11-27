@@ -194,7 +194,9 @@ export function BatchDetailView({ batchId, listHref }: Props) {
         <p role="status" className={`${styles.light} ${styles.pad} ${preview.recovery_ratio === null ? styles.lightWait : outOfBand ? styles.lightBlock : styles.lightOk}`}>
           {preview.recovery_ratio === null
             ? 'Chưa có sản lượng để tính tỷ lệ.'
-            : outOfBand ? `Lệch khoảng chuẩn ${BAND_TEXT}. Cần giải trình khi hoàn thành.` : `Trong khoảng chuẩn ${BAND_TEXT}.`}
+            : outOfBand
+              ? (open ? `Lệch khoảng chuẩn ${BAND_TEXT}. Cần giải trình khi hoàn thành.` : batch.status === 'FINISHED' ? `Lệch khoảng chuẩn ${BAND_TEXT}, đã giải trình.` : `Lệch khoảng chuẩn ${BAND_TEXT}.`)
+              : `Trong khoảng chuẩn ${BAND_TEXT}.`}
         </p>
       </section>
 

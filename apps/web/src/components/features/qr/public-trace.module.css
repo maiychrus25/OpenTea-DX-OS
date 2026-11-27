@@ -22,7 +22,7 @@
 .tableScroll { overflow-x: auto; max-width: 100%; }
 .table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .table th { padding: 8px 10px; text-align: left; background: var(--color-table-head); color: var(--color-ink-secondary); border-bottom: 1px solid var(--color-border); white-space: nowrap; }
-.table td { padding: 8px 10px; border-bottom: 1px solid var(--color-border-row); overflow-wrap: anywhere; }
+.table td { padding: 8px 10px; border-bottom: 1px solid var(--color-border-row); white-space: nowrap; }
 .link { color: var(--color-primary); font-weight: 600; text-decoration: none; font-size: 14px; }
 .link:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; border-radius: 4px; }
 .disclaimer { display: flex; gap: 8px; margin: 4px 0 0; color: var(--color-ink-secondary); font-size: 12.5px; }

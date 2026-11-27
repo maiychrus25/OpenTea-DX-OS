@@ -128,6 +128,7 @@ test('a finished batch is read-only and shows its deviation note', async () => {
   expect(screen.queryByRole('button', { name: 'Huỷ mẻ' })).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Bỏ khỏi mẻ' })).not.toBeInTheDocument()
   expect(screen.getByText('còn 19,0 kg')).toBeInTheDocument()
+  expect(screen.getByRole('status')).toHaveTextContent('Lệch khoảng chuẩn 4,50–5,00 : 1, đã giải trình.')
 })
 
 test('cancelling needs a reason of three to two hundred characters', async () => {
