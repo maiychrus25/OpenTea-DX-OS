@@ -8,7 +8,7 @@ import { ArrowLeft } from 'lucide-react'
 import kit from '@/components/features/farmer-web/kit.module.css'
 import { SampleTag } from '@/components/features/sample/SampleTag'
 import { CountRead } from '../_components/CountRead'
-import { IMAGES, NEWS, label, minutes } from '../_components/news-data'
+import { IMAGES, NEWS, PRESS, label, minutes } from '../_components/news-data'
 import styles from '../_components/newsroom.module.css'
 
 export const metadata = { title: 'Bản tin' }
@@ -33,6 +33,17 @@ export default function FarmerArticlePage({ params }: { params: { id: string } }
         <p>{article.summary}</p>
         <p className={styles.note}>Đây là bài mẫu: hệ thống chưa có nguồn tin nên chưa có nội dung đầy đủ.</p>
       </article>
+      <section className={`${kit.pn} ${styles.article}`} aria-label="Đọc thêm trên báo">
+        <h2 className={styles.more}>Đọc thêm trên báo</h2>
+        <ul className={styles.press}>
+          {PRESS.map(item => (
+            <li key={item.url}>
+              <a href={item.url} target="_blank" rel="noopener noreferrer">{item.title}</a>
+              <small>{item.source}</small>
+            </li>
+          ))}
+        </ul>
+      </section>
       <CountRead id={article.id} />
     </div>
   )

@@ -5,12 +5,13 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, Camera, ChevronLeft, ChevronRight, Download, Droplet, FileText, Leaf, Search, ShieldCheck, ShieldPlus, Sparkles, Sprout, Flower2 } from 'lucide-react'
+import { ArrowRight, Camera, ExternalLink, ChevronLeft, ChevronRight, Download, Droplet, FileText, Leaf, Search, ShieldCheck, ShieldPlus, Sparkles, Sprout, Flower2 } from 'lucide-react'
 import kit from '@/components/features/farmer-web/kit.module.css'
 import { SampleTag } from '@/components/features/sample/SampleTag'
 import styles from './handbook.module.css'
+import { REFERENCES } from '@/components/features/articles/tea-references'
 
-/** There is no data source yet: every article, count and message on this page is example content. */
+/** Articles and documents link to real sources; topic counts, pest levels and the season notes are example content. */
 const TOPICS = [
   { name: 'Trồng & chăm sóc', count: 12, icon: Sprout, categories: ['Chăm sóc'] },
   { name: 'Bón phân & tưới', count: 15, icon: Droplet, categories: ['Bón phân'] },
@@ -23,25 +24,25 @@ const TOPICS = [
 const SUGGESTIONS = ['Rầy xanh', 'Bón phân', 'Đốn chè', 'VietGAP']
 
 const ARTICLES = [
-  { title: 'Bón phân cho chè vụ đông: lượng và thời điểm', category: 'Bón phân', minutes: 6, image: '/images/tea-hills-sunrise.jpg', fresh: true },
-  { title: 'Nhận biết và xử lý rầy xanh theo hướng sinh học', category: 'Sâu bệnh', minutes: 5, image: '/images/tea-hills-mist.jpg' },
-  { title: 'Ghi nhật ký canh tác đúng chuẩn VietGAP', category: 'VietGAP', minutes: 4, image: '/images/officer/tour-tea-on-the-hill.jpg' },
-  { title: 'Hái búp 1 tôm 2 lá: cách hái để cây ra búp đều', category: 'Thu hái', minutes: 4, image: '/images/officer/tour-picking.jpg' },
-  { title: 'Cắt tỉa, đốn chè sau thu hoạch cuối vụ', category: 'Chăm sóc', minutes: 8, image: '/images/officer/tour-farmer-day.jpg' },
+  { ...REFERENCES.winterTea, category: 'Bón phân', image: '/images/tea-hills-sunrise.jpg' },
+  { ...REFERENCES.sustainable, category: 'Chăm sóc', image: '/images/officer/tour-farmer-day.jpg' },
+  { ...REFERENCES.vietgapValue, category: 'VietGAP', image: '/images/officer/tour-tea-on-the-hill.jpg' },
+  { ...REFERENCES.leafhopper, category: 'Sâu bệnh', image: '/images/tea-hills-mist.jpg' },
+  { ...REFERENCES.picking, category: 'Thu hái', image: '/images/officer/tour-picking.jpg' },
 ]
 
 const PESTS = [
-  { name: 'Rầy xanh', image: '/images/handbook/ray-xanh.jpg', sign: 'Lá non quăn, mép cháy nâu.', level: 'Trung bình', tone: 'wt' },
-  { name: 'Bọ xít muỗi', image: '/images/handbook/bo-xit-muoi.jpg', sign: 'Búp có chấm đen, héo đầu.', level: 'Cao', tone: 'bd' },
+  { name: 'Rầy xanh', url: REFERENCES.leafhopper.url, image: '/images/handbook/ray-xanh.jpg', sign: 'Lá non quăn, mép cháy nâu.', level: 'Trung bình', tone: 'wt' },
+  { name: 'Bọ xít muỗi', url: REFERENCES.mosquitoBug.url, image: '/images/handbook/bo-xit-muoi.jpg', sign: 'Búp có chấm đen, héo đầu.', level: 'Cao', tone: 'bd' },
   { name: 'Thán thư', image: '/images/handbook/than-thu.jpg', sign: 'Đốm nâu tròn, viền vàng.', level: 'Trung bình', tone: 'wt' },
-  { name: 'Phồng lá chè', image: '/images/handbook/phong-la.jpg', sign: 'Lá phồng, mặt dưới trắng.', level: 'Thấp', tone: 'soft' },
+  { name: 'Phồng lá chè', url: REFERENCES.blister.url, image: '/images/handbook/phong-la.jpg', sign: 'Lá phồng, mặt dưới trắng.', level: 'Thấp', tone: 'soft' },
 ] as const
 
 const SEASON: Record<number, [string, string, string]> = {
   11: ['Thu hái lứa cuối, dọn cành lá bệnh khỏi nương.', 'Bón lót phân hữu cơ, vun gốc giữ ẩm cho mùa khô.', 'Đốn tỉa nhẹ, che chắn rét cho chè non.'],
 }
 
-const DOCUMENTS = ['Quy trình VietGAP cho chè (PDF)', 'Bảng thuốc BVTV được phép 2026']
+const DOCUMENTS = [REFERENCES.sustainable, REFERENCES.blister, REFERENCES.picking]
 
 /** Lower case without Vietnamese marks, so "ray xanh" finds "Rầy xanh". */
 const plain = (text: string) => text.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd').toLowerCase()
@@ -53,7 +54,7 @@ export function Handbook() {
 
   const words = plain(query.trim())
   const categories = TOPICS.find(t => t.name === topic)?.categories
-  const articles = ARTICLES.filter(a => (!categories || categories.includes(a.category)) && (!words || plain(`${a.title} ${a.category}`).includes(words)))
+  const articles = ARTICLES.filter(a => (!categories || categories.includes(a.category)) && (!words || plain(`${a.title} ${a.category} ${a.source}`).includes(words)))
   const pests = PESTS.filter(p => !words || plain(`${p.name} ${p.sign}`).includes(words))
   const filtered = words !== '' || topic !== null
   const shown = filtered ? articles : articles.slice(0, 3)
@@ -121,11 +122,13 @@ export function Handbook() {
           {shown.length === 0 && !all ? <p className={styles.empty}>Chưa có bài phù hợp.</p> : (
             <ul className={styles.rows}>
               {(all && !filtered ? ARTICLES : shown).map(article => (
-                <li key={article.title}>
+                <li key={article.url}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img className={styles.photo} src={article.image} alt="" />
-                  <span className={styles.grow}><strong>{article.title}</strong><small>{article.category} · đọc {article.minutes} phút</small></span>
-                  {article.fresh && <span className={`${kit.tag} ${kit.soft}`}>Mới</span>}
+                  <span className={styles.grow}>
+                    <a className={styles.read} href={article.url} target="_blank" rel="noopener noreferrer">{article.title}<ExternalLink size={12} aria-hidden="true" /></a>
+                    <small>{article.category} · {article.source}</small>
+                  </span>
                 </li>
               ))}
             </ul>
@@ -143,7 +146,12 @@ export function Handbook() {
                 <li key={pest.name}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img className={styles.pestPhoto} src={pest.image} alt={`Ảnh minh hoạ ${pest.name}`} />
-                  <span className={styles.grow}><strong>{pest.name}</strong><small>{pest.sign}</small></span>
+                  <span className={styles.grow}>
+                    {'url' in pest
+                      ? <a className={styles.read} href={pest.url} target="_blank" rel="noopener noreferrer">{pest.name}<ExternalLink size={12} aria-hidden="true" /></a>
+                      : <strong>{pest.name}</strong>}
+                    <small>{pest.sign}</small>
+                  </span>
                   <span className={`${kit.tag} ${kit[pest.tone]}`}>{pest.level}</span>
                 </li>
               ))}
@@ -155,8 +163,12 @@ export function Handbook() {
       <section className={kit.pn} aria-label="Tài liệu tải về">
         <div className={kit.ph}><h2>Tài liệu tải về</h2></div>
         <ul className={styles.rows}>
-          {DOCUMENTS.map(name => (
-            <li key={name}><FileText size={18} aria-hidden="true" /><span className={styles.grow}>{name}</span><Download size={16} aria-hidden="true" /></li>
+          {DOCUMENTS.map(doc => (
+            <li key={doc.url}>
+              <FileText size={18} aria-hidden="true" />
+              <span className={styles.grow}><a className={styles.read} href={doc.url} target="_blank" rel="noopener noreferrer">{doc.title}</a><small>{doc.source}</small></span>
+              <a href={doc.url} target="_blank" rel="noopener noreferrer" aria-label={`Mở ${doc.title}`}><Download size={16} aria-hidden="true" /></a>
+            </li>
           ))}
         </ul>
       </section>

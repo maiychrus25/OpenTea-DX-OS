@@ -10,6 +10,7 @@ import kit from '@/components/features/farmer-web/kit.module.css'
 import { SampleTag } from '@/components/features/sample/SampleTag'
 import { CATEGORIES, FEATURED, IMAGES, NEWS, OPENED_KEY, READS, dayOf, label, minutes, timeOf, type Category } from './news-data'
 import styles from './newsroom.module.css'
+import { PRESS } from './news-data'
 
 const PRICES = [
   { name: 'Chè búp tươi', price: '45.000đ', change: 2 },
@@ -171,6 +172,18 @@ export function Newsroom() {
               </li>
             ))}
           </ol>
+        </section>
+
+        <section className={kit.pn} aria-label="Báo chí viết về chè">
+          <div className={kit.ph}><h2>Báo chí viết về chè</h2></div>
+          <ul className={styles.press}>
+            {PRESS.map(item => (
+              <li key={item.url}>
+                <a href={item.url} target="_blank" rel="noopener noreferrer">{item.title}</a>
+                <small>{item.source}</small>
+              </li>
+            ))}
+          </ul>
         </section>
 
         <section className={`${kit.pn} ${styles.savedBox}`} aria-label="Tin đã lưu">

@@ -51,3 +51,8 @@
   .topics, .season { grid-template-columns: minmax(0, 1fr); gap: 8px; }
   .season > div + div { border-left: 0; }
 }
+
+/* A title that opens an article reads as a link. */
+.rows a.read { display: block; color: var(--color-ink-primary); font-size: 13px; font-weight: 700; text-decoration: none; }
+.rows a.read svg { display: inline-block; margin-left: 4px; vertical-align: -1px; color: var(--color-ink-tertiary); }
+.rows a.read:hover { color: var(--color-primary); text-decoration: underline; }

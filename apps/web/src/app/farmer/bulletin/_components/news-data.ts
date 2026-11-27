@@ -2,6 +2,10 @@
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 import { MOCK_BULLETINS } from '@/components/features/bulletin/mock-data'
+import { REFERENCES } from '@/components/features/articles/tea-references'
+
+/** Real newspaper articles, linked from the news page and each example story. */
+export const PRESS = [REFERENCES.winterTea, REFERENCES.vietgapValue, REFERENCES.vietgapTanCuong, REFERENCES.dongHy]
 
 /** There is no news or price feed yet: every article, price and ranking here is example content. */
 export type Category = 'market' | 'weather' | 'technical' | 'policy'
