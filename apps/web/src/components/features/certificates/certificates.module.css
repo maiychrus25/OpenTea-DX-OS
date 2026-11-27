@@ -1,0 +1,33 @@
+/* SPDX-License-Identifier: MIT */
+/* Copyright (c) 2026 OpenTea Developers */
+
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 380px); gap: 20px; align-items: start; }
+.pad { padding: 14px 18px; }
+.grow { flex: 1 1 200px; min-width: 0; display: flex; flex-direction: column; gap: 2px; overflow-wrap: anywhere; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; padding: 12px 18px; border-bottom: 1px solid var(--color-border-row); font-size: 13.5px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.revokeBox { display: flex; flex-direction: column; gap: 10px; width: 100%; padding-top: 4px; }
+.form { display: flex; flex-direction: column; gap: 14px; padding: 18px; }
+.dates { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.valid { color: var(--color-success); font-weight: 600; }
+.invalid { color: var(--color-danger); font-weight: 600; }
+.error { margin: 0; color: var(--color-danger); font-weight: 600; font-size: 13px; }
+.status { margin: 0; color: var(--color-success); font-weight: 600; font-size: 13px; }
+.link { color: var(--color-primary); font-weight: 600; text-decoration: none; }
+.link:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; }
+
+.switchRow { display: flex; align-items: flex-start; gap: 12px; padding: 16px 18px; }
+.switchText { display: flex; flex-direction: column; gap: 4px; min-width: 0; font-size: 14px; }
+.switch { position: relative; flex: none; width: 46px; height: 26px; border: 0; border-radius: 999px; background: var(--color-border-input); cursor: pointer; }
+.switch[aria-checked='true'] { background: var(--color-primary); }
+.switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--color-surface-card); transition: transform 150ms ease; }
+.switch[aria-checked='true']::after { transform: translateX(20px); }
+.switch:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; }
+.switch:disabled { opacity: 0.6; cursor: wait; }
+
+@media (max-width: 900px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 480px) {
+  .dates { grid-template-columns: minmax(0, 1fr); }
+}

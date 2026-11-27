@@ -14,6 +14,10 @@ const TEXT: Record<string, string> = {
   GRADE_MISMATCH: 'Có dòng tồn không cùng hạng với lô đang đóng.',
   LOT_WITHOUT_BATCH: 'Lô chưa có nguồn từ mẻ sao sấy nên chưa xuất được QR.',
   CERTIFICATE_NOT_VALID: 'Có chứng nhận đã hết hạn hoặc đã thu hồi. Bỏ chọn chứng nhận đó rồi xuất lại.',
+  CERTIFICATE_REVOKED: 'Chứng nhận này đã được thu hồi trước đó.',
+  FILE_TOO_LARGE: 'Tệp vượt quá 10 MB.',
+  FILE_TYPE: 'Chỉ nhận tệp PDF, JPG hoặc PNG.',
+  VALIDATION_ERROR: 'Kiểm tra lại các trường đã nhập.',
 }
 
 export function processingErrorText(code: string | undefined, message: string | undefined, fallback: string): string {
