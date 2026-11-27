@@ -3,6 +3,7 @@
 
 import { z } from 'zod'
 import { UpdateJournalEntryUseCase } from '@/application/journal/UpdateJournalEntryUseCase'
+import { PrismaPesticideRepository } from '@/infrastructure/db/pesticide/PrismaPesticideRepository'
 import { PrismaJournalRepository } from '@/infrastructure/db/journal/PrismaJournalRepository'
 import type { ChatAction } from '../types'
 import { entryLabel, ownEntryChoices, scopedEntry } from './journal-entries'
@@ -43,7 +44,13 @@ export const journalEditAction: ChatAction<JournalEditPayload> = {
   async execute(payload, user) {
     await scopedEntry(user, payload.entry_id)
     const data = payload.field === 'entry_date' ? { entry_date: parseVnDate(payload.value)! } : { observation: payload.value }
-    await new UpdateJournalEntryUseCase(new PrismaJournalRepository()).execute(payload.entry_id, data, 'FARMER', user.householdId ?? undefined)
+    await new UpdateJournalEntryUseCase(new PrismaJournalRepository(), new PrismaPesticideRepository()).execute(
+      payload.entry_id,
+      data,
+      'FARMER',
+      user.householdId ?? undefined,
+      user.tenant.htxProfileId
+    )
     return 'Đã cập nhật nhật ký.'
   },
 }

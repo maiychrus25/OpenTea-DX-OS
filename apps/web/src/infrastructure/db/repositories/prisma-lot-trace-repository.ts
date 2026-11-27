@@ -3,6 +3,7 @@
 
 import { LotTraceRepository, ParcelHarvests } from '@/domain/repositories/lot-trace-repository'
 import { LotTraceData } from '@/domain/entities/lot-trace-data'
+import { belongsToLotLine, lotLineBlock } from '@/domain/journal/blocking-sprays'
 import { WITHDRAWAL_EXCLUDED_STATUSES } from '@/domain/journal/withdrawal-status'
 import { prisma } from '@/infrastructure/db/prisma.client'
 
@@ -41,7 +42,6 @@ export class PrismaLotTraceRepository implements LotTraceRepository {
                   // Every entry except drafts and rejected ones drives the withdrawal check; only APPROVED ones are shown (see journal_summaries)
                   where: { status: { notIn: [...WITHDRAWAL_EXCLUDED_STATUSES] } },
                   orderBy: { entry_date: 'asc' },
-                  take: 100,
                 }
               }
             }
@@ -68,11 +68,20 @@ export class PrismaLotTraceRepository implements LotTraceRepository {
       } as LotTraceData
     }
 
-    const allEntries = lot.lot_parcels.flatMap(lp => lp.parcel.journal_entries)
-    const latestSafeDate = computeSafeHarvestDate(allEntries)
-    
-    // If there is no latestSafeDate (no chemicals applied), it is safe to harvest by default.
-    const isHarvestSafe = latestSafeDate ? latestSafeDate <= new Date() : true
+    // A lot line answers for its own flush and for everything sprayed by the lot's harvest date.
+    const entriesOf = (lp: (typeof lot.lot_parcels)[number]) =>
+      lp.parcel.journal_entries.filter(e => belongsToLotLine(e, lot.harvest_date, lp.cycle_id))
+    const allEntries = lot.lot_parcels.flatMap(entriesOf)
+    // Rule (b): each line is judged against the lot's harvest date, so a spray done inside the withdrawal
+    // before it keeps the lot unsafe even after its safe date has passed.
+    const blocking = lot.lot_parcels
+      .map(lp => lotLineBlock(lp.parcel.journal_entries, lot.harvest_date, lp.cycle_id))
+      .filter((d): d is Date => d !== null)
+    const isHarvestSafe = blocking.length === 0
+    // Shown date: the latest blocking date, else the latest counted safe date.
+    const latestSafeDate = blocking.length
+      ? blocking.reduce((x, y) => (y > x ? y : x))
+      : computeSafeHarvestDate(allEntries)
 
     return {
       lot_code: lot.lot_code,
@@ -94,7 +103,7 @@ export class PrismaLotTraceRepository implements LotTraceRepository {
         status: lp.parcel.status
       })),
       journal_summaries: lot.lot_parcels.flatMap(lp =>
-        lp.parcel.journal_entries.filter(e => e.status === 'APPROVED').flatMap(e => {
+        entriesOf(lp).filter(e => e.status === 'APPROVED').flatMap(e => {
           if (e.activities.length === 0) {
             return [{
               entry_date: e.entry_date,
@@ -128,17 +137,19 @@ export class PrismaLotTraceRepository implements LotTraceRepository {
     const links = await prisma.lotParcel.findMany({
       where: { lot: { lot_code } },
       select: {
+        cycle_id: true,
         parcel: {
           select: {
             parcel_code: true,
-            crop_cycles: { where: { harvested_at: { not: null } }, select: { harvested_at: true } },
+            crop_cycles: { where: { harvested_at: { not: null } }, select: { id: true, harvested_at: true } },
           },
         },
       },
     })
-    return links.map(({ parcel }) => ({
+    // A line with a flush is harvested only when that flush is closed.
+    return links.map(({ cycle_id, parcel }) => ({
       parcel_code: parcel.parcel_code,
-      harvested_at: parcel.crop_cycles.flatMap((c) => (c.harvested_at ? [c.harvested_at] : [])),
+      harvested_at: parcel.crop_cycles.flatMap((c) => (c.harvested_at && (!cycle_id || c.id === cycle_id) ? [c.harvested_at] : [])),
     }))
   }
 }

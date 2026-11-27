@@ -25,7 +25,22 @@ export interface DiseaseReportPort {
   findPendingReports(): Promise<OfficerPendingReportItem[]>;
   findById(id: string): Promise<DiseaseReportDetails | null>;
   /** `confirmedDiagnosis` is the officer's disease name; null when the report is rejected. */
-  updateStatus(id: string, status: string, treatment: string, officerId: string, confirmedDiagnosis: string | null): Promise<void>;
+  updateStatus(
+    id: string,
+    status: string,
+    treatment: string,
+    officerId: string,
+    confirmedDiagnosis: string | null,
+    prescription?: DiseasePrescription
+  ): Promise<{ draftJournalEntryId?: string; prescribedProductName?: string } | void>;
+}
+
+/** Written in the same transaction as the review: one DRAFT spraying for the parcel of the report. */
+export interface DiseasePrescription {
+  pesticideProductId: string;
+  floorDays: number;
+  dosage?: string;
+  officerName: string;
 }
 
 export interface OfficerPendingReportItem {

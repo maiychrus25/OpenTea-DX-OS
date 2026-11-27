@@ -4,6 +4,7 @@
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { PrismaJournalRepository } from '@/infrastructure/db/journal/PrismaJournalRepository'
 import { PrismaParcelRepository } from '@/infrastructure/db/farm/PrismaParcelRepository'
+import { PrismaPesticideRepository } from '@/infrastructure/db/pesticide/PrismaPesticideRepository'
 import { CreateJournalEntryUseCase } from '@/application/journal/CreateJournalEntryUseCase'
 import { BatchApproveJournalUseCase } from '@/application/journal/BatchApproveJournalUseCase'
 import { ParcelStatus, ActivityType } from '@prisma/client'
@@ -67,7 +68,7 @@ describe('Story 3.4: Parcel Status Auto-Derivation', () => {
     
     const journalRepo = new PrismaJournalRepository()
     const parcelRepo = new PrismaParcelRepository()
-    const useCase = new CreateJournalEntryUseCase(journalRepo, parcelRepo)
+    const useCase = new CreateJournalEntryUseCase(journalRepo, parcelRepo, new PrismaPesticideRepository())
 
     const entryDate = new Date('2026-08-01T10:00:00Z')
     await useCase.execute({
@@ -78,7 +79,7 @@ describe('Story 3.4: Parcel Status Auto-Derivation', () => {
       submitted_by_id: 'officer-1',
       submitted_role: 'OFFICER',
       activities: [{ activity_type: ActivityType.SOWING }]
-    }, 'OFFICER')
+    }, 'OFFICER', undefined, 'htx-test')
 
     const parcel = await prisma.parcel.findUnique({ where: { id: parcelId }, include: { crop_cycles: true } })
     expect(parcel?.status).toBe(ParcelStatus.SOWING)
@@ -90,7 +91,7 @@ describe('Story 3.4: Parcel Status Auto-Derivation', () => {
     
     const journalRepo = new PrismaJournalRepository()
     const parcelRepo = new PrismaParcelRepository()
-    const useCase = new CreateJournalEntryUseCase(journalRepo, parcelRepo)
+    const useCase = new CreateJournalEntryUseCase(journalRepo, parcelRepo, new PrismaPesticideRepository())
 
     const entry = await useCase.execute({
       parcel_id: parcelId,
@@ -100,7 +101,7 @@ describe('Story 3.4: Parcel Status Auto-Derivation', () => {
       submitted_by_id: 'farmer-1',
       submitted_role: 'FARMER',
       activities: [{ activity_type: ActivityType.FERTILIZING }]
-    }, 'FARMER', householdId)
+    }, 'FARMER', householdId, 'htx-test')
 
     expect(entry.status).toBe('PENDING_APPROVAL')
 
@@ -123,7 +124,7 @@ describe('Story 3.4: Parcel Status Auto-Derivation', () => {
     
     const journalRepo = new PrismaJournalRepository()
     const parcelRepo = new PrismaParcelRepository()
-    const useCase = new CreateJournalEntryUseCase(journalRepo, parcelRepo)
+    const useCase = new CreateJournalEntryUseCase(journalRepo, parcelRepo, new PrismaPesticideRepository())
 
     const entryDate = new Date('2026-11-01T10:00:00Z')
     const entry = await useCase.execute({
@@ -134,7 +135,7 @@ describe('Story 3.4: Parcel Status Auto-Derivation', () => {
       submitted_by_id: 'farmer-1',
       submitted_role: 'FARMER',
       activities: [{ activity_type: ActivityType.HARVEST }]
-    }, 'FARMER', householdId)
+    }, 'FARMER', householdId, 'htx-test')
 
     const mockDocStorage = { uploadDocument: jest.fn() } as unknown as DocumentStoragePort
     const batchApproveUseCase = new BatchApproveJournalUseCase(journalRepo, mockDocStorage)

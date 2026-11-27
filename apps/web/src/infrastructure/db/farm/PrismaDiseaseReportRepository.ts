@@ -2,7 +2,7 @@
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 import { prisma } from '@/infrastructure/db/prisma.client';
-import { DiseaseReportPort, DiseaseReportData } from '@/domain/disease/ports/disease-report.port';
+import { DiseaseReportPort, DiseaseReportData, DiseasePrescription } from '@/domain/disease/ports/disease-report.port';
 
 export class PrismaDiseaseReportRepository implements DiseaseReportPort {
   async save(data: DiseaseReportData) {
@@ -112,16 +112,55 @@ export class PrismaDiseaseReportRepository implements DiseaseReportPort {
     };
   }
 
-  async updateStatus(id: string, status: any, treatment: string, officerId: string, confirmedDiagnosis: string | null): Promise<void> {
-    await prisma.diseaseReport.update({
-      where: { id },
-      data: {
-        status: status,
-        treatment_recommendation: treatment,
-        confirmed_diagnosis: confirmedDiagnosis,
-        confirmed_by_id: officerId,
-        confirmed_at: new Date()
-      }
+  async updateStatus(
+    id: string,
+    status: any,
+    treatment: string,
+    officerId: string,
+    confirmedDiagnosis: string | null,
+    prescription?: DiseasePrescription
+  ): Promise<{ draftJournalEntryId?: string; prescribedProductName?: string }> {
+    return prisma.$transaction(async (tx) => {
+      const report = await tx.diseaseReport.update({
+        where: { id },
+        data: {
+          status: status,
+          treatment_recommendation: treatment,
+          confirmed_diagnosis: confirmedDiagnosis,
+          confirmed_by_id: officerId,
+          confirmed_at: new Date()
+        }
+      });
+      if (!prescription) return {};
+
+      const product = await tx.pesticideProduct.findUnique({ where: { id: prescription.pesticideProductId } });
+      if (!product) throw new Error('PESTICIDE_NOT_FOUND');
+      // A draft has no flush and does not count toward withdrawal until the farmer confirms the spraying.
+      const entryDate = new Date();
+      const draft = await tx.journalEntry.create({
+        data: {
+          parcel_id: report.parcel_id,
+          entry_date: entryDate,
+          activity_type: 'SPRAYING',
+          performed_by: prescription.officerName,
+          submitted_by_id: officerId,
+          submitted_role: 'OFFICER',
+          status: 'DRAFT',
+          notes: `Theo kê đơn ca bệnh ${id}`,
+          activities: {
+            create: [{
+              activity_detail: `SPRAYING: ${product.trade_name}`,
+              product_name: product.trade_name,
+              dosage: prescription.dosage ?? null,
+              withdrawal_days: prescription.floorDays,
+              safe_harvest_date: new Date(entryDate.getTime() + prescription.floorDays * 24 * 60 * 60 * 1000),
+              pesticide_product_id: product.id,
+            }],
+          },
+        },
+        select: { id: true },
+      });
+      return { draftJournalEntryId: draft.id, prescribedProductName: product.trade_name };
     });
   }
 }

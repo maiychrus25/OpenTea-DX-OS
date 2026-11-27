@@ -20,12 +20,14 @@ const createInput = {
 describe('Farmer journal production flow', () => {
   let journalPort: jest.Mocked<JournalPort>
   let parcelPort: jest.Mocked<ParcelPort>
+  const pesticides = { floorFor: jest.fn(), matchByTradeName: jest.fn().mockResolvedValue(null), list: jest.fn(), setLabel: jest.fn(), clearLabel: jest.fn() }
 
   beforeEach(() => {
     journalPort = {
       findAll: jest.fn(),
       findById: jest.fn(),
       create: jest.fn().mockResolvedValue({ id: 'entry-1' } as any),
+      findByClientId: jest.fn(),
       update: jest.fn(),
       delete: jest.fn().mockResolvedValue(undefined),
       batchApprove: jest.fn(),
@@ -43,17 +45,17 @@ describe('Farmer journal production flow', () => {
   })
 
   it('requires a linked household before farmer submission', async () => {
-    const useCase = new CreateJournalEntryUseCase(journalPort, parcelPort)
+    const useCase = new CreateJournalEntryUseCase(journalPort, parcelPort, pesticides)
 
-    await expect(useCase.execute(createInput, 'FARMER')).rejects.toBeInstanceOf(ForbiddenError)
+    await expect(useCase.execute(createInput, 'FARMER', undefined, 'htx-1')).rejects.toBeInstanceOf(ForbiddenError)
     expect(journalPort.create).not.toHaveBeenCalled()
   })
 
   it('prevents farmer submission for another household parcel', async () => {
     parcelPort.findById.mockResolvedValue({ id: 'parcel-1', household_id: 'hh-2' } as any)
-    const useCase = new CreateJournalEntryUseCase(journalPort, parcelPort)
+    const useCase = new CreateJournalEntryUseCase(journalPort, parcelPort, pesticides)
 
-    await expect(useCase.execute(createInput, 'FARMER', 'hh-1')).rejects.toBeInstanceOf(ForbiddenError)
+    await expect(useCase.execute(createInput, 'FARMER', 'hh-1', 'htx-1')).rejects.toBeInstanceOf(ForbiddenError)
     expect(journalPort.create).not.toHaveBeenCalled()
   })
 

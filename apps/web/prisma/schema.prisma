@@ -28,7 +28,16 @@ enum ActivityType {
   SPRAYING
   IRRIGATION
   HARVEST
+  PRUNING
   OTHER
+}
+
+enum PesticideGroup {
+  BOTANICAL
+  MICROBIAL
+  BIOLOGICAL
+  CHEMICAL
+  ANTIBIOTIC
 }
 
 enum LotStatus {
@@ -87,6 +96,7 @@ model HtxProfile {
   updated_at    DateTime @updatedAt
 
   households    Household[]
+  pesticide_labels HtxPesticideLabel[]
   lots          Lot[]
   notifications Notification[]
   partners      Partner[]
@@ -155,6 +165,9 @@ model ParcelCropCycle {
   estimated_harvest_date DateTime?
   created_at             DateTime  @default(now())
 
+  journal_entries JournalEntry[]
+  lot_parcels     LotParcel[]
+
   @@map("parcel_crop_cycles")
 }
 
@@ -175,6 +188,9 @@ model JournalEntry {
   review_note     String? // reason given when an officer rejects or asks for changes
   reviewed_by_id  String? // keycloak user ID of the officer who approved, rejected or asked for changes
   notes           String?
+  cycle_id        String? // plucking flush; null for parcels without cycles
+  cycle           ParcelCropCycle? @relation(fields: [cycle_id], references: [id])
+  client_id       String? // client-generated uuid, makes offline replays idempotent
 
   // Weather auto-attach
   weather_condition     String?
@@ -191,6 +207,8 @@ model JournalEntry {
 
   activities JournalActivity[]
 
+  @@unique([submitted_by_id, client_id])
+  @@index([cycle_id])
   @@map("journal_entries")
 }
 
@@ -203,9 +221,49 @@ model JournalActivity {
   dosage           String?
   withdrawal_days  Int? // for Spraying
   safe_harvest_date DateTime? // entry_date + withdrawal_days
+  fresh_leaf_kg    Float? // for Harvest
+  pesticide_product_id String?
+  pesticide_product    PesticideProduct? @relation(fields: [pesticide_product_id], references: [id])
   created_at       DateTime     @default(now())
 
   @@map("journal_activities")
+}
+
+// Shared pesticide catalogue; default_phi_days is the floor, an HTX label can replace it.
+model PesticideProduct {
+  id                    String         @id @default(cuid())
+  trade_name            String         @unique
+  active_ingredient     String
+  group                 PesticideGroup
+  targets               String[]
+  default_phi_days      Int
+  phi_needs_label_check Boolean        @default(true)
+  source                String
+  active                Boolean        @default(true)
+  created_at            DateTime       @default(now())
+  updated_at            DateTime       @updatedAt
+
+  activities JournalActivity[]
+  labels     HtxPesticideLabel[]
+
+  @@map("pesticide_products")
+}
+
+model HtxPesticideLabel {
+  id                   String           @id @default(cuid())
+  htx_profile_id       String
+  htx_profile          HtxProfile       @relation(fields: [htx_profile_id], references: [id])
+  pesticide_product_id String
+  pesticide_product    PesticideProduct @relation(fields: [pesticide_product_id], references: [id])
+  label_phi_days       Int
+  label_note           String?
+  verified_by_id       String // Keycloak sub
+  verified_at          DateTime         @default(now())
+  created_at           DateTime         @default(now())
+  updated_at           DateTime         @updatedAt
+
+  @@unique([htx_profile_id, pesticide_product_id])
+  @@map("htx_pesticide_labels")
 }
 
 // â”€â”€â”€ Lots & QR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -247,6 +305,8 @@ model LotParcel {
   lot       Lot    @relation(fields: [lot_id], references: [id])
   parcel_id String
   parcel    Parcel @relation(fields: [parcel_id], references: [id])
+  cycle_id  String?
+  cycle     ParcelCropCycle? @relation(fields: [cycle_id], references: [id])
 
   @@unique([lot_id, parcel_id])
   @@map("lot_parcels")

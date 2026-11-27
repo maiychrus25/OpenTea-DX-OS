@@ -63,7 +63,7 @@ beforeEach(() => {
   mock(MinioDocumentAdapter).mockImplementation(() => storage)
   mock(ExportQrUseCase).mockImplementation(() => ({ execute: exportExecute }))
   mock(CreateLotUseCase).mockImplementation(() => ({ execute: createExecute }))
-  mock(CreateJournalEntryUseCase).mockImplementation(() => ({ execute: journalCreate }))
+  mock(CreateJournalEntryUseCase).mockImplementation(() => ({ execute: journalCreate, findExisting: jest.fn().mockResolvedValue(null) }))
   mock(ListJournalEntriesUseCase).mockImplementation(() => ({ execute: journalList }))
   mock(MinioStorageAdapter).mockImplementation(() => ({ getPresignedUrl: signCertificate }))
   signCertificate.mockResolvedValue('https://signed/cert')

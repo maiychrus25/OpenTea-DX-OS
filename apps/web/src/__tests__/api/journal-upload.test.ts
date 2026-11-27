@@ -45,7 +45,7 @@ beforeEach(() => {
   mock(prisma.htxProfile.findUnique).mockResolvedValue({ id: 'htx-tc', htx_code: 'TC', name: 'HTX TC', crop_types: [] })
   mock(prisma.parcel.findUnique).mockResolvedValue({ household: { htx_profile_id: 'htx-tc' } })
   mock(MinioDocumentAdapter).mockImplementation(() => storage)
-  mock(CreateJournalEntryUseCase).mockImplementation(() => ({ execute: journalCreate }))
+  mock(CreateJournalEntryUseCase).mockImplementation(() => ({ execute: journalCreate, findExisting: jest.fn().mockResolvedValue(null) }))
   storage.generateUploadUrl.mockImplementation(async (key: string) => ({ url: `https://signed/${key}`, key }))
   journalCreate.mockResolvedValue({ id: 'e1' })
 })

@@ -4,6 +4,7 @@
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { PrismaJournalRepository } from '@/infrastructure/db/journal/PrismaJournalRepository'
 import { PrismaParcelRepository } from '@/infrastructure/db/farm/PrismaParcelRepository'
+import { PrismaPesticideRepository } from '@/infrastructure/db/pesticide/PrismaPesticideRepository'
 import { CreateJournalEntryUseCase } from '@/application/journal/CreateJournalEntryUseCase'
 import { ActivityType } from '@prisma/client'
 
@@ -21,7 +22,7 @@ describe('Story 3.5: Weather Auto-Attach to Journal Entries', () => {
 
   const journalRepo = new PrismaJournalRepository()
   const parcelRepo = new PrismaParcelRepository()
-  const useCase = new CreateJournalEntryUseCase(journalRepo, parcelRepo)
+  const useCase = new CreateJournalEntryUseCase(journalRepo, parcelRepo, new PrismaPesticideRepository())
 
   beforeAll(async () => {
     try {
@@ -131,7 +132,7 @@ describe('Story 3.5: Weather Auto-Attach to Journal Entries', () => {
       submitted_by_id: 'farmer-1',
       submitted_role: 'FARMER',
       activities: [{ activity_type: ActivityType.FERTILIZING }]
-    }, 'FARMER', householdId)
+    }, 'FARMER', householdId, htxId)
 
     // Should fetch the weather from 3 days ago, not today's
     expect(entry.weather_condition).toBe('Rainy')
@@ -155,7 +156,7 @@ describe('Story 3.5: Weather Auto-Attach to Journal Entries', () => {
       submitted_by_id: 'farmer-1',
       submitted_role: 'FARMER',
       activities: [{ activity_type: ActivityType.FERTILIZING }]
-    }, 'FARMER', householdId)
+    }, 'FARMER', householdId, htxId)
 
     // Should leave weather fields as null
     expect(entry.weather_condition).toBeNull()

@@ -35,6 +35,9 @@ class MockLotPort implements LotPort {
   async create(_data: CreateLotData): Promise<LotSummary> {
     return {} as LotSummary
   }
+  async cycleForLine(): Promise<string | null> {
+    return null
+  }
   async exportQr(_id: string, snapshotData: LotTraceData, qrImageUrl?: string, _certificateKeys?: string[]): Promise<ExportQrResult> {
     return {
       lot_code: snapshotData.lot_code,
