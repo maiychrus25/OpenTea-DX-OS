@@ -3,7 +3,7 @@
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 /** Fallback only: real parcel geometry / partner coordinates always take priority. */
-export const DEFAULT_MAP_VIEW = { center: [21.55, 105.80] as [number, number], zoom: 14 }
+export const DEFAULT_MAP_VIEW = { center: [21.538, 105.775] as [number, number], zoom: 14 }
 
 export const PARCEL_STATUS_CONFIG: Record<string, { color: string; fillColor: string; label: string }> = {
   SOWING: { color: 'var(--color-status-sowing)', fillColor: 'var(--color-status-sowing)', label: 'Đang gieo sạ' },

@@ -34,15 +34,16 @@ const respond = (data: unknown, ok = true) => ({ ok, status: ok ? 200 : 503, jso
 
 beforeEach(() => { jest.clearAllMocks(); global.fetch = jest.fn().mockResolvedValue(respond([])) })
 
-test('partner map starts at Tan Cuong, has both credited layers, and opens the form only on request', async () => {
+test('partner map starts at Tan Cuong, has both labelled layers, and opens the form only on request', async () => {
   render(<PartnerMap />)
   await screen.findByText('Công ty Chè Tân Thái')
   expect(screen.getByText('Mẫu')).toBeInTheDocument()
   expect(screen.queryByPlaceholderText('Nhập tên đối tác')).not.toBeInTheDocument()
-  expect(L.map).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ center: [21.55, 105.80], zoom: 14 }))
-  expect(L.control.layers).toHaveBeenCalledWith(expect.objectContaining({ 'Vệ tinh': expect.anything(), 'Đường phố': expect.anything() }), undefined, expect.anything())
-  expect(L.tileLayer).toHaveBeenCalledWith(expect.stringContaining('arcgisonline'), expect.objectContaining({ attribution: expect.stringContaining('Esri') }))
-  expect(L.tileLayer).toHaveBeenCalledWith(expect.stringContaining('openstreetmap'), expect.objectContaining({ attribution: expect.stringContaining('OpenStreetMap') }))
+  expect(L.map).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ center: [21.538, 105.775], zoom: 14 }))
+  expect(L.control.layers).toHaveBeenCalledWith(expect.objectContaining({ 'Bản đồ': expect.anything(), 'Vệ tinh': expect.anything() }), undefined, expect.anything())
+  for (const service of ['World_Street_Map', 'World_Imagery', 'World_Transportation', 'World_Boundaries_and_Places']) {
+    expect(L.tileLayer).toHaveBeenCalledWith(expect.stringContaining(service), expect.objectContaining({ attribution: expect.stringContaining('Esri') }))
+  }
   fireEvent.click(screen.getByRole('button', { name: 'Thêm đối tác' }))
   expect(screen.getByPlaceholderText('Nhập tên đối tác')).toBeInTheDocument()
 })

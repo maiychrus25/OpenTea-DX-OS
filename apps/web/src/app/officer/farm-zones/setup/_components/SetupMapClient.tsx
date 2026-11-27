@@ -46,7 +46,7 @@ export default function SetupMapClient({ onAreaCalculated }: Props) {
       maxZoom: 24, // Cho phép zoom thật sâu
     })
 
-    addMapBaseLayers(map)
+    addMapBaseLayers(map, 'satellite')
 
     // 1. Search Control (GeoSearch)
     const provider = new EsriProvider()
