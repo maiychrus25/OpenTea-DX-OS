@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 -->
 # Đặc tả thiết kế — GĐ1 dự án con 4: Vật tư ứng, Sổ cái xã viên và Quyết toán kỳ có VietQR
 
-> **Trạng thái:** Bản thiết kế (2026-11-28). Nhánh `feat/phase1-value-chain`, làm sau dự án con 3.
+> **Trạng thái:** Đã triển khai trên nhánh `feat/phase1-value-chain` (2026-11-28), chưa phát hành. Bản thiết kế viết ngày 2026-11-28; khác biệt giữa thiết kế và mã nằm ở "Ghi chú sau triển khai" cuối tài liệu.
 > **Căn cứ:** [product-roadmap.md](../product-roadmap.md) §1 (lời hứa 2), §5 GĐ1 mục 4, §6 (vai `accountant`, `farmer`), §7 KPI "chốt kỳ ≤ 30 phút"; [ADR 0005](../adr/0005-multi-tenant-tea-value-chain-dxos.md) (tiền luôn có người ký); DEV-011.
 > **Quyết định của chủ dự án (2026-11-28):**
 > - Cấp ứng vật tư ghi nợ cho hộ. Chốt kỳ tự tính `Tiền búp − Nợ vật tư = Thực lĩnh` và xuất phiếu có mã VietQR, dùng lại bộ sinh EMVCo và CRC16 trên nhánh `feat/tea-tour-pro`, commit `b60708fb`.
@@ -285,3 +285,20 @@ Ngoài ra: route `GET /api/pesticides` (S1) với nông dân xếp lên đầu c
    - Bảng `households` đã được kiểm toán, nên ba cột mới cũng vào `audit.events`, như họ tên và số điện thoại đang có. Đây là kho kiểm toán nội bộ có kiểm soát, chấp nhận được.
    - Các cột này không được gửi ra Telegram, agent hay log ứng dụng.
 8. **Xã viên có nhiều hộ:** các route `mine` trả dữ liệu của mọi hộ gắn với tài khoản, gộp theo hộ.
+
+## Ghi chú sau triển khai
+
+Mã là nguồn cuối cùng. Phần dưới liệt kê chỗ mã khác thân đặc tả (đã tính các quyết định ở mục 7).
+
+1. **Hai cột tên người.** `settlement_periods` có thêm `created_by_name` và `closed_by_name` (tên hiển thị lúc tạo và lúc chốt), ngoài `created_by_id` và `closed_by_id`; API trả cả hai tên trong kỳ.
+2. **Chốt quét mọi phiếu chưa quyết toán đến hết `date_to`,** không chỉ phiếu nằm trong khoảng `date_from` đến `date_to` như mục 4.2 bước 2. Phiếu cân `VALID` có `weighed_at` trước hết ngày `date_to` (giờ Việt Nam) và phiếu ứng `VALID` có `advanced_on` không sau `date_to`, mà `settlement_id` còn rỗng, đều vào kỳ.
+3. **`balance_vnd` ở các route đọc sổ là số tạm tính:** số dư sổ cộng tiền phiếu cân chưa quyết toán trừ tiền phiếu ứng chưa quyết toán. Các route đọc sổ còn trả thêm `households[]` (số tạm tính từng hộ), vì một tài khoản có thể gắn nhiều hộ (mục 7.8).
+4. **`GET /api/settlements` và `GET /api/settlements/[id]` chỉ cho `manager` và `accountant`** (bảng 4.4 để trống cột vai); vai khác nhận 403.
+5. **Phiếu của xã viên.** Phiếu quyết toán của xã viên có ảnh QR mã hoá đúng tài khoản của họ, nhưng phản hồi chỉ có số đã che (4 số cuối); `account_full` chỉ có với `manager` và `accountant`.
+6. **Route thêm ngoài bảng 4.4:** `GET /api/households/[id]/bank` (điền sẵn biểu mẫu tài khoản, trả số đủ cho `manager` và `accountant`), `GET /api/households/[id]/ledger` (sổ của một hộ cho `manager` và `accountant`) và `GET /api/banks` (danh sách 21 ngân hàng).
+7. **Dòng quyết toán mang `period_id`.** Mỗi dòng trả `period_id`; các dòng trong sổ của hộ còn có `period_code`, `date_from` và `date_to`. Dòng của kỳ `DRAFT` có `id` rỗng.
+8. **Mã lỗi riêng.** Huỷ phiếu ứng đã quyết toán trả 409 `ADVANCE_SETTLED`, đã huỷ trả 409 `ADVANCE_VOIDED`; trùng tên vật tư trả 409 `ITEM_EXISTS`; ghi trả dòng không có khoản chi trả trả 409 `NOTHING_TO_PAY`, đã trả rồi trả 409 `ALREADY_PAID`. Lỗi `PERIOD_CHANGED` kèm `totals` mới.
+9. **`ticket_id` và `advance_id` của `member_ledger_entries`** có trong bảng nhưng mã chưa điền; dòng sổ trỏ về dòng quyết toán qua `settlement_id` (rỗng với `ADJUSTMENT`).
+10. **Giới hạn đọc sổ.** Mỗi lần đọc trả tối đa 200 dòng sổ, 200 phiếu cân và 200 phiếu ứng chưa quyết toán, và 100 dòng quyết toán mới nhất.
+11. **Chống trùng phiếu ứng** theo `(created_by_id, client_id)`, như phiếu cân; gửi lại trả 200 với phiếu đầu.
+12. **Hasura.** `public_households.yaml` bỏ `columns: '*'` của ba vai `farmer`, `manager`, `officer` và liệt kê rõ tám cột (không có cột ngân hàng); vai `agent` vốn chỉ có `id`, `htx_profile_id`, `created_at`, `updated_at`.
