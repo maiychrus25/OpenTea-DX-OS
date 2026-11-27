@@ -185,6 +185,14 @@ export class PrismaAppBuildRepository implements AppBuildRepository {
     })
   }
 
+  restore(htxCode: string, id: string, previous: AppBuildRequest): Promise<boolean> {
+    const spec = previous.spec === null ? null : JSON.stringify(previous.spec)
+    return this.moved(ACTOR, (tx) => tx.$executeRaw`
+      UPDATE platform.app_build_requests
+      SET status = ${previous.status}, path = ${previous.path}, app_id = ${previous.appId}, spec = ${spec}::jsonb, updated_at = now()
+      WHERE htx_code = ${htxCode} AND id = ${id}::uuid AND status IN ('routed', 'spec_proposed')`)
+  }
+
   approveSpec(htxCode: string, id: string): Promise<boolean> {
     return this.moved(ACTOR, (tx) => tx.$executeRaw`
       UPDATE platform.app_build_requests SET status = 'spec_approved', updated_at = now()

@@ -136,6 +136,8 @@ export interface AppBuildRepository {
   setRouted(htxCode: string, id: string, path: 'store' | 'book', target: string): Promise<boolean>
   /** `new` or `asking` to `spec_proposed`. Throws APP_ID_TAKEN when the id is in the catalogue or in `app_builds`. */
   setSpec(htxCode: string, id: string, appId: string, spec: Record<string, unknown>): Promise<boolean>
+  /** Undoes `setRouted` or `setSpec` when their proposal could not be created: back to `previous`' status, path, id and spec. */
+  restore(htxCode: string, id: string, previous: AppBuildRequest): Promise<boolean>
   /** `spec_proposed` to `spec_approved`. False when the request moved. */
   approveSpec(htxCode: string, id: string): Promise<boolean>
   /** `new`, `asking` or `spec_proposed` to `cancelled`. */

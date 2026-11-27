@@ -41,6 +41,8 @@ function fakeRepo(initial: AppBuildRequest[], builds: AppBuild[] = [], catalog: 
       Array.from(rows.values()).filter((r) => r.htxCode === htx && (r.status === 'new' || (r.status === 'asking' && r.answerText) || (['passed', 'failed'].includes(r.status) && !r.announcedAt))),
     setQuestions: async (h, id, questions) => move(h, id, ['new'], { status: 'asking', questions }),
     setRouted: async (h, id, path, target) => move(h, id, ['new', 'asking'], { status: 'routed', path, appId: target }),
+    restore: async (h, id, previous) =>
+      move(h, id, ['routed', 'spec_proposed'], { status: previous.status, path: previous.path, appId: previous.appId, spec: previous.spec }),
     setSpec: async (h, id, appId, s) => {
       if ([...catalog].some((c) => c.id === appId) || builds.some((b) => b.appId === appId)) throw new AppBuildError('APP_ID_TAKEN', 'taken')
       return move(h, id, ['new', 'asking'], { status: 'spec_proposed', path: 'build', appId, spec: s })
@@ -154,6 +156,24 @@ describe('A12 service (contract C4)', () => {
     expect(proposals).toHaveLength(0)
     await svc.proposeSpec('TC', request().id, { ...spec, app_id: 'gen-fertiliser-stock-2' })
     expect(rows.get(request().id)?.appId).toBe('gen-fertiliser-stock-2')
+  })
+
+  it('puts the request back when the proposal cannot be created, so it is not left routed or spec_proposed with nothing to approve', async () => {
+    for (const act of [
+      (svc: AppBuilderAgentService) => svc.route('TC', request().id, { path: 'store', target: 'tea-shop', reason_vi: 'Đã có app' }),
+      (svc: AppBuilderAgentService) => svc.proposeSpec('TC', request().id, spec),
+    ]) {
+      const { repo, rows } = fakeRepo([request()])
+      const svc = new AppBuilderAgentService({
+        repo,
+        store: { snapshot: async () => snapshot(['custom-books']) },
+        providers: async () => [],
+        propose: async () => { throw new Error('the catalogue refused it') },
+        notifier: { questionsAsked: async () => undefined, finished: async () => undefined },
+      })
+      await expect(act(svc)).rejects.toThrow('the catalogue refused it')
+      expect(rows.get(request().id)).toMatchObject({ status: 'new', path: null, appId: null, spec: null })
+    }
   })
 
   it('never sees a request of another cooperative', async () => {

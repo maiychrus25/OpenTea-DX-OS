@@ -111,7 +111,7 @@ export class AppBuilderAgentService {
         sha256: sha256Hex(canonicalJson({ request_id: request.id })),
         values: { request_id: request.id },
       }
-      return this.deps.propose({
+      return this.proposeOrRestore(request, {
         htxCode,
         kind: `app.${CUSTOM_BOOKS}.book.create`,
         payload: { template: body.target, name_vi: request.requestText.slice(0, 80) },
@@ -119,7 +119,7 @@ export class AppBuilderAgentService {
         evidence: evidenceOf(row),
       })
     }
-    return this.deps.propose({
+    return this.proposeOrRestore(request, {
       htxCode,
       kind: 'miniapp.install',
       payload: { app_id: target },
@@ -128,13 +128,23 @@ export class AppBuilderAgentService {
     })
   }
 
+  /** A request whose proposal could not be created goes back to where it was: left as it is, nobody could ever decide it. */
+  private async proposeOrRestore(previous: AppBuildRequest, input: ProposeInput): Promise<string | null> {
+    try {
+      return await this.deps.propose(input)
+    } catch (err) {
+      await this.deps.repo.restore(previous.htxCode, previous.id, previous)
+      throw err
+    }
+  }
+
   /** The body is the C2 spec itself. APP_ID_TAKEN (409) comes from the repository. */
   async proposeSpec(htxCode: string, id: string, rawSpec: unknown): Promise<string | null> {
     const spec: AppSpec = appSpecSchema.parse(rawSpec)
-    await this.mustFind(htxCode, id)
+    const previous = await this.mustFind(htxCode, id)
     if (!(await this.deps.repo.setSpec(htxCode, id, spec.app_id, spec))) throw wrongState()
     const proposed = await this.mustFind(htxCode, id)
-    return this.deps.propose({
+    return this.proposeOrRestore(previous, {
       htxCode,
       kind: 'app.spec.approve',
       payload: { request_id: id },
