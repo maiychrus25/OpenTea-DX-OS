@@ -42,7 +42,7 @@ for item in sources:
 
 def chinh_thuc(url):
     host = urlparse(url).hostname or ""
-    return host.endswith((".gov.vn", ".chinhphu.vn", ".cdnchinhphu.vn")) or host in ("vbpl.vn", "storage-vnportal.vnpt.vn")
+    return host.endswith((".gov.vn", ".chinhphu.vn", ".cdnchinhphu.vn")) or host in ("vbpl.vn", "thainguyen.dcs.vn", "storage-vnportal.vnpt.vn")
 
 # "có" chỉ khi lần chạy này tải được bản gốc.
 got = {row["id"] for row in report if "loi" not in row}
