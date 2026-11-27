@@ -90,39 +90,6 @@
   }
 }
 
-/* Reels takes the whole page area beside the menu and scrolls inside itself. */
-.shell:has([data-reels]) {
-  height: 100dvh;
-  min-height: 0;
-  overflow: hidden;
-}
-.workspace:has([data-reels]),
-.content:has([data-reels]) {
-  min-height: 0;
-}
-.pageContent:has([data-reels]) {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  max-width: none;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-}
-
-/* With the sidebar on screen Reels drops the top bar, and the viewer may put the sidebar away too. */
-@media (min-width: 1024px) {
-  .content:has([data-reels]) > header,
-  .shell:has([data-reels][data-menu='hidden']) > aside {
-    display: none;
-  }
-
-  .shell:has([data-reels][data-menu='hidden']) > .workspace {
-    width: 100%;
-    margin-left: 0;
-  }
-}
-
 /* The menu folded to a rail of icons. */
 @media (min-width: 1024px) {
   .shell[data-collapsed] {
