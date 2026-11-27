@@ -6,12 +6,19 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { FarmerJournalForm } from '@/app/farmer/journal/_components/FarmerJournalForm'
 
-jest.mock('idb-keyval', () => ({ get: jest.fn().mockResolvedValue(undefined), set: jest.fn().mockResolvedValue(undefined) }))
+const mockStore: Record<string, any> = {}
+jest.mock('idb-keyval', () => ({
+  get: jest.fn(async (key: string) => mockStore[key]),
+  set: jest.fn(async (key: string, value: unknown) => { mockStore[key] = value }),
+  update: jest.fn(async (key: string, fn: (v: unknown) => unknown) => { mockStore[key] = fn(mockStore[key]) }),
+}))
 
 const product = { id: 'p1', trade_name: 'Abamec', active_ingredient: 'abamectin', group: 'CHEMICAL', targets: [], default_phi_days: 7, floor_days: 10, label: null, needs_label_check: false }
 
 let posted: any
 beforeEach(() => {
+  Object.keys(mockStore).forEach(k => delete mockStore[k])
+  Object.defineProperty(navigator, 'onLine', { value: true, configurable: true })
   posted = undefined
   global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
     if (url === '/api/farm/parcels') return { ok: true, status: 200, json: async () => ({ data: [{ id: 'parcel-1', parcel_code: 'T-01', crop_type: 'Chè' }] }) }
@@ -51,4 +58,46 @@ test('"Đốn chè" is selectable and sent without pesticide fields', async () =
   await waitFor(() => expect(onSuccess).toHaveBeenCalled())
   expect(posted.activities[0]).toMatchObject({ activity_type: 'PRUNING' })
   expect(posted.activities[0].pesticide_product_id).toBeUndefined()
+})
+
+describe('offline queue', () => {
+  const submit = () => fireEvent.click(screen.getByRole('button', { name: /Gửi chờ duyệt/ }))
+  const renderPruning = async (onSuccess: () => void) => {
+    render(<FarmerJournalForm onSuccess={onSuccess} onCancel={() => undefined} />)
+    await screen.findByRole('option', { name: /T-01/ })
+    fireEvent.click(screen.getByRole('button', { name: 'Đốn chè' }))
+  }
+
+  test('every POST carries a client_id', async () => {
+    const onSuccess = jest.fn()
+    await renderPruning(onSuccess)
+    submit()
+    await waitFor(() => expect(onSuccess).toHaveBeenCalled())
+    expect(posted.client_id).toMatch(/^[0-9a-f-]{36}$/)
+  })
+
+  test('offline: nothing is posted, the entry is queued and the form closes', async () => {
+    Object.defineProperty(navigator, 'onLine', { value: false, configurable: true })
+    const onSuccess = jest.fn()
+    await renderPruning(onSuccess)
+    submit()
+    await waitFor(() => expect(onSuccess).toHaveBeenCalled())
+    expect(posted).toBeUndefined()
+    expect(mockStore.journal_offline_queue).toHaveLength(1)
+    expect(mockStore.journal_offline_queue[0].payload.activities[0].activity_type).toBe('PRUNING')
+  })
+
+  test('a dropped connection queues the entry with the same client_id', async () => {
+    const original = global.fetch as jest.Mock
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      if (url === '/api/journal' && init?.method === 'POST') throw new TypeError('Failed to fetch')
+      return original(url, init)
+    }) as unknown as typeof fetch
+    const onSuccess = jest.fn()
+    await renderPruning(onSuccess)
+    submit()
+    await waitFor(() => expect(onSuccess).toHaveBeenCalled())
+    expect(mockStore.journal_offline_queue).toHaveLength(1)
+    expect(mockStore.journal_offline_queue[0].client_id).toMatch(/^[0-9a-f-]{36}$/)
+  })
 })

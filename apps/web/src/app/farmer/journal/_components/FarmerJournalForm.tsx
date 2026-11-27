@@ -3,7 +3,7 @@
 
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import styles from '../journal.module.css'
 import kit from '@/components/features/farmer-web/kit.module.css'
 import { ImageIcon, Send } from 'lucide-react'
@@ -11,6 +11,7 @@ import { fetchJson, LOAD_FAILED_MESSAGE } from '@/lib/api/fetch-json'
 import { ACTIVITY_TYPES, type JournalPrefill } from './journal-prefill'
 import { PesticidePicker, isBelowFloor, type PesticideChange } from '@/components/features/pesticide/PesticidePicker'
 import { CUSTOM_PRODUCT_FLOOR_DAYS } from '@/lib/pesticide/catalogue'
+import { uploadJournalPhoto, useJournalOfflineQueue, type JournalPayload } from '@/lib/hooks/useJournalOfflineQueue'
 
 interface Parcel {
   id: string
@@ -48,6 +49,8 @@ export function FarmerJournalForm({ onSuccess, onCancel, initial: chatPrefill, e
     withdrawalDays: first?.withdrawal_days ?? undefined,
   } : chatPrefill
   const confirming = entry?.status === 'DRAFT'
+  const queue = useJournalOfflineQueue()
+  const clientIdRef = useRef<string>()
   const [parcels, setParcels] = useState<Parcel[]>([])
   const [parcelId, setParcelId] = useState(entry?.parcel_id ?? '')
   const [entryDate, setEntryDate] = useState(entry && !confirming ? entry.entry_date.slice(0, 10) : new Date().toISOString().slice(0, 10))
@@ -89,7 +92,7 @@ export function FarmerJournalForm({ onSuccess, onCancel, initial: chatPrefill, e
     setError('')
 
     const body: Record<string, unknown> = {
-      ...(entry ? { submit: true } : { parcel_id: parcelId }),
+      ...(entry ? { submit: true } : { parcel_id: parcelId, client_id: (clientIdRef.current ??= crypto.randomUUID()) }),
       entry_date: entryDate,
       observation,
       activities: [{
@@ -104,39 +107,19 @@ export function FarmerJournalForm({ onSuccess, onCancel, initial: chatPrefill, e
     }
 
     try {
-      let photo_url: string | undefined
-      let photo_minio_key: string | undefined
+      // Offline: keep the entry (and the photo) on the device; the queue sends it once when the network is back.
+      if (!entry && !navigator.onLine) {
+        await queue.enqueue(body as unknown as JournalPayload, photo ?? undefined)
+        onSuccess()
+        return
+      }
 
       if (photo) {
         setUploadingPhoto(true)
-        const ext = photo.name.split('.').pop() || 'jpg'
-        const filename = `journal-${Date.now()}.${ext}`
-        
-        // Get presigned URL
-        const presignRes = await fetch('/api/journal/upload', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ filename, contentType: photo.type })
-        })
-        if (!presignRes.ok) throw new Error('Không thể lấy đường dẫn tải ảnh')
-        const { data: { uploadUrl, key } } = await presignRes.json()
-
-        // Upload directly to MinIO
-        const uploadRes = await fetch(uploadUrl, {
-          method: 'PUT',
-          headers: { 'Content-Type': photo.type },
-          body: photo
-        })
-        if (!uploadRes.ok) throw new Error('Lỗi tải ảnh lên hệ thống')
-
-        photo_minio_key = key
-        // Need the final URL (without presign params) for simple storage if needed, but minio_key is primary.
-        // Actually the backend will generate public URL. We just pass minio_key.
-        photo_url = key // Temporary, backend should construct real URL or use presigned later
+        const key = await uploadJournalPhoto(photo)
+        // The backend builds the public URL from the key; the key stands in until then.
+        Object.assign(body, { photo_url: key, photo_minio_key: key })
       }
-
-      // Add photo to body
-      Object.assign(body, { photo_url, photo_minio_key })
 
       const res = await fetch(entry ? `/api/journal/${entry.id}` : '/api/journal', {
         method: entry ? 'PUT' : 'POST',
@@ -149,6 +132,12 @@ export function FarmerJournalForm({ onSuccess, onCancel, initial: chatPrefill, e
       }
       onSuccess()
     } catch (err: unknown) {
+      // A dropped connection (fetch rejects with TypeError) is queued, not shown as an error. Same client_id on any retry.
+      if (!entry && err instanceof TypeError) {
+        await queue.enqueue(body as unknown as JournalPayload, photo ?? undefined)
+        onSuccess()
+        return
+      }
       setError(err instanceof Error ? err.message : 'Lỗi không xác định')
     } finally {
       setSubmitting(false)

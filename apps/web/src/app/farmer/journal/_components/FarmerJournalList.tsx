@@ -9,6 +9,7 @@ import { Calendar, ChevronDown, ChevronRight, Droplet, FileText, Layers, Leaf, P
 import kit from '@/components/features/farmer-web/kit.module.css'
 import styles from '../journal.module.css'
 import { fetchJson, LOAD_FAILED_MESSAGE } from '@/lib/api/fetch-json'
+import { QUEUED_MESSAGE, useJournalOfflineQueue, type JournalPayload } from '@/lib/hooks/useJournalOfflineQueue'
 
 interface JournalEntry {
   id: string
@@ -103,6 +104,19 @@ function formatDetail(detail: string | null | undefined): string {
   return detail
 }
 
+/** Opens the new-entry form with the values of an item the server refused (Sửa button). */
+function prefillHref(payload: JournalPayload): string {
+  const first = payload.activities[0] ?? {}
+  const params = new URLSearchParams()
+  const put = (key: string, value: unknown) => { if (value !== undefined && value !== null && value !== '') params.set(key, String(value)) }
+  put('parcel', payload.parcel_id)
+  put('activity', first.activity_type)
+  put('product', first.product_name)
+  put('dosage', first.dosage)
+  put('withdrawal', first.withdrawal_days)
+  return `/farmer/journal/new?${params}`
+}
+
 export function FarmerJournalList() {
   const [entries, setEntries] = useState<JournalEntry[]>([])
   const [loading, setLoading] = useState(true)
@@ -124,6 +138,7 @@ export function FarmerJournalList() {
   }, [])
 
   useEffect(() => { fetchEntries() }, [fetchEntries])
+  const queue = useJournalOfflineQueue({ onSent: fetchEntries })
 
   async function handleWithdraw(id: string) {
     if (!confirm('Bạn có chắc chắn muốn rút nhật ký đang chờ duyệt này?')) return
@@ -208,6 +223,24 @@ export function FarmerJournalList() {
           Ghi nhật ký
         </Link>
       </div>
+
+      {queue.pending > 0 && (
+        <p className={styles.queueNote} role="status">{queue.pending} nhật ký đang chờ gửi. {QUEUED_MESSAGE}</p>
+      )}
+      {queue.failed.length > 0 && (
+        <section className={styles.queueFailed} aria-label="Chưa gửi được">
+          <h2>Chưa gửi được</h2>
+          <ul>
+            {queue.failed.map(item => (
+              <li key={item.client_id}>
+                <span>{item.payload.entry_date} · {item.last_error}</span>
+                <Link className={kit.btn2} href={prefillHref(item.payload)} onClick={() => { void queue.discard(item.client_id) }}>Sửa</Link>
+                <button type="button" className={kit.btn2} onClick={() => { void queue.discard(item.client_id) }}>Bỏ</button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {loading ? (
         <div className={styles.empty}>Đang tải...</div>

@@ -7,7 +7,12 @@ import '@testing-library/jest-dom'
 import { FarmerJournalList } from '@/app/farmer/journal/_components/FarmerJournalList'
 import { FarmerJournalEditClient } from '@/app/farmer/journal/[id]/edit/_components/FarmerJournalEditClient'
 
-jest.mock('idb-keyval', () => ({ get: jest.fn().mockResolvedValue(undefined), set: jest.fn().mockResolvedValue(undefined) }))
+const mockStore: Record<string, any> = {}
+jest.mock('idb-keyval', () => ({
+  get: jest.fn(async (key: string) => mockStore[key]),
+  set: jest.fn(async (key: string, value: unknown) => { mockStore[key] = value }),
+  update: jest.fn(async (key: string, fn: (v: unknown) => unknown) => { mockStore[key] = fn(mockStore[key]) }),
+}))
 const push = jest.fn()
 jest.mock('next/navigation', () => ({ useRouter: () => ({ push, refresh: jest.fn() }) }))
 
@@ -33,7 +38,11 @@ function mockApi(entries: object[]) {
   }) as unknown as typeof fetch
 }
 
-beforeEach(() => push.mockClear())
+beforeEach(() => {
+  push.mockClear()
+  Object.keys(mockStore).forEach(k => delete mockStore[k])
+  Object.defineProperty(navigator, 'onLine', { value: false, configurable: true }) // keeps the queue from sending in these tests
+})
 
 describe('buttons on the list', () => {
   test.each([['REQUEST_CHANGES', 'Sửa lại'], ['REJECTED', 'Sửa lại'], ['DRAFT', 'Đã phun']])('%s offers "%s" to the edit page', async (status, label) => {
@@ -90,5 +99,28 @@ describe('edit page', () => {
     mockApi([])
     render(<FarmerJournalEditClient id="nope" />)
     expect(await screen.findByText('Không tìm thấy nhật ký này.')).toBeInTheDocument()
+  })
+})
+
+describe('queue on the list', () => {
+  const item = (over: object) => ({ client_id: 'c1', created_at: 1, payload: { parcel_id: 'parcel-1', entry_date: '2026-11-28', activities: [{ activity_type: 'PRUNING' }] }, ...over })
+
+  test('shows the number of entries waiting to be sent', async () => {
+    mockStore.journal_offline_queue = [item({}), item({ client_id: 'c2' })]
+    mockApi([])
+    render(<FarmerJournalList />)
+    expect(await screen.findByRole('status')).toHaveTextContent('2 nhật ký đang chờ gửi. Đã lưu trên máy, sẽ tự gửi khi có mạng.')
+  })
+
+  test('lists the refused entry with Sửa and Bỏ; Bỏ drops it', async () => {
+    mockStore.journal_offline_queue = [item({ last_error: 'Thiếu liều lượng' })]
+    mockApi([])
+    render(<FarmerJournalList />)
+    const region = await screen.findByRole('region', { name: 'Chưa gửi được' })
+    expect(region).toHaveTextContent('Thiếu liều lượng')
+    expect(screen.getByRole('link', { name: 'Sửa' }).getAttribute('href')).toContain('/farmer/journal/new?parcel=parcel-1&activity=PRUNING')
+    fireEvent.click(screen.getByRole('button', { name: 'Bỏ' }))
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'Chưa gửi được' })).not.toBeInTheDocument())
+    expect(mockStore.journal_offline_queue).toHaveLength(0)
   })
 })
