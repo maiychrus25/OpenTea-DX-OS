@@ -19,7 +19,7 @@ avg = sum(sum(d.values()) for d in docs) / len(docs)
 def score(query, doc):
     size = sum(doc.values())
     return sum(math.log(1 + (len(docs) - seen[t] + 0.5) / (seen[t] + 0.5)) * doc[t] * 2.2 / (doc[t] + 1.2 * (0.25 + 0.75 * size / avg))
-               for t in terms(query) if t in doc) 
+               for t in terms(query) if t in doc)
 
 query = " ".join(sys.argv[1:]) or sys.exit('Dùng: python3 tim.py "câu hỏi"')
 # Ghi chú đã biên tập được ưu tiên hơn toàn văn thô.
