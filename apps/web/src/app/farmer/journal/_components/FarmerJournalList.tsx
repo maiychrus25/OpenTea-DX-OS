@@ -278,30 +278,33 @@ export function FarmerJournalList() {
           </div>
 
           <div className={styles.layout}>
-            <div className={styles.entries}>
-              {shown.length === 0 && <div className={styles.empty}>Không có nhật ký nào khớp bộ lọc.</div>}
-              {GROUPS.map(group => {
-                const items = shown.filter(e => groupOf(e.entry_date) === group.key)
-                if (items.length === 0) return null
-                if (group.key !== 'older') {
+            <section className={`${kit.pn} ${styles.entries}`} aria-label="Danh sách nhật ký">
+              <div className={kit.ph}><h2>Danh sách nhật ký</h2></div>
+              <div className={styles.entryList}>
+                {shown.length === 0 && <div className={styles.empty}>Không có nhật ký nào khớp bộ lọc.</div>}
+                {GROUPS.map(group => {
+                  const items = shown.filter(e => groupOf(e.entry_date) === group.key)
+                  if (items.length === 0) return null
+                  if (group.key !== 'older') {
+                    return (
+                      <React.Fragment key={group.key}>
+                        <h2 className={styles.groupHead}>{group.label}</h2>
+                        {items.map(card)}
+                      </React.Fragment>
+                    )
+                  }
                   return (
                     <React.Fragment key={group.key}>
-                      <h2 className={styles.groupHead}>{group.label}</h2>
-                      {items.map(card)}
+                      <button type="button" className={styles.groupHead} aria-expanded={showOlder} onClick={() => setOlderOpen(!showOlder)}>
+                        {showOlder ? <ChevronDown size={18} aria-hidden="true" /> : <ChevronRight size={18} aria-hidden="true" />}
+                        {group.label} ({items.length})
+                      </button>
+                      {showOlder && items.map(card)}
                     </React.Fragment>
                   )
-                }
-                return (
-                  <React.Fragment key={group.key}>
-                    <button type="button" className={styles.groupHead} aria-expanded={showOlder} onClick={() => setOlderOpen(!showOlder)}>
-                      {showOlder ? <ChevronDown size={18} aria-hidden="true" /> : <ChevronRight size={18} aria-hidden="true" />}
-                      {group.label} ({items.length})
-                    </button>
-                    {showOlder && items.map(card)}
-                  </React.Fragment>
-                )
-              })}
-            </div>
+                })}
+              </div>
+            </section>
 
             {selectedEntry && (
               <section className={`${kit.pn} ${styles.detail}`} aria-label="Chi tiết nhật ký">

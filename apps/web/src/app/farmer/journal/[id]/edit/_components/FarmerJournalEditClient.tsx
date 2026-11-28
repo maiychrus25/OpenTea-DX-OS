@@ -41,7 +41,7 @@ export function FarmerJournalEditClient({ id }: { id: string }) {
         <Link href="/farmer/journal" className={kit.btn2}><ChevronLeft size={16} aria-hidden="true" />Về nhật ký</Link>
       </div>
 
-      <div className={`${kit.pn} ${styles.formCard}`}>
+      <div className={styles.formCard}>
         {state.kind === 'loading' && <p className={styles.empty}>Đang tải...</p>}
         {state.kind === 'failed' && <p className={styles.empty}>{LOAD_FAILED_MESSAGE}</p>}
         {state.kind === 'missing' && <p className={styles.empty}>Không tìm thấy nhật ký này.</p>}

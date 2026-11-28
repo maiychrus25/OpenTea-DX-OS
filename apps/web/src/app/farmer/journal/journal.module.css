@@ -347,8 +347,9 @@
 .field svg:last-child { position: absolute; right: 12px; }
 .select { flex: 1; min-width: 0; align-self: stretch; padding: 0 26px 0 0; border: 0; outline: 0; appearance: none; background: transparent; color: inherit; font: inherit; font-size: 13px; cursor: pointer; }
 .count { margin-left: auto; font-size: 13px; color: var(--color-ink-secondary); }
-.layout { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 16px; align-items: start; }
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
 .entries { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.entryList { display: flex; flex-direction: column; gap: 8px; padding: 0 14px 14px; }
 .groupHead { display: flex; align-items: center; gap: 8px; width: 100%; margin: 0; min-height: 32px; padding: 0 12px; border: 0; border-radius: var(--rounded-md); background: var(--color-primary-subtle); color: var(--color-primary); font: inherit; font-size: 12px; font-weight: 800; text-align: left; text-transform: uppercase; }
 button.groupHead { cursor: pointer; }
 .entry { display: flex; gap: 12px; width: 100%; padding: 10px 12px; border: 2px solid transparent; border-radius: var(--rounded-lg); outline: 1px solid var(--color-border-default); outline-offset: -1px; background: var(--color-surface-card); color: var(--color-ink-primary); font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
@@ -392,21 +393,44 @@ button.groupHead { cursor: pointer; }
 }
 
 /* New entry page. */
-.formCard { flex: 3 1 560px; padding: 22px; }
-.guide { flex: 1 1 300px; }
+.formLayout { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.formCard { min-width: 0; }
+.guide { width: 100%; }
 .steps { margin: 0; padding: 14px 18px 16px 38px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; line-height: 1.6; list-style: decimal; }
-.entryForm { display: flex; flex-direction: column; gap: 18px; }
-.two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.entryForm { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
 .three { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
 .entryForm .tall { height: 44px; }
-.entryForm .tallChip { height: 40px; }
 .check { display: flex; align-items: center; gap: 10px; font-size: 14px; }
 .check input { width: 18px; height: 18px; accent-color: var(--color-primary); }
 .entryForm .area { height: 84px; padding: 10px 12px; resize: vertical; }
-.drop { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 110px; border: 2px dashed var(--color-border-input); border-radius: 14px; background: var(--color-surface-sunken); color: var(--color-ink-secondary); font-weight: 400; font-size: 13px; cursor: pointer; }
+.drop { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 110px; padding: 12px; overflow-wrap: anywhere; text-align: center; border: 2px dashed var(--color-border-input); border-radius: 14px; background: var(--color-surface-sunken); color: var(--color-ink-secondary); font-weight: 400; font-size: 13px; cursor: pointer; }
 .drop:focus-within { border-color: var(--color-primary); }
-.fileInput { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-.entryActions { display: flex; justify-content: flex-end; gap: 10px; padding-top: 16px; border-top: 1px solid var(--color-border-row); }
+.fileInput { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.entryActions { display: flex; justify-content: flex-end; gap: 10px; padding: 16px; border: 1px solid var(--color-border); border-radius: var(--radius-card); background: var(--color-surface-card); }
+.formBlock { display: flex; flex-direction: column; gap: 16px; min-width: 0; padding: 16px; border: 1px solid var(--color-border); border-radius: var(--radius-card); background: var(--color-surface-card); box-shadow: var(--shadow-card); }
+.blockTitle { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 15px; font-weight: 700; color: var(--color-ink-heading); }
+.blockTitle::before { content: ''; flex: none; width: 4px; height: 18px; border-radius: 4px; background: var(--color-primary); }
+.formDetails { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
+.formDetails > :only-child { grid-column: 1 / -1; }
+.activityChoices { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
+.activityChoice { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-width: 0; min-height: 72px; padding: 10px 4px; border: 1px solid var(--color-border); border-radius: var(--rounded-md); background: var(--color-surface-card); color: var(--color-ink-secondary); font: inherit; font-size: 13px; cursor: pointer; }
+.activityChoice[aria-pressed='true'] { border-color: var(--color-primary); box-shadow: inset 0 0 0 1px var(--color-primary); background: var(--color-primary-subtle); color: var(--color-primary); font-weight: 700; }
+.activityChoice:focus-visible, .pill:focus-visible, .entry:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; }
+.pill, .field, button.groupHead, .foot .withdraw { min-height: 44px; }
+.detailTitle, .detailHead, .rows div, .history, .rejectBox { overflow-wrap: anywhere; }
+.rows dt, .rows dd { min-width: 0; }
+.rows dt { flex: 0 0 40%; }
+
+@media (max-width: 767px) {
+  .formDetails { grid-template-columns: minmax(0, 1fr); }
+  .activityChoices { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .activityChoice { font-size: 12px; }
+  .entry { display: grid; grid-template-columns: 44px minmax(0, 1fr); }
+  .entryTag { grid-column: 2; justify-self: start; }
+  .detailHead { flex-wrap: wrap; }
+  .entryActions > button { flex: 1; }
+}
 
 /* Entries kept on the device until the network is back, and the ones the server refused. */
 .queueNote { margin: 0; padding: 10px 14px; border-radius: 12px; background: var(--color-info-subtle); color: var(--color-info); font-size: 13.5px; }

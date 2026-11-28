@@ -45,8 +45,8 @@ export function FarmerJournalNewClient({ initial }: { initial?: JournalPrefill }
         <Link href="/farmer/journal" className={kit.btn2}><ChevronLeft size={16} aria-hidden="true" />Về nhật ký</Link>
       </div>
 
-      <div className={kit.cols}>
-        <div className={`${kit.pn} ${styles.formCard}`}>
+      <div className={styles.formLayout}>
+        <div className={styles.formCard}>
           <FarmerJournalForm
             initial={initial}
             onSuccess={() => router.push('/farmer/journal')}
