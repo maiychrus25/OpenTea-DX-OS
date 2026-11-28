@@ -149,6 +149,8 @@ test('một ngày của lô chè A3', async ({ browser }) => {
     await expectImageLoaded(officer, 'Ảnh bệnh')
     await expect(officer.getByText('TC-A3', { exact: true })).toBeVisible()
     await officer.getByLabel('Tên bệnh đã xác nhận (Bắt buộc khi Duyệt)').fill(CONFIRMED_NAME)
+    // GĐ4-B: confirming needs a label from disease_labels; "Bệnh đốm tảo" is algal_leaf_spot.
+    await officer.getByLabel('Nhãn bệnh/sâu (Bắt buộc khi Duyệt)').selectOption('algal_leaf_spot')
     await officer.getByLabel('Nhập hướng dẫn (Bắt buộc khi Duyệt):').fill('Tỉa bỏ lá bệnh, giữ vườn thông thoáng, theo dõi thêm 7 ngày.')
     await officer.getByRole('button', { name: 'Phê duyệt' }).click()
     await officer.waitForURL('**/officer/diseases')
