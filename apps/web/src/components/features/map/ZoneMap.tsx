@@ -164,7 +164,7 @@ export default function ZoneMap({ parcels, focusId, satellite = false }: ZoneMap
 
           layer.bindPopup(popupDiv)
           // Whose plot it is, written on the plot.
-          if (satellite) layer.bindTooltip(`<strong>${safeHousehold}</strong><br>${safeCode} · ${safeArea}`, { permanent: true, direction: 'center', className: styles.plotLabel })
+          if (satellite) layer.bindTooltip(`<strong>${safeHousehold}</strong><br>${safeCode}`, { permanent: true, direction: 'center', className: styles.plotLabel })
 
           layer.on('popupopen', async () => {
             const container = popupDiv.querySelector(`#farm-photo-${safeId}`)
@@ -212,7 +212,7 @@ export default function ZoneMap({ parcels, focusId, satellite = false }: ZoneMap
 
       geoJsonLayerRef.current = geoLayer
       const bounds = geoLayer.getBounds()
-      if (bounds.isValid()) mapRef.current.fitBounds(bounds, { maxZoom: satellite ? 19 : 17, padding: [24, 24] })
+      if (bounds.isValid()) mapRef.current.fitBounds(bounds, satellite ? { maxZoom: 19, padding: [4, 4] } : { maxZoom: 17, padding: [24, 24] })
     } catch (e) {
       console.error('Error rendering ZoneMap polygons:', e)
     }
@@ -242,7 +242,7 @@ export default function ZoneMap({ parcels, focusId, satellite = false }: ZoneMap
           <p>Chưa có thửa nào được vẽ ranh giới.</p>
         </div>
       )}
-      <div className={styles.legend}>
+      <div className={satellite ? `${styles.legend} ${styles.legendSmall}` : styles.legend}>
         {Object.entries(PARCEL_STATUS_CONFIG).map(([status, config]) => (
           <span key={status}>
             <i className={styles.swatch} style={{ background: config.fillColor }} aria-hidden="true" />

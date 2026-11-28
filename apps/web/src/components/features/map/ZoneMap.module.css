@@ -123,5 +123,6 @@
 }
 
 /* The owner's name on the plot, readable over imagery. */
-.mapFrame :global(.leaflet-tooltip).plotLabel { padding: 2px 8px; border: 0; border-radius: var(--rounded-md); background: color-mix(in srgb, var(--color-hero-bg) 72%, transparent); color: var(--color-hero-text); text-align: center; font-size: 12px; line-height: 1.35; box-shadow: none; }
+.mapFrame :global(.leaflet-tooltip).plotLabel { padding: 2px 8px; border: 0; border-radius: var(--rounded-md); background: color-mix(in srgb, var(--color-hero-bg) 72%, transparent); color: var(--color-hero-text); text-align: center; font-size: 11px; line-height: 1.25; box-shadow: none; }
 .mapFrame :global(.leaflet-tooltip).plotLabel::before { display: none; }
+.legend.legendSmall { left: 6px; bottom: 6px; gap: 2px 10px; padding: 4px 8px; font-size: 10px; }
