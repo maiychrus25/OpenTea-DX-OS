@@ -404,6 +404,15 @@ make web-up
 make apps-smoke                         # kiểm thử tích hợp (sau npm run seed và make platform-smoke)
 ```
 
+### Chép bộ cẩm nang chè vào HTX (`./dxos para seed`)
+
+```bash
+./dxos para seed TC --dry-run           # in kế hoạch, không gọi gì
+DXOS_WEB_COOKIE='<cookie phiên của manager HTX TC>' ./dxos para seed TC   # chép vào para/TC/ qua API tài liệu của web
+```
+
+Chỉ chép tệp chưa có, không ghi đè; chạy lại được. Web chỉ nhận phiên trình duyệt cho API tài liệu, nên lệnh dùng cookie phiên của manager (`DXOS_WEB_URL`, mặc định `http://localhost:3000`). Mẫu nằm ở [docs/templates/para-tea-cooperative](./docs/templates/para-tea-cooperative/README.md).
+
 ### Nối Telegram (`./dxos telegram`)
 
 Telegram là tuỳ chọn. Đặt `TELEGRAM_BOT_TOKEN` (token BotFather tạo) và `TELEGRAM_BOT_USERNAME` trong `docker/.env.local`, rồi chạy:

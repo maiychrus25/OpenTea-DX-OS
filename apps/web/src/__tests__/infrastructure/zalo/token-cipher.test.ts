@@ -23,6 +23,8 @@ describe('Zalo token cipher', () => {
   it('refuses to encrypt without a key, with a wrong-size key, and refuses a tampered value', () => {
     delete process.env.DXOS_ZALO_TOKEN_KEY
     expect(() => encryptToken('x')).toThrow(/not set/)
+    // A refusal the admin can read (422 ZALO_TOKEN_KEY_MISSING), not a bare 500.
+    expect(() => encryptToken('x')).toThrow(expect.objectContaining({ code: 'ZALO_TOKEN_KEY_MISSING', message: expect.stringMatching(/DXOS_ZALO_TOKEN_KEY/) }))
     process.env.DXOS_ZALO_TOKEN_KEY = 'abcd'
     expect(() => encryptToken('x')).toThrow(/32 bytes/)
     process.env.DXOS_ZALO_TOKEN_KEY = KEY

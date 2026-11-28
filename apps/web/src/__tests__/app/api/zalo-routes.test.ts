@@ -115,7 +115,8 @@ describe('internal relay routes', () => {
   it('refuses to store tokens without DXOS_ZALO_TOKEN_KEY', async () => {
     delete process.env.DXOS_ZALO_TOKEN_KEY
     const res = await postCredentials(json('http://x/c', 'POST', { access_token: 'a', refresh_token: 'b', expires_at: '2026-12-01T00:00:00Z' }), undefined)
-    expect(res.status).toBe(500)
+    expect(res.status).toBe(422)
+    expect((await res.json()).error.code).toBe('ZALO_TOKEN_KEY_MISSING')
     expect(mockState.repo.stored).toBeNull()
   })
 })

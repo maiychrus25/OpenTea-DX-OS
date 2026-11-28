@@ -17,7 +17,7 @@ ID_RE='^[a-z][a-z0-9-]{1,30}$'  # same as "id" in platform/apps/manifest.schema.
 HTX_RE='^[A-Z0-9_-]{1,20}$'
 
 usage() {
-  echo "Dùng: ./dxos install <dir> | upgrade <dir> | remove <id> [--purge] | list | validate <dir>... | worker | builder [--once] | agent <enable|disable> <HTX> | staff <enable|disable> <HTX> | telegram <enable|disable> | zalo <enable|disable> | apps actor enable" >&2
+  echo "Dùng: ./dxos install <dir> | upgrade <dir> | remove <id> [--purge] | list | validate <dir>... | worker | builder [--once] | agent <enable|disable> <HTX> | staff <enable|disable> <HTX> | telegram <enable|disable> | zalo <enable|disable> | apps actor enable | para seed <HTX> [--dry-run]" >&2
   exit 2
 }
 
@@ -609,6 +609,64 @@ zalo_disable() {
   echo "Đã tắt Zalo: đã xoá client dxos-zalo"
 }
 
+# Copies the cooperative template (docs/templates/para-tea-cooperative) into para/<HTX>/ of the document store through the web
+# document API, as a manager: only files that are missing, never an overwrite. DXOS_WEB_COOKIE is the manager's Auth.js session cookie
+# (the web has no bearer login for documents); DXOS_WEB_URL defaults to http://localhost:3000.
+# shortcut: one request per folder and file, no retry; run it again after a failure, it skips what already exists.
+para_seed() {  # <HTX> [--dry-run]
+  local htx="$1" dry="${2:-}"
+  [[ "$htx" =~ $HTX_RE ]] || { echo "Mã HTX '$htx' không hợp lệ" >&2; exit 1; }
+  [ -z "$dry" ] || [ "$dry" = --dry-run ] || usage
+  [ -n "$dry" ] || [ -n "${DXOS_WEB_COOKIE:-}" ] || { echo "Cần DXOS_WEB_COOKIE (cookie phiên của tài khoản manager HTX $htx), hoặc thêm --dry-run để xem kế hoạch" >&2; exit 1; }
+  python3 -I - "$htx" "$dry" "$ROOT/docs/templates/para-tea-cooperative" <<'PY'
+import json, os, sys, urllib.parse, urllib.request
+htx, dry, template = sys.argv[1], sys.argv[2] == "--dry-run", sys.argv[3]
+base = os.environ.get("DXOS_WEB_URL", "http://localhost:3000").rstrip("/")
+cookie = os.environ.get("DXOS_WEB_COOKIE", "")
+CATEGORY = {"1-projects": "Projects", "2-areas": "Areas", "3-resources": "Resources", "4-archives": "Archives"}
+TYPES = {".md": "text/markdown", ".csv": "text/csv"}
+
+
+def call(url, method="GET", body=None, content_type="application/json"):
+    req = urllib.request.Request(url, data=body, method=method, headers={"Cookie": cookie, "Content-Type": content_type})
+    with urllib.request.urlopen(req, timeout=60) as res:
+        return res.read()
+
+
+plan = []  # (folder prefix, file name, local path)
+for root, dirs, files in os.walk(template):
+    dirs.sort()
+    rel = os.path.relpath(root, template)
+    top, _, rest = rel.partition(os.sep)
+    if top not in CATEGORY:
+        continue
+    for name in sorted(files):
+        if os.path.splitext(name)[1] in TYPES:
+            folder = "/".join(["para", htx, CATEGORY[top]] + ([rest.replace(os.sep, "/")] if rest else [])) + "/"
+            plan.append((folder, name, os.path.join(root, name)))
+
+existing = {}  # folder -> names already stored; read once per folder, and only when uploading
+sent = skipped = 0
+for folder, name, path in plan:
+    if dry:
+        print(f"sẽ chép {folder}{name}")
+        continue
+    if folder not in existing:
+        listing = json.loads(call(f"{base}/api/documents?path={urllib.parse.quote(folder)}"))
+        existing[folder] = {d["name"] for d in listing["data"]["documents"]}
+    if name in existing[folder]:
+        skipped += 1
+        print(f"đã có, bỏ qua {folder}{name}")
+        continue
+    grant = json.loads(call(f"{base}/api/documents/upload", "POST", json.dumps({"fileName": name, "pathPrefix": folder}).encode()))["data"]
+    with open(path, "rb") as fh:
+        call(grant["uploadUrl"], "PUT", fh.read(), TYPES[os.path.splitext(name)[1]])
+    sent += 1
+    print(f"đã chép {grant['key']}")
+print(f"Kế hoạch: {len(plan)} tệp" if dry else f"Xong: chép {sent}, bỏ qua {skipped} tệp đã có")
+PY
+}
+
 [ $# -ge 1 ] || usage
 cmd="$1"; shift
 case "$cmd" in
@@ -669,5 +727,8 @@ case "$cmd" in
   apps)
     [ $# -eq 2 ] && [ "$1" = actor ] && [ "$2" = enable ] || usage
     cd "$ROOT"; apps_actor_enable ;;
+  para)
+    [ $# -ge 2 ] && [ $# -le 3 ] && [ "$1" = seed ] || usage
+    cd "$ROOT"; para_seed "$2" "${3:-}" ;;
   *) usage ;;
 esac

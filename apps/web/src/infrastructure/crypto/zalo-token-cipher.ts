@@ -2,13 +2,14 @@
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
+import { UnprocessableError } from '@/domain/errors'
 
 export const ZALO_TOKEN_KEY_ENV = 'DXOS_ZALO_TOKEN_KEY'
 
 /** The 32-byte key from the environment (64 hex characters or base64). Throws when it is missing or the wrong size, so nothing is stored in clear. */
 function loadKey(): Buffer {
   const raw = process.env[ZALO_TOKEN_KEY_ENV]?.trim()
-  if (!raw) throw new Error(`${ZALO_TOKEN_KEY_ENV} is not set`)
+  if (!raw) throw new UnprocessableError('ZALO_TOKEN_KEY_MISSING', `${ZALO_TOKEN_KEY_ENV} is not set on the server; set it (openssl rand -hex 32) before saving Zalo tokens`)
   const key = /^[0-9a-fA-F]{64}$/.test(raw) ? Buffer.from(raw, 'hex') : Buffer.from(raw, 'base64')
   if (key.length !== 32) throw new Error(`${ZALO_TOKEN_KEY_ENV} must be 32 bytes (64 hex characters or base64)`)
   return key

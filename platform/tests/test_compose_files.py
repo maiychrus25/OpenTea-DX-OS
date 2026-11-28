@@ -165,6 +165,21 @@ def test_release_web_refuses_the_dev_or_empty_telegram_callback_key(value):
     assert refused.returncode == 1 and "DXOS_TELEGRAM_CALLBACK_KEY" in refused.stderr and "started" not in refused.stdout
 
 
+DEV_ZALO_TOKEN_KEY = "6465762d7a616c6f2d746f6b656e2d6b65792d6e6f742d666f722d70726f6421"
+
+
+def test_zalo_token_key_has_a_dev_default_that_never_reaches_a_release():
+    assert load_compose(COMPOSE)["web"]["environment"]["DXOS_ZALO_TOKEN_KEY"] == "${DXOS_ZALO_TOKEN_KEY:-" + DEV_ZALO_TOKEN_KEY + "}"
+    # Zalo is optional, so a release may run without the key, but never with the public dev one.
+    assert load_compose(RELEASE)["web"]["environment"]["DXOS_ZALO_TOKEN_KEY"] == "${DXOS_ZALO_TOKEN_KEY:-}"
+    ok = {"DXOS_INTERNAL_GATEWAY_SECRET": "long-random-value"}
+    refused = run_release_wrapper("web", **ok, DXOS_ZALO_TOKEN_KEY=DEV_ZALO_TOKEN_KEY)
+    assert refused.returncode == 1 and "DXOS_ZALO_TOKEN_KEY" in refused.stderr and "started" not in refused.stdout
+    for value in ("", "a" * 64):
+        started = run_release_wrapper("web", **ok, DXOS_ZALO_TOKEN_KEY=value)
+        assert started.returncode == 0 and "started" in started.stdout
+
+
 def test_telegram_credentials_are_separate_volumes_mounted_read_only():
     doc = load_document(COMPOSE)
     services, volumes = doc["services"], doc["volumes"]

@@ -5,7 +5,7 @@
 # person. Sourced, never run on its own; it needs lib.sh and tokens.sh sourced first.
 
 ZL_STUB="http://127.0.0.1:8084"
-ZL_PHONE="84900000001"  # phone of hh_tc_1 (0900000001) in the 84 form the outbox and the consent use
+ZL_PHONE="84900000099"  # phone of hh_zalo_smoke (0900000099) in the 84 form the outbox and the consent use
 
 zalo_stub_calls() { curl -sf "$ZL_STUB/control/calls"; }
 zalo_stub_reset() { curl -sf -X POST "$ZL_STUB/control/reset" -d '{}' >/dev/null; }
