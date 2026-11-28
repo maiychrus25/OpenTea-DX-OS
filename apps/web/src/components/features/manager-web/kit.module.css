@@ -45,3 +45,26 @@
 }
 
 .sample { display: inline-block; padding: 0 6px; border: 1px dashed var(--color-border-input); border-radius: var(--radius-pill); font-size: 10.5px; font-weight: 700; color: var(--color-ink-secondary); vertical-align: middle; }
+
+.split { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 12px; align-items: start; min-width: 0; }
+.split td, .split th { padding-left: 9px; padding-right: 9px; }
+.rows tr { cursor: pointer; }
+.rows tr[aria-selected='true'] { background: var(--color-primary-subtle); }
+.rows button.link { padding: 0; border: 0; background: none; color: inherit; font: inherit; font-weight: 700; cursor: pointer; }
+.num { text-align: right; }
+.detail { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; background: var(--color-surface-card); border: 1px solid var(--color-border); border-radius: var(--radius-card); box-shadow: var(--shadow-card); }
+.detailHead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.detailHead h2 { margin: 0; font-size: 16px; font-weight: 800; color: var(--color-ink-heading); }
+.detail dl { margin: 0; }
+.detail dl div { display: flex; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--color-border-row); font-size: 13px; }
+.detail dt { display: flex; flex: 0 0 120px; align-items: center; gap: 8px; color: var(--color-ink-secondary); }
+.detail dt span { display: flex; }
+.detail dd { min-width: 0; margin: 0; font-weight: 700; overflow-wrap: anywhere; }
+.total { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin: 0; padding: 12px 14px; border-radius: var(--radius-button); background: var(--color-primary-subtle); font-weight: 700; }
+.total strong { font-size: 22px; color: var(--color-primary); }
+.detailActions { display: flex; flex-wrap: wrap; gap: 8px; }
+.detailActions > * { flex: 1 1 120px; justify-content: center; min-height: 40px; }
+
+@media (max-width: 1200px) {
+  .split { grid-template-columns: minmax(0, 1fr); }
+}

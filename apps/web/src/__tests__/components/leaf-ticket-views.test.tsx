@@ -28,12 +28,25 @@ beforeEach(() => {
   }) as unknown as typeof fetch
 })
 
-describe('manager and accountant ticket lists', () => {
-  test('the manager page lists tickets with totals, and "Tải thêm" appends the next page', async () => {
+describe("the head's ticket page", () => {
+  test('reads every page of the day and shows the chosen ticket beside the list', async () => {
     listBody = url => url.includes('cursor=c1')
       ? { data: [{ ...ticket, id: 't2', ticket_no: 'HTX-PC-20261128-002' }], next_cursor: null, totals: { net_kg: 95, amount_vnd: '1235000' } }
       : { data: [ticket], next_cursor: 'c1', totals: { net_kg: 95, amount_vnd: '1235000' } }
     render(<ManagerLeafTicketsPage />)
+    expect(await screen.findByRole('button', { name: 'HTX-PC-20261128-002' })).toBeInTheDocument()
+    expect(screen.getByRole('complementary', { name: 'Phiếu cân HTX-PC-20261128-001' })).toHaveTextContent('1.235.000 đ')
+    expect(screen.getByRole('link', { name: 'In phiếu' })).toHaveAttribute('href', '/manager/leaf-tickets/t1/print')
+    expect(screen.getByRole('button', { name: 'Hủy phiếu' })).toBeInTheDocument()
+  })
+})
+
+describe('the ticket list of the accountant', () => {
+  test('lists tickets with totals, and "Tải thêm" appends the next page', async () => {
+    listBody = url => url.includes('cursor=c1')
+      ? { data: [{ ...ticket, id: 't2', ticket_no: 'HTX-PC-20261128-002' }], next_cursor: null, totals: { net_kg: 95, amount_vnd: '1235000' } }
+      : { data: [ticket], next_cursor: 'c1', totals: { net_kg: 95, amount_vnd: '1235000' } }
+    render(<AccountantLeafTicketsPage />)
     expect(await screen.findByText('HTX-PC-20261128-001')).toBeInTheDocument()
     expect(screen.getByText('Tổng kg tịnh').closest('dl')).toHaveTextContent('95,0 kg')
     fireEvent.click(screen.getByRole('button', { name: 'Tải thêm' }))
@@ -48,7 +61,7 @@ describe('manager and accountant ticket lists', () => {
   })
 
   test('a status filter and a date filter go into the query; CSV needs a date', async () => {
-    render(<ManagerLeafTicketsPage />)
+    render(<AccountantLeafTicketsPage />)
     await screen.findByText('HTX-PC-20261128-001')
     expect(screen.getByText('Chọn ngày để tải CSV.')).toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('Trạng thái'), { target: { value: 'VOIDED' } })
