@@ -24,6 +24,7 @@ const INCLUDE = {
   household: { select: { name: true, keycloak_user_id: true } },
   parcel: { select: { parcel_code: true } },
   grade: { select: { name: true } },
+  cycle: { select: { season: true } },
 } satisfies Prisma.FreshLeafTicketInclude
 
 type TicketRow = Prisma.FreshLeafTicketGetPayload<{ include: typeof INCLUDE }>
@@ -37,6 +38,7 @@ function view(row: TicketRow): TicketView {
     parcel_id: row.parcel_id,
     parcel_code: row.parcel.parcel_code,
     cycle_id: row.cycle_id,
+    cycle_season: row.cycle?.season ?? null,
     grade_id: row.grade_id,
     grade_name: row.grade.name,
     weighed_at: row.weighed_at.toISOString(),

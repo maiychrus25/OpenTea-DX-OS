@@ -139,3 +139,9 @@ test('the ledger history names each row and signs its amount', async () => {
   const rows = within(await screen.findByRole('list', { name: 'Lịch sử ghi sổ' })).getAllByRole('listitem')
   expect(rows.map(r => r.textContent)).toEqual(['28/11/2026Tiền búp+1.235.000 đ', '27/11/2026Trừ vật tưPhân NPK−30.000 đ'])
 })
+
+test('a ticket names its flush when it has one', async () => {
+  mine = { ...(mine as object), unsettled_tickets: [{ ...ticket, cycle_season: 'Lứa 3/2026' }] }
+  render(<FarmerLedger />)
+  expect(within(await screen.findByRole('table', { name: 'Phiếu cân' })).getByText('Lứa 3/2026')).toBeInTheDocument()
+})

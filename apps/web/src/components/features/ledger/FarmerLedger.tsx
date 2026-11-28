@@ -128,7 +128,7 @@ export function FarmerLedger() {
                           {t.status === 'VOIDED' && t.void_reason && <span className={kit.muted}>{t.void_reason}</span>}
                         </td>
                         <td><time dateTime={t.weighed_at}>{dayMonthYear(localDay(t.weighed_at))}{' '}<span className={kit.muted}>{clockVn(t.weighed_at)}</span></time></td>
-                        <td>{t.parcel_code}<span className={kit.muted}>{t.grade_name}</span></td>
+                        <td>{t.parcel_code}<span className={kit.muted}>{t.grade_name}</span>{t.cycle_season && <span className={kit.muted}>{t.cycle_season}</span>}</td>
                         <td className={styles.ticketNumeric}>{kg(Number(t.net_kg))}<span className={kit.muted}>Gộp {kg(Number(t.gross_kg))}</span><span className={kit.muted}>Trừ {Number(t.deduction_pct).toLocaleString('vi-VN')}%</span></td>
                         <td className={styles.ticketNumeric}>{formatVnd(t.amount_vnd)} đ<span className={kit.muted}>{money(t.price_vnd_per_kg)} đ/kg</span></td>
                       </tr>

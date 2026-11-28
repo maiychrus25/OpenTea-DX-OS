@@ -10,6 +10,7 @@ export interface LeafTicket {
   parcel_id: string
   parcel_code: string
   cycle_id: string | null
+  cycle_season?: string | null
   grade_id: string
   grade_name: string
   weighed_at: string

@@ -14,6 +14,8 @@ export interface TicketView {
   parcel_id: string
   parcel_code: string
   cycle_id: string | null
+  /** Name of the flush, e.g. "Lứa 3/2026"; null for a parcel without one. */
+  cycle_season?: string | null
   grade_id: string
   grade_name: string
   weighed_at: string
