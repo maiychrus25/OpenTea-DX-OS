@@ -96,6 +96,37 @@ export class PrismaReportSource implements ReportSource {
     }
   }
 
+  async sales(htxProfileId: string, range: ReportRange) {
+    const [totals, kg, receivable, partners] = await Promise.all([
+      prisma.$queryRaw<{ kind: string; total: bigint }[]>`
+        SELECT kind::text AS kind, SUM(total_vnd)::bigint AS total FROM sales_orders
+        WHERE htx_profile_id = ${htxProfileId} AND status = 'CONFIRMED' AND ordered_on >= ${range.from}::date AND ordered_on <= ${range.to}::date
+        GROUP BY kind`,
+      prisma.$queryRaw<{ g: bigint }[]>`
+        SELECT COALESCE(SUM(l.net_g), 0)::bigint AS g FROM sales_order_lines l JOIN sales_orders o ON o.id = l.order_id
+        WHERE o.htx_profile_id = ${htxProfileId} AND o.status = 'CONFIRMED' AND o.ordered_on >= ${range.from}::date AND o.ordered_on <= ${range.to}::date`,
+      // Per order, never below 0: a payment after the period does not count, and an overpaid order does not offset another.
+      prisma.$queryRaw<{ due: bigint }[]>`
+        SELECT COALESCE(SUM(GREATEST(o.total_vnd - COALESCE(pay.paid, 0), 0)), 0)::bigint AS due
+        FROM sales_orders o
+        LEFT JOIN (SELECT order_id, SUM(amount_vnd) AS paid FROM sales_payments WHERE paid_on <= ${range.to}::date GROUP BY order_id) pay ON pay.order_id = o.id
+        WHERE o.htx_profile_id = ${htxProfileId} AND o.kind = 'WHOLESALE' AND o.status = 'CONFIRMED' AND o.ordered_on <= ${range.to}::date`,
+      prisma.$queryRaw<{ partner_name: string; amount: bigint }[]>`
+        SELECT p.name AS partner_name, SUM(o.total_vnd)::bigint AS amount
+        FROM sales_orders o JOIN partners p ON p.id = o.partner_id
+        WHERE o.htx_profile_id = ${htxProfileId} AND o.kind = 'WHOLESALE' AND o.status = 'CONFIRMED' AND o.ordered_on >= ${range.from}::date AND o.ordered_on <= ${range.to}::date
+        GROUP BY p.id, p.name ORDER BY amount DESC, p.name, p.id LIMIT 10`,
+    ])
+    const total = (kind: string) => totals.find((t) => t.kind === kind)?.total ?? ZERO
+    return {
+      wholesale_vnd: total('WHOLESALE'),
+      retail_vnd: total('RETAIL'),
+      kg_sold: Number(kg[0]?.g ?? 0) / 1000,
+      receivable_vnd: receivable[0]?.due ?? ZERO,
+      top_partners: partners.map((p) => ({ partner_name: p.partner_name, amount_vnd: p.amount })),
+    }
+  }
+
   async safety(htxProfileId: string, range: ReportRange) {
     const [sprayings, harvests] = await Promise.all([
       prisma.journalEntry.count({ where: { activity_type: 'SPRAYING', status: 'APPROVED', entry_date: { gte: range.start, lt: range.end }, parcel: { household: { htx_profile_id: htxProfileId } } } }),

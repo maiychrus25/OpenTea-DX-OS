@@ -21,6 +21,7 @@ function source(over: Partial<ReportSource> = {}): ReportSource {
     memberMoney: jest.fn(async () => ({ periods_closed: 2, paid_vnd: B(800000), payable_open_vnd: B(250000), advances_vnd: B(100000) })),
     processing: jest.fn(async () => ({ batches: 3, fresh_kg: 100, dry_kg: 22, out_of_band: 1, by_grade: [{ grade: 'DINH' as const, kg: 20 }, { grade: 'CAM' as const, kg: 2 }] })),
     lots: jest.fn(async () => ({ lots: 2, exported: 1, kg: 18.5, certificates_valid: [{ kind: 'VIETGAP' as const, number: 'VG-1', issuer: 'Sở NN', expires_on: '2027-01-01' }] })),
+    sales: jest.fn(async () => ({ wholesale_vnd: B(5000000), retail_vnd: B(700000), kg_sold: 12.34, receivable_vnd: B(1200000), top_partners: [{ partner_name: 'Anh Ba', amount_vnd: B(3000000) }] })),
     safety: jest.fn(async () => ({ sprayings_approved: 5, harvests_approved: 9 })),
     ...over,
   }
@@ -32,7 +33,8 @@ describe('SeasonReportUseCase', () => {
   it('builds every section but sales, with money as strings', async () => {
     const s = source()
     const report = await read(s)
-    expect(report).toMatchObject({ htx_name: 'HTX Tân Cương', from: '2026-01-01', to: '2026-12-31', sales: null })
+    expect(report).toMatchObject({ htx_name: 'HTX Tân Cương', from: '2026-01-01', to: '2026-12-31' })
+    expect(report.sales).toEqual({ wholesale_vnd: '5000000', retail_vnd: '700000', kg_sold: 12.3, receivable_vnd: '1200000', top_partners: [{ partner_name: 'Anh Ba', amount_vnd: '3000000' }] })
     expect(report.members).toEqual({ households: 12, parcels: 20, area_ha: 7.5 })
     expect(report.purchases?.total).toEqual({ net_kg: 150.5, amount_vnd: '1350000', tickets: 6 })
     expect(report.purchases?.months[1]).toEqual({ month: '2026-05', net_kg: 50, amount_vnd: '450000', tickets: 2 })
@@ -64,11 +66,13 @@ describe('reportSectionCsv', () => {
     expect(reportSectionCsv(report, 'purchases')).toContain('"Tháng","Kg tịnh","Thành tiền (đ)","Số phiếu"\r\n"2026-04","100.5","900000","4"')
     expect(reportSectionCsv(report, 'lots')).toContain(`"'=1+1"`)
     expect(reportSectionCsv(report, 'members')).toContain('"12"')
+    expect(reportSectionCsv(report, 'sales')).toContain('"Phải thu cuối kỳ (đ)","1200000"')
     for (const section of ['member_money', 'processing', 'safety'] as const) expect(reportSectionCsv(report, section)).toMatch(/^"/)
   })
 
   it('refuses a section that did not load', async () => {
-    const report = await read(source())
+    const report = await read(source({ sales: async () => { throw new Error('x') } }))
+    expect(report.sales).toBeNull()
     expect(reportSectionCsv(report, 'sales')).toBeNull()
   })
 })

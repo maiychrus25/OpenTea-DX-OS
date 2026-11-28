@@ -39,5 +39,13 @@ export interface ReportSource {
     kg: number
     certificates_valid: { kind: CertificateKind; number: string; issuer: string; expires_on: string }[]
   }>
+  /** CONFIRMED orders ordered in the range; the receivable is wholesale ordered up to `range.to`, less payments paid up to `range.to`. */
+  sales(htxProfileId: string, range: ReportRange): Promise<{
+    wholesale_vnd: bigint
+    retail_vnd: bigint
+    kg_sold: number
+    receivable_vnd: bigint
+    top_partners: { partner_name: string; amount_vnd: bigint }[]
+  }>
   safety(htxProfileId: string, range: ReportRange): Promise<{ sprayings_approved: number; harvests_approved: number }>
 }
