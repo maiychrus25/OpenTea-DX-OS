@@ -65,7 +65,7 @@ export function ChatInterface({ role, chatType: requestedType, closedNote, aside
     }
   }
   return (
-    <div className={styles.chatLayout} data-chat-workspace data-aside={aside ? true : undefined}>
+    <div className={styles.chatLayout} data-chat-workspace={aside ? undefined : true} data-aside={aside ? true : undefined}>
       <dialog ref={drawerRef} className={styles.historyDrawer} aria-label="Lịch sử trò chuyện"
         onClick={event => { if (event.target === event.currentTarget) drawerRef.current?.close() }}>
         <div className={styles.drawerContent}>

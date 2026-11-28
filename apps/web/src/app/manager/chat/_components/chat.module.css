@@ -2,8 +2,8 @@
 /* SPDX-FileCopyrightText: 2026 OpenTea Developers */
 
 .page { height: calc(100dvh - var(--topbar-height) - 48px); min-height: 560px; }
-.page > [data-chat-workspace] { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 12px; flex: 1; width: auto; height: auto; min-height: 0; margin: 0; background: none; }
-.page [data-chat-workspace] > section { min-height: 0; background: var(--color-surface-card); border: 1px solid var(--color-border); border-radius: var(--radius-card); }
+.page > [data-aside] { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 12px; flex: 1; width: auto; height: auto; min-height: 0; margin: 0; background: none; }
+.page [data-aside] > section { min-height: 0; background: var(--color-surface-card); border: 1px solid var(--color-border); border-radius: var(--radius-card); }
 .side { display: flex; flex-direction: column; gap: 12px; min-width: 0; overflow-y: auto; }
 .box { padding: 12px 14px; background: var(--color-surface-card); border: 1px solid var(--color-border); border-radius: var(--radius-card); box-shadow: var(--shadow-card); }
 .box h2 { display: flex; align-items: center; gap: 10px; margin: 0 0 6px; font-size: 15px; font-weight: 800; color: var(--color-ink-heading); }
@@ -17,6 +17,6 @@
 
 @media (max-width: 1000px) {
   .page { height: auto; }
-  .page > [data-chat-workspace] { grid-template-columns: minmax(0, 1fr); }
-  .page [data-chat-workspace] > section { height: 70dvh; }
+  .page > [data-aside] { grid-template-columns: minmax(0, 1fr); }
+  .page [data-aside] > section { height: 70dvh; }
 }
