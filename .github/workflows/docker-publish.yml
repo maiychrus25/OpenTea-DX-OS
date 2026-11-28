@@ -39,6 +39,8 @@ jobs:
             context: ./platform/agent
           - service: telegram
             context: ./platform/telegram
+          - service: zalo
+            context: ./platform/zalo
 
     steps:
       - name: Checkout the commit that passed CI

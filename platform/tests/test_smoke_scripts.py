@@ -9,7 +9,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 TESTS = ROOT / "platform" / "tests"
 SHELL_SCRIPTS = [
-    "smoke-telegram.sh", "smoke-platform.sh", "smoke-agent.sh", "smoke-llm.sh", "smoke-agents.sh", "smoke-assistant.sh",
+    "smoke-telegram.sh", "smoke-zalo.sh", "lib-zalo.sh", "smoke-platform.sh", "smoke-agent.sh", "smoke-llm.sh", "smoke-agents.sh", "smoke-assistant.sh",
     "smoke-campaign.sh", "smoke-improvement.sh", "smoke-mcp.sh", "smoke-staff.sh", "smoke-autopilot.sh", "smoke-app-actions.sh", "smoke-builder.sh", "smoke-strategy.sh", "smoke-voice.sh", "smoke-agentic.sh", "lib.sh", "lib-telegram.sh", "tokens.sh",
 ]
 
@@ -454,3 +454,17 @@ def test_assistant_smoke_checks_the_chat_media_with_stubs_and_restores_what_it_s
     for needle in ("docker rm -f", "start disease-api", "start piper", "delete from bulletins", "delete from disease_reports"):
         assert needle in cleanup, needle
     assert (TESTS / "stub_disease.py").exists() and (TESTS / "stub_tts.py").exists()
+
+
+def test_zalo_smoke_runs_after_the_telegram_smoke_and_skips_without_the_web():
+    for name in ("smoke-platform.sh", "smoke-agentic.sh"):
+        text = (TESTS / name).read_text(encoding="utf-8")
+        assert text.index("source platform/tests/smoke-telegram.sh") < text.index("source platform/tests/smoke-zalo.sh"), name
+    assert '"${WEB_UP:-0}" != "1"' in (TESTS / "smoke-zalo.sh").read_text(encoding="utf-8")
+
+
+def test_zalo_smoke_uses_the_contract_routes_stub_port_and_tables():
+    text = (TESTS / "smoke-zalo.sh").read_text(encoding="utf-8") + (TESTS / "lib-zalo.sh").read_text(encoding="utf-8")
+    for needle in ("127.0.0.1:8084", "/api/internal/zalo/tick", "/api/internal/zalo/outbox", "platform.zalo_outbox",
+                   "platform.zalo_consents", "./dxos zalo enable", "./dxos zalo disable", "--profile zalo-test", "fail-next"):
+        assert needle in text, needle
