@@ -43,8 +43,8 @@ ensure_user smoke_platform_admin platform_admin
 # here would otherwise pin.
 psql_app "insert into households (id, name, phone, htx_profile_id, updated_at) values
   ('hh_zalo_smoke', 'Household Zalo Smoke', '0900000099', (select id from htx_profiles where htx_code = 'TC'), now()) on conflict (id) do nothing" >/dev/null
-psql_app "insert into parcels (id, parcel_code, household_id, crop_type, area_ha, updated_at) values
-  ('pc_zalo_smoke', 'P-TC-ZALO', 'hh_zalo_smoke', 'Chè Trung du', 0.5, now()) on conflict (id) do nothing" >/dev/null
+psql_app "insert into parcels (id, parcel_code, household_id, crop_type, area_ha, status, updated_at) values
+  ('pc_zalo_smoke', 'P-TC-ZALO', 'hh_zalo_smoke', 'Chè Trung du', 0.5, 'TENDING', now()) on conflict (id) do update set status = 'TENDING'" >/dev/null  # a DRAFT parcel cannot be weighed
 zalo_relay_up
 
 # 1. The platform admin enters the OA tokens and the approved template ids; the manager turns the cooperative on; one household consents.
