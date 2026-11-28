@@ -776,19 +776,23 @@ Một Zalo OA chung của nền tảng; web giữ hàng đợi, người nhận,
   - mỗi lần đổi ghi thời điểm và người đổi, và được kiểm toán.
 - **Manifest ảnh thực địa** (`GET /api/platform/disease-dataset`), chỉ `platform_admin`:
   - chỉ gồm báo cáo `CONFIRMED` có nhãn và ảnh, của HTX đã bật đồng ý;
-  - không có tên hay số điện thoại;
-  - mỗi lần tối đa 500 mục, lấy tiếp bằng `since`;
+  - không có tên hay số điện thoại, và không có mã hộ thật: mỗi mục có `household_key` = 16 ký tự đầu của `sha256(htx_code + ":" + household_id)` (chữ thường, hex), để tách theo hộ mà không lộ hộ nào;
+  - phân trang: mỗi trang tối đa 500 mục, phản hồi là `{ items, next_cursor }`; `next_cursor` khác `null` khi còn trang sau, truyền lại bằng `?cursor=` (con trỏ đục, ổn định cả khi nhiều dòng cùng `confirmed_at`); `since` vẫn dùng được;
   - mỗi mục có `sha256` của ảnh gốc và một URL tải chỉ sống **15 phút**.
 - **`train.py fetch-field`** đọc manifest:
-  - nguồn là URL, kèm cookie phiên `platform_admin` trong biến `DXOS_WEB_COOKIE`, giống `./dxos para seed`; hoặc là tệp JSON đã tải;
+  - nguồn là URL, kèm cookie phiên `platform_admin` trong biến `DXOS_WEB_COOKIE`, giống `./dxos para seed`, hoặc là tệp JSON đã tải (một trang `{ items }` hoặc danh sách các trang);
+  - với URL, đi theo `next_cursor` đến khi hết, và tải ảnh của từng trang trước khi lấy trang sau (URL ảnh chỉ sống 15 phút);
+  - lưu `household_key` cạnh mỗi ảnh;
   - kiểm `sha256` trên đúng byte tải về, rồi **lưu lại chỉ phần điểm ảnh**, nên mọi EXIF và GPS bị xoá;
   - chạy lại không tải trùng.
 - **Huấn luyện:**
   - Một lớp chỉ có ảnh thực địa phải có ít nhất **150 ảnh** mới vào mô hình; thiếu thì báo cáo đánh giá ghi "chưa đủ dữ liệu".
   - Lớp đã có ảnh công khai (Bọ xít muỗi) vẫn dùng ảnh công khai.
   - Lớp `not_tea_leaf` luôn có 300 ảnh nhiễu tổng hợp.
-  - Cổng của `evaluate`: độ chính xác ≥ 0,80; recall ≥ 0,70 cho mỗi lớp mục tiêu có mặt; độ chính xác ≥ 0,75 trên ảnh thực địa của các HTX giữ riêng (tách theo HTX). Không đạt thì in `BLOCKED`, thoát mã 1 và không ghi sổ.
-  - Khi mới có một HTX góp ảnh, không có HTX nào để giữ riêng, nên mô hình có ảnh thực địa luôn bị `BLOCKED`.
+  - Cổng của `evaluate`: độ chính xác ≥ 0,80; recall ≥ 0,70 cho mỗi lớp mục tiêu có mặt; độ chính xác ≥ 0,75 trên ảnh thực địa giữ riêng. Không đạt thì in `BLOCKED`, thoát mã 1 và không ghi sổ.
+  - Cách giữ riêng ảnh thực địa tự đổi theo số HTX (quyết định của chủ dự án 2026-11-28): từ **hai HTX** trở lên thì giữ nguyên cả HTX (`field_split: "htx"`, "tách theo HTX"); khi mới có **một HTX** thì giữ nguyên cả hộ của HTX đó (`field_split: "household"`, "tách theo hộ, 1 HTX"). Từ HTX thứ hai trở đi tự quay về tách theo HTX. Chế độ được ghi trong báo cáo đánh giá, trong `registry.json` (`metrics.field_split`, `metrics.field_split_label`) và in ra khi chạy.
+  - Mọi ảnh của một hộ cùng một nhóm (`field:<htx>:<household_key>`), nên không bao giờ nằm ở hai tập train, val, test.
+  - Đơn vị chỉ được giữ riêng khi mọi lớp có ảnh trong đó vẫn còn ít nhất hai nhóm cho train và val. Một lớp có ít hơn **3 nhóm** (với lớp chỉ có ảnh thực địa, là 3 hộ) không tách được train/val/test: `prepare`, `train` và `evaluate` kết thúc bằng `BLOCKED` nêu rõ lớp và lý do, thoát mã khác 0 và không ghi sổ, không còn `AssertionError`.
 - **Sổ mô hình** `ai-models/tea/registry.json`:
   - ghi `version`, tệp, `sha256`, các lớp, ngưỡng, số liệu, ngày huấn luyện và nguồn dữ liệu;
   - `disease-api` không nạp tệp `.keras` có băm khác sổ: `/health` báo `models.tea: false` kèm `reasons.tea`, còn mô hình `general` vẫn chạy;

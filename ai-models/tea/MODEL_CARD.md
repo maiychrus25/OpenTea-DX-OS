@@ -116,7 +116,7 @@ Xem `ai-models/tea/README.md`. Tóm tắt: trong `ai-models/tea`, chạy `python
 - `ai-models/tea/registry.json` ghi phiên bản (`tea-2026.11.0`), tên tệp, mã băm sha256 của `tea_leaf_model.keras`, danh sách lớp, ngưỡng và số liệu của bảng trên. `disease-api` không nạp tệp có mã băm khác sổ (`/health` báo `tea: false` kèm lý do), và CI kiểm mã băm khớp. Mô hình hiện tại chưa có ảnh thực địa nên `field_accuracy` là `null`.
 - Bản huấn luyện tiếp theo thêm ảnh thực địa từ HTX đồng ý chia sẻ (`fetch-field`), đã xoá EXIF và GPS. Mỗi lớp cần tối thiểu 150 ảnh thực địa, nếu thiếu thì ảnh thực địa của lớp đó không được dùng và báo cáo ghi "chưa đủ dữ liệu"; lớp chỉ có ảnh thực địa sẽ không vào mô hình.
 - Thêm lớp `not_tea_leaf` (300 ảnh sinh từ nhiễu, màu phẳng, dải màu, khối ngẫu nhiên) để ảnh không phải lá chè không còn bị gán `healthy`. Giới hạn "ảnh nhiễu được trả `healthy`" bên dưới chỉ còn đúng với mô hình hiện tại.
-- Cổng phát hành của `evaluate`: độ chính xác kiểm tra ≥ 0,80, recall ≥ 0,70 cho từng lớp mục tiêu có trong mô hình, độ chính xác ≥ 0,75 trên ảnh thực địa của HTX được để riêng (tách theo `htx_code`), và có ngưỡng tin cậy đạt precision 0,90 trên tập kiểm định. Không đạt thì in `BLOCKED`, thoát mã 1 và không ghi `registry.json`.
+- Cổng phát hành của `evaluate`: độ chính xác kiểm tra ≥ 0,80, recall ≥ 0,70 cho từng lớp mục tiêu có trong mô hình, độ chính xác ≥ 0,75 trên ảnh thực địa được để riêng (từ hai HTX trở lên: tách theo `htx_code`; mới một HTX: tách theo hộ, ghi `field_split` và `field_split_label` trong báo cáo và `registry.json`), và có ngưỡng tin cậy đạt precision 0,90 trên tập kiểm định. Không đạt thì in `BLOCKED`, thoát mã 1 và không ghi `registry.json`.
 
 ## Giới hạn
 

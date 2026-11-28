@@ -37,7 +37,7 @@ docker run --rm -v "$PWD:/tea" -w /tea python:3.12.15-slim-bookworm sh -c '
 - test accuracy at least 0.80;
 - recall at least 0.70 for every target class in the model (`green_leafhopper`, `tea_thrips`, `red_spider_mite`,
   `blister_blight`, `helopeltis`);
-- accuracy at least 0.75 on field photos of cooperatives held out of training (when field photos are in the model);
+- accuracy at least 0.75 on field photos held out of training: whole cooperatives, or whole households when there is only one cooperative (when field photos are in the model);
 - a confidence threshold that reaches 0.90 precision on validation.
 
 So the `cp` below never ships a failing model. After a pass, copy the model, the class names and the registry
@@ -54,10 +54,15 @@ export DXOS_WEB_COOKIE='authjs.session-token=...'   # the platform_admin's brows
 python -I train.py fetch-field --manifest https://<host>/api/platform/disease-dataset --cookie-env DXOS_WEB_COOKIE
 ```
 
-`--manifest` also takes a local JSON file. The manifest is `{ items: [{ report_id, label_code, htx_code, confirmed_on,
-sha256, url }] }`. Each photo goes to `.work/field/<label_code>/<report_id>.jpg` after its sha256 is checked against the
-bytes downloaded; EXIF and GPS are removed by re-saving the pixels only. A second run downloads nothing new. The manifest
-URLs are short-lived (15 minutes), so run `fetch-field` right after getting the manifest.
+`--manifest` also takes a local JSON file, either one page `{ items }` or a list of pages. A page is `{ items: [{ report_id,
+label_code, htx_code, household_key, confirmed_on, sha256, url }], next_cursor }`; `household_key` is the first 16 hex
+characters of `sha256(htx_code + ":" + household_id)`, so households can be kept together without being identified.
+Given a URL, `fetch-field` follows `next_cursor` (sent back as `?cursor=`, same session cookie) until it is `null` and
+merges the pages. It downloads each page's photos before fetching the next page, so the 15 minute URLs are still valid.
+Each photo goes to `.work/field/<label_code>/<report_id>.jpg` after its sha256 is checked against the
+bytes downloaded; EXIF and GPS are removed by re-saving the pixels only. A second run downloads nothing new (a photo saved
+before `household_key` existed only gets its key). The URLs of a saved manifest file are short-lived (15 minutes), so
+run `fetch-field` right after saving it.
 
 `prepare` then:
 
@@ -66,8 +71,16 @@ URLs are short-lived (15 minutes), so run `fetch-field` right after getting the 
   public photos, like `helopeltis`, stays with those);
 - adds a `not_tea_leaf` class, 300 generated images (noise, flat colours, gradients, random blocks), so a random image is
   no longer called `healthy`;
-- holds out whole cooperatives (`htx_code`) as the field test set, about 20% of the field photos. With one cooperative
-  nothing is held out, and `evaluate` then blocks a model that contains field photos.
+- groups every field photo by household (`field:<htx>:<household_key>`), on top of the near-duplicate grouping, so one
+  household never crosses train, val and test;
+- holds out whole units as the field test set, about 20% of the field photos: whole cooperatives when there are two or
+  more (`field_split: "htx"`, "tách theo HTX"), whole households of that cooperative when there is exactly one
+  (`field_split: "household"`, "tách theo hộ, 1 HTX"). The switch is automatic, and the mode is in `evaluate`'s printed
+  summary, `.work/metrics.json` and `registry.json` metrics;
+- holds a unit out only if every class in it keeps at least two groups for train and val. A class with fewer than 3
+  groups (for a class with only field photos: fewer than 3 households) cannot be split, so `prepare` (and `train`,
+  `evaluate` after it) exits 1 with `BLOCKED: lớp <class> chỉ có ảnh của N hộ, cần ít nhất 3 hộ ... (class <class> has
+  photos from N households, needs at least 3)` and no registry.
 
 `prepare` crops the bounding boxes of the Roboflow (YOLO) dataset, removes exact duplicates, keeps near-duplicates and
 Roboflow's flipped copies in the same split group, drops classes with fewer than 100 images, and splits 70/15/15 per

@@ -310,7 +310,7 @@ Quy tắc đang áp dụng ở [rules-and-limits.md](../rules-and-limits.md) m�
   - `fetch-field` đăng nhập bằng cookie phiên `platform_admin` (`DXOS_WEB_COOKIE`), vì các route `/api/platform` chỉ nhận phiên.
   - Băm trong manifest là băm của ảnh gốc. EXIF và GPS bị xoá lúc tải về, sau khi kiểm băm.
 - **Ngưỡng 150 ảnh** chỉ loại các lớp không có ảnh công khai. Bọ xít muỗi vẫn học từ ảnh công khai khi ảnh thực địa chưa đủ, để không làm mô hình hiện tại kém đi.
-- **Cổng độ chính xác thực địa** tách theo HTX. Khi mới có một HTX góp ảnh, mô hình có ảnh thực địa luôn bị `BLOCKED`. Cần ít nhất hai HTX đồng ý trước khi phát hành được mô hình v2.
+- **Cổng độ chính xác thực địa** (≥ 0,75) giữ riêng ảnh theo HTX khi có từ hai HTX; **quyết định của chủ dự án 2026-11-28 (tối):** khi mới có một HTX thì giữ riêng theo hộ của HTX đó, tự đổi lại tách theo HTX từ HTX thứ hai. Chế độ (`field_split`, `field_split_label`) được ghi trong báo cáo, `registry.json` và dòng in ra. Ảnh một hộ không bao giờ nằm ở hai tập; manifest cấp `household_key` ẩn danh và có phân trang `next_cursor`. Lớp có dưới 3 nhóm (lớp chỉ có ảnh thực địa: dưới 3 hộ) thì `prepare` và `evaluate` in `BLOCKED` nêu lớp và lý do, không còn `AssertionError`. Xem rules-and-limits.md mục 3.36.
 - **Lớp `not_tea_leaf`** hiện chỉ có 300 ảnh nhiễu tổng hợp, chưa có ảnh thật không phải lá.
 - **Tên khoa học** của Rầy xanh và Bọ cánh tơ theo tài liệu chè trong nước: *Empoasca flavescens*, *Physothrips setiventris*.
 - **Tên tiếng Việt cho phía trình duyệt:** `DISEASE_LABEL_VI`, dùng trong thẻ đề xuất của agent, vẫn là hằng số trong mã, vì phía trình duyệt không đọc được CSDL. Một test buộc nó khớp với dữ liệu gieo của `disease_labels`.
