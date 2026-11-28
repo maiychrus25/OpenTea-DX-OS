@@ -7,7 +7,12 @@
     "helopeltis",
     "birds_eye_spot",
     "white_spot",
-    "healthy"
+    "healthy",
+    "green_leafhopper",
+    "tea_thrips",
+    "red_spider_mite",
+    "blister_blight",
+    "not_tea_leaf"
   ],
   "sources": [
     {
