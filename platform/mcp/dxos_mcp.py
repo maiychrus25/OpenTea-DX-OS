@@ -17,7 +17,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-VERSION = "1.19.0"
+VERSION = "1.20.0"
 PROTOCOL_VERSION = "2025-06-18"
 CLIENT_ID = "dxos-mcp"
 DEVICE_GRANT = "urn:ietf:params:oauth:grant-type:device_code"
