@@ -176,8 +176,9 @@ services:
       DXOS_TELEGRAM_WEBAPP_KEY: ${DXOS_TELEGRAM_WEBAPP_KEY:-}
       # The web's HTTPS base URL (D17): chat shows the Mini App buttons only when it is set. Same value as the relay's.
       DXOS_WEB_PUBLIC_URL: ${DXOS_WEB_PUBLIC_URL:-}
-      # Encrypts the Zalo OA tokens at rest (64 hex characters). Empty = the web refuses to store them.
-      DXOS_ZALO_TOKEN_KEY: ${DXOS_ZALO_TOKEN_KEY:-}
+      # Encrypts the Zalo OA tokens at rest (64 hex characters). The default is a public dev key ("dev-zalo-token-key-not-for-prod!");
+      # the release override drops it and refuses it, so a release without its own key cannot store tokens.
+      DXOS_ZALO_TOKEN_KEY: ${DXOS_ZALO_TOKEN_KEY:-6465762d7a616c6f2d746f6b656e2d6b65792d6e6f742d666f722d70726f6421}
       HOSTNAME: "0.0.0.0"
       # Frozen features (ADR 0005): app factory, autopilot, strategy agent, MCP, staff sync. Off unless "1" or "true".
       DXOS_LABS: ${DXOS_LABS:-}

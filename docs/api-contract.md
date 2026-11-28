@@ -1699,6 +1699,6 @@ Bearer token của client `dxos-zalo` cùng header `X-Dxos-Gateway`. Trả `{ "d
 - **`GET /api/zalo/deliveries?status=&kind=`** (manager, accountant): 100 tin mới nhất, số điện thoại che còn 3 số cuối, `reason_vi` là lý do tiếng Việt của tin lỗi hoặc bị bỏ qua.
 - **`GET|POST /api/households/[id]/zalo-consent`**: `{ status: OPTED_IN|OPTED_OUT, source: REGISTRATION|OFFICER|MEMBER }`. Cán bộ và trưởng HTX ghi OPTED_IN hoặc OPTED_OUT (nguồn `REGISTRATION` hoặc `OFFICER`) cho mọi hộ của HTX. Xã viên chỉ ghi `OPTED_OUT` nguồn `MEMBER` cho hộ gắn với tài khoản của mình; mọi trường hợp khác `403`. Mỗi lần ghi lưu `recorded_by`.
 - **`GET|PUT /api/platform/zalo/templates`** (`platform_admin`): bốn khoá mẫu; tên tham số ngoài danh sách cho phép bị từ chối `400`.
-- **`GET|PUT /api/platform/zalo/credentials`** (`platform_admin`): PUT nhận `{ access_token, refresh_token, expires_at }`; GET chỉ trả `configured`, 4 ký tự cuối của access token và hạn.
+- **`GET|PUT /api/platform/zalo/credentials`** (`platform_admin`): PUT nhận `{ access_token, refresh_token, expires_at }`; GET chỉ trả `configured`, 4 ký tự cuối của access token và hạn. Máy chủ chưa đặt `DXOS_ZALO_TOKEN_KEY` thì PUT (và `POST /api/internal/zalo/credentials`) trả 422 `ZALO_TOKEN_KEY_MISSING`, không lưu gì.
 
 Sự kiện và khoá chống lặp: giá ngày `<htx>:<ngày>:<sha256(grade:price đã sắp xếp)>`, phiếu cân `<ticket_id>`, hết cách ly `<parcel_id>:<ngày>`, chốt kỳ `<settlement_line_id>`. Tin được ghi sau khi việc gốc đã commit; lỗi ghi tin không làm hỏng việc gốc.
