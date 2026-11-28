@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 -->
 # Đặc tả thiết kế — GĐ3: Bảng điều hành Giám đốc, Bán hàng gắn lô và Báo cáo vụ/năm
 
-> **Trạng thái:** Đã duyệt (2026-11-28). Chủ dự án chốt cả bốn mục §7 theo khuyến nghị (§8). S7 đã làm; S8 và S9 làm theo §3. Nhánh `feat/phase3-director-sales`, tách từ `feat/phase2-processing-qr`.
+> **Trạng thái:** Đã triển khai trên nhánh `feat/phase3-director-sales` (2026-11-28), chưa phát hành. Đã duyệt 2026-11-28; chủ dự án chốt cả bốn mục §7 theo khuyến nghị (§8). Khác biệt giữa thiết kế và mã nằm ở "Ghi chú sau triển khai" cuối tài liệu.
 > **Căn cứ:** [product-roadmap.md](../product-roadmap.md) §5 GĐ3, §6 (vai `manager`, `accountant`, khách mua), §7 KPI "kiểm tra hàng – tiền – rủi ro mỗi sáng < 60 giây trên 1 màn hình"; §3 `[D]` (dữ liệu chuỗi giá trị đi qua lõi, không giữ bảng cô lập).
 
 ## 1. Mục đích
@@ -192,3 +192,19 @@ Chủ dự án chốt cả bốn mục ở §7 theo khuyến nghị:
 3. Hạn thanh toán mặc định 30 ngày, sửa được theo đơn. Quá hạn hiện cảnh báo đỏ trên bảng điều hành, không tự gửi tin ra ngoài.
 4. Bảng điều hành sáu khối (S7) thay hẳn trang chủ `/manager/dashboard`.
 
+## Ghi chú sau triển khai
+
+Mã là nguồn cuối cùng. Phần dưới liệt kê chỗ mã khác thân đặc tả (đã tính §8).
+
+1. **Bảng điều hành không có route API và nhận thêm vai.** `DirectorBoardUseCase.read(htxProfileId, now, role)` nhận thời điểm và vai (`manager` hoặc `accountant`) thay vì chỉ `today`; hai trang dashboard đọc thẳng ở máy chủ. Kế toán thấy khối 1, 2, 3, 5 và bốn cảnh báo về tiền (`ORDERS_OVERDUE`, `SETTLEMENT_DRAFT`, `UNPAID_LINES`, `PRICE_NOT_PUBLISHED`); khối tồn chè khô chỉ có với trưởng HTX.
+2. **Cách đếm cảnh báo.** "Mẻ còn mở quá 2 ngày" đếm mẻ `OPEN` có ngày chế biến cách hôm nay từ 3 ngày; "tồn chè khô quá 60 ngày" đếm dòng tồn có ngày chế biến cách hôm nay từ 61 ngày; "kỳ quyết toán còn nháp" chỉ nêu kỳ nháp mới nhất (`count` luôn 1); "chưa trả quá 7 ngày" tính từ `closed_at` trước 00:00 giờ Việt Nam của ngày cách hôm nay 7 ngày. Cảnh báo giá không hiện khi khối giá hỏng, và cảnh báo quá hạn không hiện khi khối công nợ hỏng.
+3. **Thu tiền không bị chặn trên đơn lẻ.** §3 quy tắc 3 chỉ nói thu tiền trên đơn `CONFIRMED`; mã không kiểm loại đơn, nên `POST .../payments` cũng chạy trên đơn `RETAIL` (đơn lẻ vẫn không vào công nợ).
+4. **Ngày đặt của đơn lẻ.** Thân `POST /api/internal/apps/sales/retail-orders` chấp nhận `ordered_on` nhưng mã bỏ qua và luôn đặt hôm nay.
+5. **Thêm ràng buộc CSDL ngoài đặc tả:** `total_vnd >= 0`, `due_on >= ordered_on`, `kind` (sỉ phải có `partner_id`, lẻ không có `due_on`), `amount_vnd >= 0` ở dòng, công thức gói `net_g = pack_count × pack_net_g`.
+6. **`PATCH /api/sales/orders/[id]` kiểm kỹ hơn §3 quy tắc 5.** Hạn trước ngày đặt trả 400 `VALIDATION_ERROR`; đơn lẻ trả 422 `NOT_WHOLESALE`; đơn đã huỷ trả 409 `ORDER_CANCELLED`; đơn đã thu đủ trả 409 `ORDER_PAID`.
+7. **`LOT_STOCK_SHORT` chỉ liệt kê lô thiếu.** Trường `error.stock` chứa các lô không đủ (`lot_id`, `remaining_g`), không phải mọi lô của đơn như quy tắc 1 viết.
+8. **Huỷ đơn lẻ lần hai.** `POST .../retail-orders/[external_ref]/cancel` cho đơn đã huỷ trả đúng đơn đó (200), không phải 409 `ORDER_CANCELLED`; lý do tuỳ chọn, thiếu thì là "Huỷ từ gian hàng".
+9. **Route Core Action API có thêm giới hạn** 120 yêu cầu mỗi phút theo header `Authorization` (429) ở APISIX. Web kiểm `azp` của token bằng `KEYCLOAK_CLIENT_ID` (mặc định `nextjs-web`), từ chối token vai dịch vụ, và chỉ nhận vai `manager`.
+10. **Báo cáo, phần "An toàn".** Số "thửa được nghiệm thu đạt cách ly" mã đếm là số lứa có `parcel_crop_cycles.harvested_at` trong kỳ (`harvests_approved`), không đếm lần bấm nghiệm thu. Phần "Thành viên" tính tại thời điểm xem, không theo kỳ.
+11. **Phần "Bán hàng" của báo cáo** (§3 S9 mục 6) được nối bằng nhiệm vụ R2 của kế hoạch, ở commit riêng sau commit đầu của báo cáo. Khi phần này chưa có số liệu, mã trả `sales: null` và `GET /api/reports/season.csv?section=sales` trả 503 `SECTION_UNAVAILABLE`.
+12. **Tệp CSV báo cáo.** Mỗi phần một bảng; phần hỏng hoặc không có bảng xuất trả 503 `SECTION_UNAVAILABLE`, không trả tệp rỗng.

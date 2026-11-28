@@ -34,6 +34,11 @@ erDiagram
     ProcessingBatch ||--o{ FreshLeafTicket : "takes"
     ProcessingBatch ||--o{ ProcessingBatchOutput : "yields"
     ProcessingBatchOutput ||--o{ LotBatchSource : "feeds"
+    HTXProfile ||--o{ SalesOrder : "sells"
+    Partner ||--o{ SalesOrder : "buys"
+    SalesOrder ||--o{ SalesOrderLine : "lines"
+    Lot ||--o{ SalesOrderLine : "sold from"
+    SalesOrder ||--o{ SalesPayment : "paid by"
     Lot ||--o{ LotBatchSource : "drawn from"
     HTXProfile ||--o{ HtxCertificate : "holds"
     Lot ||--o{ LotCertificate : "attaches"
@@ -690,6 +695,67 @@ Chứng nhận gắn vào lô lúc xuất QR. Trigger kiểm toán: có.
 | certificate_id | TEXT | FK → htx_certificates (RESTRICT), NOT NULL | |
 
 **Index:** khoá duy nhất `(lot_id, certificate_id)`.
+
+### Bán hàng gắn lô (GĐ3 S8)
+
+Thêm bởi migration `20261128170000_sales`. Enum mới: `SalesKind` (`WHOLESALE`, `RETAIL`), `SalesSource` (`CORE`, `TEA_SHOP`), `SalesStatus` (`CONFIRMED`, `CANCELLED`); `sales_payments.method` dùng lại `PaymentMethod` (`TRANSFER`, `CASH`). Tiền là BIGINT đồng (trừ `price_vnd_per_kg` là INT), khối lượng là INT gam.
+
+**Trigger.** Cả ba bảng có trigger kiểm toán `dxos_audit_row` (`audit.capture_row()`), cài bởi `03-audit-triggers.sql` cho cơ sở dữ liệu mới và bởi migration cho cơ sở dữ liệu đang chạy (bỏ qua khi chưa có schema `audit`); các giao dịch bán hàng đặt `dxos.actor`. `sales_payments` còn có trigger **chỉ thêm**: `sales_payments_append_only` (`BEFORE UPDATE OR DELETE`, theo dòng) và `sales_payments_no_truncate` (`BEFORE TRUNCATE`) cùng gọi `public.sales_payments_refuse_change()`, hàm này ném lỗi `restrict_violation`. Khoản thu sai không sửa được; đơn đã có khoản thu không huỷ được (do ứng dụng giữ).
+
+#### `sales_orders`
+Đơn bán sỉ (lõi) và đơn lẻ (mini-app). Ghi bởi `manager`, `accountant` (huỷ: `manager`) và, qua Core Action API, bởi token của `manager`. Trigger kiểm toán: có.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | TEXT | PK | |
+| htx_profile_id | TEXT | FK → htx_profiles (RESTRICT), NOT NULL | |
+| order_no | TEXT | UNIQUE, NOT NULL | `{HTX_CODE}-DH-{YYYYMMDD}-{NNN}` theo ngày đặt |
+| kind | ENUM `SalesKind` | NOT NULL | |
+| source | ENUM `SalesSource` | NOT NULL, DEFAULT 'CORE' | Đơn lẻ của tea-shop là `TEA_SHOP` |
+| external_ref | TEXT | nullable | Mã đơn của mini-app; duy nhất cùng `(htx_profile_id, source)` |
+| partner_id | TEXT | nullable FK → partners (SET NULL) | Bắt buộc với `WHOLESALE` |
+| customer_name | TEXT | nullable | Tên khách lẻ |
+| ordered_on | DATE | NOT NULL | Ngày giờ Việt Nam |
+| due_on | DATE | nullable | Hạn thanh toán, chỉ đơn sỉ |
+| status | ENUM `SalesStatus` | NOT NULL, DEFAULT 'CONFIRMED' | |
+| total_vnd | BIGINT | NOT NULL, `CHECK` >= 0 | Tổng các dòng |
+| note | TEXT | nullable | |
+| created_by_id | TEXT | NOT NULL | Keycloak sub |
+| created_at | TIMESTAMP(3) | NOT NULL, DEFAULT now() | |
+| cancelled_by_id, cancelled_at, cancel_reason | TEXT, TIMESTAMP(3), TEXT | nullable | Điền khi huỷ |
+
+**CHECK:** `sales_orders_due_check` (`due_on` rỗng hoặc không trước `ordered_on`); `sales_orders_kind_check` (`WHOLESALE` thì có `partner_id`; `RETAIL` thì `due_on` rỗng). **Index:** khoá duy nhất `order_no`; khoá duy nhất `(htx_profile_id, source, external_ref)` (nhiều dòng `external_ref` rỗng vẫn hợp lệ); `(htx_profile_id, ordered_on)`; `(htx_profile_id, kind, status, due_on)`; `partner_id`.
+
+#### `sales_order_lines`
+Một dòng bán một lô. Trigger kiểm toán: có.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | TEXT | PK | |
+| order_id | TEXT | FK → sales_orders (RESTRICT), NOT NULL | |
+| lot_id | TEXT | FK → lots (RESTRICT), NOT NULL | |
+| net_g | INT | NOT NULL, `CHECK` > 0 | Khối lượng tịnh bán, gam |
+| pack_count, pack_net_g | INT | nullable | Dòng lẻ: số gói và gam mỗi gói |
+| price_vnd_per_kg | INT | nullable | Chỉ dòng sỉ |
+| amount_vnd | BIGINT | NOT NULL, `CHECK` >= 0 | Dòng sỉ: giá × gam / 1000, làm tròn đồng, nửa lên |
+
+**CHECK:** `sales_order_lines_packs_check` (`pack_count` và `pack_net_g` cùng rỗng, hoặc cùng lớn hơn 0 và `net_g = pack_count × pack_net_g`). **Index:** `order_id`; `lot_id`. Tồn của lô = sức chứa − tổng `net_g` của các dòng thuộc đơn `CONFIRMED` (mục 3.28 của [rules-and-limits.md](./rules-and-limits.md)).
+
+#### `sales_payments`
+Khoản thu của đơn; **chỉ thêm** (xem trigger ở trên). Ghi bởi `manager`, `accountant`. Trigger kiểm toán: có.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | TEXT | PK | |
+| order_id | TEXT | FK → sales_orders (RESTRICT), NOT NULL | |
+| amount_vnd | BIGINT | NOT NULL, `CHECK` > 0 | Tổng các khoản không vượt `total_vnd` (do ứng dụng giữ dưới khoá dòng đơn) |
+| paid_on | DATE | NOT NULL | |
+| method | ENUM `PaymentMethod` | NOT NULL | |
+| ref | TEXT | nullable | |
+| created_by_id | TEXT | NOT NULL | Keycloak sub |
+| created_at | TIMESTAMP(3) | NOT NULL, DEFAULT now() | |
+
+**Index:** `order_id`.
 
 ### Agentic Layer (`platform` schema — `platform/postgres/init/08-agent.sql`, M1a)
 Tất cả ba bảng đều gắn trigger `dxos_audit_row` ghi vào `audit.events`.
