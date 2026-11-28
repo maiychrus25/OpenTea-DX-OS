@@ -11,6 +11,8 @@ export interface DirectorBoard {
   prices: PricesToday | null
   payable: MemberPayable | null
   dry_stock: DryStockByGrade[] | null
+  /** Dry tea expected in the next 14 days, from the forecast (phase 4 A3); null when it failed to load. */
+  forecast_dry_kg_14d?: number | null
   /** Trader receivables (S8); null when the block failed to load. */
   receivables: BoardReceivables | null
   alerts: BoardAlert[] | null

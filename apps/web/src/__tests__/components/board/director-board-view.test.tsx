@@ -142,3 +142,15 @@ describe('change against yesterday', () => {
     expect(changeText(4, 0)).toBe('Hôm qua chưa có phiếu')
   })
 })
+
+describe('forecast on the dry stock block', () => {
+  test('the dry stock block adds the 14-day forecast line when there is one', () => {
+    render(<DirectorBoardView board={{ ...full, forecast_dry_kg_14d: 42.5 }} role="manager" />)
+    expect(screen.getByText('Dự báo 14 ngày tới: 42,5 kg chè khô')).toBeInTheDocument()
+  })
+
+  test('no forecast means no line', () => {
+    render(<DirectorBoardView board={{ ...full, forecast_dry_kg_14d: null }} role="manager" />)
+    expect(screen.queryByText(/Dự báo 14 ngày tới/)).not.toBeInTheDocument()
+  })
+})

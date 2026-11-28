@@ -10,10 +10,12 @@ import styles from './board.module.css'
 
 interface Props {
   stock: DryStockByGrade[] | null
+  /** Dry tea expected in the next 14 days; null hides the summary line. */
+  forecast_dry_kg_14d?: number | null
 }
 
 /** Block 4: dry tea left in finished batches, per grade, all five grades. */
-export function DryStockBlock({ stock }: Props) {
+export function DryStockBlock({ stock, forecast_dry_kg_14d }: Props) {
   return (
     <BoardBlock title="Tồn chè khô" href="/manager/processing" failedText={stock ? undefined : 'Chưa tải được tồn chè khô.'}>
       {stock && (
@@ -25,6 +27,9 @@ export function DryStockBlock({ stock }: Props) {
             </li>
           ))}
         </ul>
+      )}
+      {stock && forecast_dry_kg_14d != null && (
+        <p className={styles.muted}>Dự báo 14 ngày tới: {kgText(forecast_dry_kg_14d)} kg chè khô</p>
       )}
     </BoardBlock>
   )
