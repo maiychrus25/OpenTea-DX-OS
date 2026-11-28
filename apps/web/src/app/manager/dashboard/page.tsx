@@ -4,7 +4,7 @@
 import React from 'react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { CheckSquare, ChevronRight, Newspaper, BarChart3 } from 'lucide-react'
+import { CheckSquare, ChevronRight, Newspaper, BarChart3, Coins, Flame, Leaf, ShoppingBag } from 'lucide-react'
 
 import { GetHtxProfileUseCase } from '@/application/useCases/GetHtxProfileUseCase'
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/repositories/PrismaHtxProfileRepository'
@@ -14,7 +14,13 @@ import { NotFoundError } from '@/domain/errors'
 import { auth } from '@/auth'
 import { requireTenant } from '@/lib/api/tenant'
 import { loadDirectorBoard } from '@/lib/board/director-board-data'
-import { HeroBanner, Panel, EmptyState } from '@/components/ui'
+import { loadSeasonReport } from '@/lib/report/season-report-data'
+import { changePercent, vnDay, weeklyKg, weeksStart } from '@/lib/manager/overview'
+import { WeatherHero } from '@/components/features/farmer-web/WeatherHero'
+import { StatCards, type StatCard } from '@/components/features/manager-web/parts'
+import type { SeasonReport } from '@/domain/report/views'
+import { OverviewSection, type Todo } from './_components/OverviewSection'
+import { Panel, EmptyState } from '@/components/ui'
 
 import { NoticesAndWeather, RainAlert } from '@/components/features/dashboard/NoticesAndWeather'
 import { PendingJournals } from '@/components/features/dashboard/PendingJournals'
@@ -22,6 +28,25 @@ import { DirectorBoardView } from '@/components/features/board/DirectorBoardView
 import styles from './Dashboard.module.css'
 import layout from '@/components/features/dashboard/dashboard.module.css'
 import boardStyles from '@/components/features/board/board.module.css'
+
+const kgText = (value: number | undefined) => (value === undefined ? '—' : `${value.toLocaleString('vi-VN', { maximumFractionDigits: 1 })} kg`)
+const revenue = (report: SeasonReport | null) => (report?.sales ? Number(report.sales.wholesale_vnd) + Number(report.sales.retail_vnd) : undefined)
+
+/** From 1 January to today, against the same days of last year. */
+function yearFigures(now: SeasonReport | null, before: SeasonReport | null): StatCard[] {
+  const note = (change: number | null) => (change === null ? 'Từ đầu năm' : 'so cùng kỳ')
+  const card = (label: string, value: string, icon: React.ReactNode, current: number | undefined, last: number | undefined): StatCard => {
+    const change = current === undefined ? null : changePercent(current, last)
+    return { label, value, icon, change, note: note(change) }
+  }
+  const money = revenue(now)
+  return [
+    card('Búp đã thu mua', kgText(now?.purchases?.total.net_kg), <Leaf size={26} />, now?.purchases?.total.net_kg, before?.purchases?.total.net_kg),
+    card('Chè khô đã sao', kgText(now?.processing?.dry_kg), <Flame size={26} />, now?.processing?.dry_kg, before?.processing?.dry_kg),
+    card('Chè đã bán', kgText(now?.sales?.kg_sold), <ShoppingBag size={26} />, now?.sales?.kg_sold, before?.sales?.kg_sold),
+    card('Doanh thu', money === undefined ? '—' : `${money.toLocaleString('vi-VN')} đ`, <Coins size={26} />, money, revenue(before)),
+  ]
+}
 
 /** The analysis mini-app's id in its manifest (miniapps/htx-dashboard/app.yaml). */
 const ANALYSIS_APP_ID = 'htx-dashboard'
@@ -88,6 +113,9 @@ export default async function ManagerDashboard() {
   let pending: { id: string; activity_type: string; entry_date: Date; activities?: { product_name: string | null }[]; parcel: { parcel_code: string; household: { name: string } } }[] = []
   let board = null as Awaited<ReturnType<typeof loadDirectorBoard>> | null
   let analysisEnabled = false
+  let figures: StatCard[] = []
+  let weeks: ReturnType<typeof weeklyKg> = []
+  const todos: Todo[] = []
 
   if (hasProfile && profileId) {
     const [entries, loaded, enabled] = await Promise.all([
@@ -109,20 +137,57 @@ export default async function ManagerDashboard() {
     pending = entries
     board = loaded
     analysisEnabled = enabled
+
+    // The figures above the board; each one that fails leaves a dash or drops its line, never the page.
+    const now = new Date()
+    const today = vnDay(now)
+    const year = Number(today.slice(0, 4))
+    const lastDay = today.slice(5) === '02-29' ? '02-28' : today.slice(5)
+    const household = { household: { htx_profile_id: profileId } }
+    const soon = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+    const [thisYear, lastYear, tickets, waiting, due, unscheduled, drafts] = await Promise.all([
+      loadSeasonReport(profileId, `${year}-01-01`, today, htxName, now).catch(() => null),
+      loadSeasonReport(profileId, `${year - 1}-01-01`, `${year - 1}-${lastDay}`, htxName, now).catch(() => null),
+      prisma.freshLeafTicket.findMany({
+        where: { htx_profile_id: profileId, status: 'VALID', weighed_at: { gte: weeksStart(now, 8) } },
+        select: { weighed_at: true, net_kg: true },
+      }).catch(() => []),
+      prisma.journalEntry.count({ where: { parcel: household, status: 'PENDING_APPROVAL' } }).catch(() => 0),
+      prisma.parcelCropCycle.count({ where: { parcel: household, harvested_at: null, estimated_harvest_date: { lte: soon } } }).catch(() => 0),
+      prisma.parcelCropCycle.count({ where: { parcel: household, harvested_at: null, estimated_harvest_date: null } }).catch(() => 0),
+      prisma.settlementPeriod.count({ where: { htx_profile_id: profileId, status: 'DRAFT' } }).catch(() => 0),
+    ])
+    figures = yearFigures(thisYear, lastYear)
+    weeks = weeklyKg(tickets.map(t => ({ weighed_at: t.weighed_at, net_kg: Number(t.net_kg) })), now)
+    if (waiting) todos.push({ key: 'journals', title: 'Duyệt nhật ký canh tác', detail: `${waiting} nhật ký chờ duyệt`, href: '/manager/journal-approve' })
+    if (due) todos.push({ key: 'harvest', title: 'Lứa đến hạn hái', detail: `${due} lứa đến hạn trong 7 ngày tới hoặc đã quá ngày`, href: '/manager/schedule' })
+    if (unscheduled) todos.push({ key: 'unscheduled', title: 'Xếp lịch thu hái', detail: `${unscheduled} lứa chưa có ngày hái`, href: '/manager/schedule' })
+    if (drafts) todos.push({ key: 'settlements', title: 'Chốt kỳ quyết toán', detail: `${drafts} kỳ đang ở bản nháp`, href: '/manager/settlements' })
   }
+
+  const hero = (
+    <WeatherHero
+      eyebrow={htxName || 'Trưởng HTX'}
+      title={`${getGreeting()}, ${session.user.name}`}
+      subtitle={[formatDate(new Date()), seasonLabel].filter(Boolean).join(' · ')}
+      actions={[]}
+      place=""
+      cached={null}
+      forecastHref="/manager/bulletin"
+    />
+  )
 
   return (
     <main className={hasProfile ? layout.page : styles.container}>
       {hasProfile && board ? (
         <>
-          <HeroBanner
-            eyebrow={htxName || 'Trưởng HTX'}
-            title={`${getGreeting()}, ${session.user.name}`}
-            subtitle={[formatDate(new Date()), seasonLabel].filter(Boolean).join(' · ')}
-            status="Đang hoạt động"
-          />
+          {hero}
 
           <RainAlert />
+
+          <StatCards items={figures} />
+
+          <OverviewSection weeks={weeks} todos={todos} />
 
           <DirectorBoardView board={board} role="manager" />
 
@@ -160,12 +225,7 @@ export default async function ManagerDashboard() {
         </>
       ) : hasProfile ? (
         <>
-          <HeroBanner
-            eyebrow={htxName || 'Trưởng HTX'}
-            title={`${getGreeting()}, ${session.user.name}`}
-            subtitle={[formatDate(new Date()), seasonLabel].filter(Boolean).join(' · ')}
-            status="Đang hoạt động"
-          />
+          {hero}
           <p role="alert" className={boardStyles.failed}>Chưa tải được bảng điều hành. Vui lòng tải lại trang.</p>
         </>
       ) : (

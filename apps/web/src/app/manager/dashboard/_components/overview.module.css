@@ -1,0 +1,42 @@
+/* SPDX-License-Identifier: MIT */
+/* SPDX-FileCopyrightText: 2026 OpenTea Developers */
+
+.row { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1.2fr) minmax(0, 0.95fr); gap: 12px; }
+.card { display: flex; flex-direction: column; min-width: 0; gap: 10px; padding: 14px 16px; background: var(--color-surface-card); border: 1px solid var(--color-border); border-radius: var(--radius-card); box-shadow: var(--shadow-card); }
+.card h2 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 15px; font-weight: 700; color: var(--color-ink-heading); }
+.card h2 svg { color: var(--color-primary); }
+.card ul, .card ol { margin: 0; padding: 0; list-style: none; }
+.empty { margin: auto 0; text-align: center; font-size: 13.5px; color: var(--color-ink-secondary); }
+
+.chart { display: flex; flex: 1; align-items: stretch; gap: 8px; min-height: 176px; }
+.chart li { display: flex; flex: 1; flex-direction: column; align-items: center; gap: 4px; min-width: 0; font-size: 11.5px; color: var(--color-ink-secondary); }
+.value { font-weight: 700; color: var(--color-ink-primary); white-space: nowrap; }
+.track { display: flex; flex: 1; align-items: flex-end; justify-content: center; width: 100%; border-bottom: 1px solid var(--color-border); }
+.track i { width: min(100%, 30px); border-radius: 4px 4px 0 0; background: color-mix(in srgb, var(--color-primary) 45%, var(--color-surface-card)); }
+.track i.current { background: var(--color-primary); }
+.week { white-space: nowrap; }
+
+.todos { display: flex; flex-direction: column; gap: 6px; }
+.todos a { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: var(--radius-button); background: var(--color-table-head); color: var(--color-ink-primary); text-decoration: none; }
+.todos a:hover { background: var(--color-primary-subtle); color: var(--color-ink-primary); }
+.todos a > span:nth-child(2) { display: flex; flex: 1; flex-direction: column; min-width: 0; }
+.todos strong { font-size: 13.5px; }
+.todos small { font-size: 12px; color: var(--color-ink-secondary); }
+.todoIcon { display: flex; color: var(--color-primary); }
+
+.actions { display: grid; flex: 1; grid-template-columns: 1fr 1fr; gap: 8px; }
+.actions a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; height: 100%; min-height: 78px; padding: 8px; border-radius: var(--radius-button); background: var(--color-primary-subtle); color: var(--color-ink-primary); font-size: 13px; font-weight: 700; text-align: center; text-decoration: none; }
+.actions a:hover { color: var(--color-ink-primary); box-shadow: var(--shadow-card-hover); }
+.actions span { display: flex; color: var(--color-primary); }
+
+@media (max-width: 1200px) {
+  .row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .row > :first-child { grid-column: 1 / -1; }
+}
+
+@media (max-width: 767px) {
+  .row { grid-template-columns: minmax(0, 1fr); }
+  .chart { gap: 3px; }
+  .value { font-size: 10px; }
+  .week { font-size: 10px; }
+}
