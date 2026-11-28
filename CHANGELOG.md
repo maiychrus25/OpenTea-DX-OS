@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Officers record consent on the household page. A farmer can turn messages off for their own household from the profile. A household without consent is never sent anything.
   - The platform admin enters the OA token and the approved ZNS template ids on `/platform/zalo`. Tokens are stored encrypted and never shown again.
   - A ZNS stub (`dxos-zalo-stub`, profile `zalo-test`, port 8084) lets the smoke run every message end to end without an OA.
+- **Tea handbook template (`docs/templates/para-tea-cooperative`)**: 66 notes and 5 tables on cultivation, pests and diseases, processing and sales, food safety, cooperative law, finance and regional data, ported from the resource survey by Nguyễn Bá Quyến (PR #99) into English kebab-case folders, each file crediting the author and its own sources. The officer pesticide reference carries `ai: false`. `./dxos para seed <HTX> [--dry-run]` copies the template into `para/<HTX>/` through the web document API, only files that do not exist yet.
 
 ### Changed
 

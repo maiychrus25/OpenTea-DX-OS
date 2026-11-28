@@ -1,0 +1,22 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
+> Nguồn: khảo sát tài nguyên HTX của Nguyễn Bá Quyến (PR #99)
+
+[TÀI NGUYÊN] Kho tri thức, tài liệu tham khảo (Feed cho AI RAG)
+
+# VietGAP, chất lượng và OCOP
+
+| Văn bản | Ghi chú |
+| --- | --- |
+| TCVN 11892-1:2026 (VietGAP trồng trọt) | Thay bản 2017; đơn vị chứng nhận áp dụng từ 01/08/2026. Có bản quyền, kho chưa có toàn văn. Xem `new-points-2026.md`. |
+| TCVN 9740:2013 (chè xanh) | Định nghĩa, yêu cầu cơ bản; tương đương ISO 11287:2011. Yêu cầu chung: chè sạch, không lẫn tạp chất, không mùi lạ. |
+| Quyết định 26/2026/QĐ-TTg (OCOP) | Thang 100 điểm: sức mạnh cộng đồng 40, tiếp thị 25, chất lượng 35. 3 sao 50 đến dưới 70, 4 sao 70 đến dưới 90, 5 sao từ 90. Tỉnh đánh giá ít nhất 2 đợt/năm (xã đề nghị trước 30/4 và 30/10). Tiêu chí cho chè ở Phụ lục II (bản scan, chưa đọc). Theo Cổng thông tin Chính phủ. |
+
+Ghi chép khi làm VietGAP: nhật ký từ làm đất, bón phân, phun thuốc (đủ thời gian cách ly) đến thu hái, chế biến. Mẫu nhật ký trong hệ thống OpenTea nằm ở mục Nhật ký.
+
+- `record-book.md`: mẫu sổ cho nông hộ và hợp tác xã
+- `self-check-list.md`: danh sách tự kiểm tra
+- `new-points-2026.md`: điểm mới của bản 2026
