@@ -15,7 +15,7 @@ Ban quản trị HTX quản lý sản phẩm chè và xử lý đơn hàng; khá
 | `/orders/export.csv` | `manager` | CSV của danh sách đang lọc: Mã đơn, Đặt lúc, Khách, Số điện thoại, Địa chỉ, Tổng tiền, Trạng thái |
 | `/orders/<id>/print` | `manager` | Phiếu giao hàng để in (mã đơn, khách, điện thoại, địa chỉ, dòng hàng, tổng, thu tiền khi nhận) |
 | `/products` | `manager` | Danh sách sản phẩm: tìm `q` theo tên, lọc `show` (`all`, `active`, `hidden`, `low`), phân trang |
-| `/products/<id>/edit` | `manager` | Sửa tên, quy cách, giá, tồn kho, mã lô, đang bán hay ngừng |
+| `/products/<id>/edit` | `manager` | Sửa tên, quy cách, giá, tồn kho, mã lô, đang bán hay ngừng; chọn lô của HTX và nhập trọng lượng tịnh mỗi gói (g) |
 | `/promotions` | `manager` | Khuyến mãi của HTX (sản phẩm, % giảm, từ ngày, đến ngày, trạng thái) và nút Kết thúc cho khuyến mãi đang chạy (`POST /promotions/<id>/end`) |
 | `/orders/<id>` | `manager` | Chi tiết đơn kèm họ tên, điện thoại, địa chỉ; các bước trạng thái; chuyển trạng thái hoặc huỷ |
 | `/agent/suggestions` | token của `dxos-agent` (role `agent`) | Đề xuất cho trợ lý: sản phẩm đang bán, tồn từ 20 gói trở lên, 21 ngày không có dòng đơn nào (đơn huỷ không tính) và chưa có khuyến mãi thì đề xuất giảm 10% trong 7 ngày; tối đa 10 đề xuất |
@@ -42,10 +42,19 @@ Mọi thao tác ghi là `POST` và trả 303 về một trang dưới `/apps/tea
 - Khối `agent` trong `app.yaml` khai báo hành động `promotion.create` (`money: true`, người duyệt là `manager`). App tự kiểm lại khi hành động chạy như khi bấm trên giao diện: dữ liệu, sản phẩm thuộc HTX của người duyệt, không trùng khuyến mãi. Khuyến mãi ghi người duyệt vào `created_by`.
 - App kit: `appkit.read_claims(authorization, headers)` chỉ tin ba header `X-DXOS-Acting-*` khi token có `azp` là `dxos-apps-actor` và role trong header là `manager` hoặc `officer`; với token khác thì bỏ qua header.
 
+## Bán từ lô của HTX
+
+- `migrations/003_core_lots.sql`: `products.lot_id` và `products.pack_net_g` (1 đến 100000 gam), cùng có hoặc cùng rỗng; `orders.core_order_no`. Mã lô truy xuất cũ (`lot_code`) vẫn dùng cho link nguồn gốc; khi chọn lô mà ô đó để trống, app điền mã của lô.
+- Trang sửa sản phẩm lấy danh sách lô từ `GET /api/internal/apps/sales/sellable-lots` (mã lô, hạng, còn bao nhiêu kg). Lõi không trả lời được thì danh sách rỗng và trang vẫn lưu được.
+- Xác nhận đơn `NEW` có dòng gắn lô: app gửi `POST /api/internal/apps/sales/retail-orders` với `external_ref` là id đơn và mỗi dòng `{lot_id, pack_count, pack_net_g, amount_vnd}`; lõi trừ `pack_count x pack_net_g` gam (4 gói 250 g là đúng 1.000 g). Thành công thì lưu `core_order_no` và chuyển `CONFIRMED`. Gửi lại cùng `external_ref` (sau khi quá thời gian chờ) không tạo đơn thứ hai. Đơn không có dòng gắn lô chuyển trạng thái như trước, không gọi lõi.
+- Huỷ đơn đã có `core_order_no` gọi `POST .../retail-orders/<external_ref>/cancel` trước; lõi báo không có đơn đó thì coi như xong.
+- Lỗi hiện trên trang đơn và đơn giữ nguyên trạng thái: `Lô <mã> chỉ còn <kg> kg, không đủ cho đơn này.` (409), `Chưa ghi được vào sổ bán hàng của HTX. Thử lại sau.` (503, lõi không trả lời hoặc 5xx).
+- Cấu hình: `DXOS_CORE_INTERNAL_URL` (mặc định `http://apisix:9081`); app chuyển nguyên header `Authorization` của người dùng, chờ tối đa 5 giây, chỉ dùng thư viện chuẩn. Chỉ trưởng HTX xác nhận và huỷ đơn.
+
 ## Dữ liệu và mạng
 
 - Bảng `products`, `orders`, `order_items`, `promotions` trong schema `app_tea_shop` (`migrations/001_init.sql`), đều có `htx_code`; mọi truy vấn lọc theo `htx_code` của token (trang quản trị) hoặc của URL (trang công khai). Khoá ngoại của `order_items` gồm cả `htx_code`, nên dòng đơn luôn cùng HTX với đơn và sản phẩm.
-- App đọc `DXOS_APP_DB_URL` do `./dxos install` ghi vào tệp env; role `app_tea_shop` chỉ có quyền trên schema của mình (tối đa 10 kết nối). App giữ tối đa 8 kết nối cùng lúc; chờ quá 2 giây thì trả 503 "Hệ thống đang bận". App không gọi lõi nên không có `core_client`.
+- App đọc `DXOS_APP_DB_URL` do `./dxos install` ghi vào tệp env; role `app_tea_shop` chỉ có quyền trên schema của mình (tối đa 10 kết nối). App giữ tối đa 8 kết nối cùng lúc; chờ quá 2 giây thì trả 503 "Hệ thống đang bận". Từ 0.4.0 app gọi API nội bộ của lõi, xem mục Bán từ lô của HTX.
 - Giao diện: `/dxos-app.css`, `?theme=light|dark` đặt `data-theme` trên `<html>` và đi theo mọi link, form và chuyển hướng (như `hello`). Không có JavaScript.
 
 ## Kiểm thử

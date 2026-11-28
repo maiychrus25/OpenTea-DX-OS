@@ -1440,6 +1440,92 @@ Trang Server Component không cần đăng nhập; mã lô sai ký tự (`/`, `?
 
 ---
 
+## Bảng điều hành, bán hàng, Core Action API và báo cáo (GĐ3)
+
+Mọi route dưới đây trả `{ "data": ... }` khi thành công và `{ "error": { "code", "message", ...chi tiết } }` khi lỗi; chỉ tính trong HTX của phiên (bản ghi HTX khác trả 404 `NOT_FOUND`). Quy tắc nghiệp vụ: [rules-and-limits.md](./rules-and-limits.md) mục 3.27 đến 3.30. Tiền (`*_vnd`) là số nguyên đồng viết thành chuỗi, trừ `price_vnd_per_kg` và `outstanding_vnd` trong lỗi `OVERPAYMENT` ghi rõ dưới đây; ngày là `YYYY-MM-DD` giờ Việt Nam. Bảng điều hành (S7) do trang `/manager/dashboard` và `/accountant/dashboard` đọc thẳng ở máy chủ nên **không có route API riêng**.
+
+**Đơn bán (`SalesOrderView`):**
+```json
+{ "id": "cuid", "order_no": "TC-DH-20261128-001", "kind": "WHOLESALE", "source": "CORE", "external_ref": null,
+  "partner_id": "cuid", "partner_name": "Thương lái A", "customer_name": null,
+  "ordered_on": "2026-11-28", "due_on": "2026-12-28", "status": "CONFIRMED",
+  "total_vnd": "1125000", "paid_vnd": "500000", "outstanding_vnd": "625000", "overdue": false, "note": null,
+  "created_at": "...", "cancelled_at": null, "cancel_reason": null,
+  "lines": [ { "id": "cuid", "lot_id": "cuid", "lot_code": "TC-CHE-20261128-001", "net_g": 12500, "pack_count": null, "pack_net_g": null,
+               "price_vnd_per_kg": 90000, "amount_vnd": "1125000" } ],
+  "payments": [ { "id": "cuid", "amount_vnd": "500000", "paid_on": "2026-11-28", "method": "TRANSFER", "ref": null, "created_at": "..." } ] }
+```
+`paid_vnd` và `outstanding_vnd` tính từ các khoản thu; `overdue` đúng khi đơn sỉ `CONFIRMED`, còn nợ và `due_on` trước hôm nay.
+
+### `GET /api/sales/sellable-lots`
+Lô còn bán được: `QR_EXPORTED`, có khối lượng, còn lại lớn hơn 0 gam; mới nhất trước. **Vai:** `manager`, `accountant`. **Response:** `{ "data": [ { "lot_id", "lot_code", "dry_grade": "TOM_NON|null", "quality_grade": "Tôm nõn|null", "capacity_g": 50000, "remaining_g": 37500 } ] }`. **Errors:** 403 `FORBIDDEN`.
+
+### `GET /api/sales/orders`
+Danh sách đơn, mới nhất trước, 50 đơn mỗi trang. **Vai:** `manager`, `accountant`. **Query (tuỳ chọn):** `kind` (`WHOLESALE`, `RETAIL`), `status` (`CONFIRMED`, `CANCELLED`), `overdue` (chỉ giá trị `1`: chỉ đơn sỉ quá hạn), `partner_id`, `cursor` (`next_cursor` của trang trước). **Response:** `{ "data": [ <đơn> ], "next_cursor": "cuid|null" }`. **Errors:** 400 `VALIDATION_ERROR`; 403 `FORBIDDEN`.
+
+### `POST /api/sales/orders`
+Tạo đơn bán sỉ từ tồn lô. **Vai:** `manager`, `accountant`.
+
+**Request:**
+```json
+{ "partner_id": "cuid", "ordered_on": "2026-11-28", "due_on": "2026-12-28", "note": "...",
+  "lines": [ { "lot_id": "cuid", "kg": 12.5, "price_vnd_per_kg": 90000 } ] }
+```
+`partner_id` bắt buộc. `ordered_on` mặc định hôm nay; `due_on` mặc định `ordered_on` cộng 30 ngày và không được trước `ordered_on`. `note` 1 đến 500 ký tự. `lines` 1 đến 50 dòng: `kg` lớn hơn 0, tối đa 1.000.000, một chữ số thập phân; `price_vnd_per_kg` số nguyên từ 1 đến 10.000.000. Khoá lạ bị từ chối. Thành tiền dòng = giá × gam / 1000, làm tròn đến đồng, nửa làm tròn lên.
+
+**Response:** 201 `{ "data": <đơn> }`.
+
+**Errors:** 400 `VALIDATION_ERROR` (kể cả "Hạn thanh toán không được trước ngày đặt"); 403 `FORBIDDEN`; 404 `NOT_FOUND` (thương lái hoặc lô không thuộc HTX); 409 `LOT_STOCK_SHORT` (lô không còn đủ; kèm `error.stock: [ { lot_id, remaining_g } ]` cho các lô thiếu); 422 `LOT_NOT_SELLABLE` (lô chưa xuất QR hoặc chưa có khối lượng; kèm `lot_id`).
+
+### `GET /api/sales/orders/[id]`
+**Vai:** `manager`, `accountant`. **Response:** `{ "data": <đơn> }`. **Errors:** 403 `FORBIDDEN`; 404 `NOT_FOUND`.
+
+### `PATCH /api/sales/orders/[id]`
+Đổi hạn thanh toán của đơn sỉ còn nợ. **Vai:** `manager`, `accountant`. **Request:** `{ "due_on": "2027-01-15" }`. **Response:** `{ "data": <đơn> }`. **Errors:** 400 `VALIDATION_ERROR` (ngày sai hoặc trước ngày đặt); 403 `FORBIDDEN`; 404 `NOT_FOUND`; 409 `ORDER_CANCELLED`; 409 `ORDER_PAID` (đã thu đủ); 422 `NOT_WHOLESALE`.
+
+### `POST /api/sales/orders/[id]/payments`
+Ghi một khoản thu (chỉ thêm, không sửa hay xoá). **Vai:** `manager`, `accountant`. **Request:** `{ "amount_vnd": "500000", "paid_on": "2026-11-28", "method": "TRANSFER", "ref": "..." }`: `amount_vnd` là chuỗi số nguyên dương (tối đa 13 chữ số, như cách màn hình đơn hàng gửi), hoặc số nguyên JSON từ 1 đến 1.000.000.000.000; `paid_on` mặc định hôm nay; `method` `TRANSFER` hoặc `CASH`; `ref` 1 đến 100 ký tự, tuỳ chọn. **Response:** 201 `{ "data": <đơn> }` đã gồm khoản thu mới. **Errors:** 400 `VALIDATION_ERROR`; 403 `FORBIDDEN`; 404 `NOT_FOUND`; 409 `ORDER_CANCELLED`; 409 `OVERPAYMENT` (vượt số còn phải thu; kèm `error.outstanding_vnd` dạng chuỗi).
+
+### `POST /api/sales/orders/[id]/cancel`
+Huỷ đơn; phần đã bán của lô quay về tồn. **Vai:** `manager`. **Request:** `{ "reason": "..." }` (3 đến 200 ký tự). **Response:** `{ "data": <đơn> }` với `status` `CANCELLED`. **Errors:** 400 `VALIDATION_ERROR`; 403 `FORBIDDEN`; 404 `NOT_FOUND`; 409 `ORDER_CANCELLED`; 409 `ORDER_HAS_PAYMENTS`.
+
+### `GET /api/sales/receivables`
+Công nợ thương lái (đơn sỉ `CONFIRMED` còn nợ), nợ nhiều nhất trước. **Vai:** `manager`, `accountant`. **Response:** `{ "data": { "outstanding_vnd": "625000", "overdue_count": 1, "overdue_vnd": "625000", "partners": [ { "partner_id", "partner_name", "outstanding_vnd", "overdue_vnd" } ] } }`. **Errors:** 403 `FORBIDDEN`.
+
+### `GET /api/partners` (thay đổi GĐ3)
+Thêm vai `accountant` đọc được danh sách (để chọn thương lái); thêm, sửa và xoá đối tác vẫn chỉ `manager`. Vai được đọc: `manager`, `officer`, `accountant`.
+
+### Core Action API cho mini-app: `/api/internal/apps/*`
+Chỉ ở cổng nội bộ 9081 của gateway (cổng 9080 không có route này). Người gọi là mini-app, chuyển nguyên `Authorization: Bearer <token của chính Trưởng HTX>`; gateway gắn `X-Dxos-Gateway`, và web kiểm lại token: chữ ký, thời hạn, `iss`, `aud`; `azp` phải là client đăng nhập của web (nếu không 401); token vai dịch vụ bị từ chối 403; cần claim `htx_code`; vai `manager` bắt buộc (403 nếu không); HTX lấy từ token. Mọi route dưới đây không đọc phiên và không chấp nhận vai khác `manager`. Giới hạn 120 yêu cầu mỗi phút theo header `Authorization` (429 khi vượt).
+
+**Errors chung:** 401 `UNAUTHORIZED` (thiếu hoặc sai token, `azp` sai, HTX của token không có); 403 `INTERNAL_GATEWAY_REQUIRED` (thiếu header của gateway) hoặc `FORBIDDEN` (token dịch vụ, thiếu `htx_code`, không phải `manager`); 429 từ gateway.
+
+#### `GET /api/internal/apps/sales/sellable-lots`
+Như `GET /api/sales/sellable-lots`, cho HTX của token. **Response:** `{ "data": [ { "lot_id", "lot_code", "dry_grade", "quality_grade", "capacity_g", "remaining_g" } ] }`.
+
+#### `POST /api/internal/apps/sales/retail-orders`
+Ghi đơn lẻ của mini-app và trừ tồn lô. **Request:**
+```json
+{ "external_ref": "7f3c...", "customer_name": "Nguyễn Văn A", "ordered_on": "2026-11-28",
+  "lines": [ { "lot_id": "cuid", "pack_count": 4, "pack_net_g": 250, "amount_vnd": 400000 } ] }
+```
+`external_ref` khớp `^[A-Za-z0-9_-]{1,64}$` (mã đơn của mini-app); `customer_name` 1 đến 100 ký tự, tuỳ chọn; `ordered_on` được chấp nhận nhưng bị bỏ qua (đơn luôn đặt hôm nay); `lines` 1 đến 50 dòng: `pack_count` 1 đến 999, `pack_net_g` 1 đến 100.000 (gam), `amount_vnd` số nguyên không âm (số hoặc chuỗi số tối đa 13 chữ số). Số gam của dòng là `pack_count × pack_net_g`. Khoá lạ bị từ chối.
+
+**Response:** 201 `{ "data": <đơn RETAIL, source TEA_SHOP> }`; **200** với đơn đầu tiên khi `external_ref` đã có (gửi lại không trừ tồn thêm).
+
+**Errors:** 400 `VALIDATION_ERROR`; 404 `NOT_FOUND` (lô không thuộc HTX); 409 `LOT_STOCK_SHORT` (kèm `error.stock`); 422 `LOT_NOT_SELLABLE`; cùng lỗi chung ở trên.
+
+#### `POST /api/internal/apps/sales/retail-orders/[external_ref]/cancel`
+Huỷ đơn lẻ theo `external_ref`; phần đã bán của lô quay về tồn. **Request:** `{ "reason": "..." }` (3 đến 200 ký tự, tuỳ chọn; thiếu thì lý do là "Huỷ từ gian hàng"). **Response:** `{ "data": <đơn> }`; huỷ lần hai trả đúng đơn đã huỷ, không lỗi. **Errors:** 400 `VALIDATION_ERROR` (`external_ref` sai dạng); 404 `NOT_FOUND` (không có đơn đó); 409 `ORDER_HAS_PAYMENTS` (đơn đã có khoản thu); cùng lỗi chung ở trên.
+
+### `GET /api/reports/season.csv`
+Một phần của báo cáo vụ/năm dưới dạng CSV (UTF-8 có BOM), `Content-Disposition: attachment; filename="bao-cao-<section>-<from>_<to>.csv"`. **Vai:** `manager`, `accountant`. **Query bắt buộc:** `from`, `to` (ngày thật, `from` không sau `to`, tối đa ba năm = 1.098 ngày), `section` (`members`, `purchases`, `member_money`, `processing`, `lots`, `sales`, `safety`). Cột tiếng Việt, mỗi phần một bảng. **Errors:** 400 `VALIDATION_ERROR`; 403 `FORBIDDEN`; **503 `SECTION_UNAVAILABLE`** ("Phần này chưa có dữ liệu để xuất") khi phần đó không tải được hoặc chưa có bảng xuất.
+
+### Trang báo cáo (không phải route API)
+`/manager/reports` và `/accountant/reports` chọn kỳ (năm nay, năm trước hoặc khoảng tự chọn); `/manager/reports/view?from=&to=` và `/accountant/reports/view?from=&to=` dựng báo cáo khổ A4. Kỳ sai hiện thông báo tại trang ("Chọn ngày bắt đầu và ngày kết thúc.", "Ngày không hợp lệ.", "Ngày kết thúc phải sau hoặc cùng ngày bắt đầu.", "Báo cáo tối đa ba năm."), vai khác bị chuyển về `/login`. Báo cáo gồm bảy phần (thành viên; thu mua búp; tiền xã viên; chế biến; lô và chứng nhận; bán hàng; an toàn), phần lỗi hiện "Chưa tải được phần này".
+
+---
+
 ## Error Codes
 
 | HTTP | code | Meaning |
@@ -1462,11 +1548,15 @@ Trang Server Component không cần đăng nhập; mã lô sai ký tự (`/`, `?
 | 409 | TICKET_IN_BATCH | Phiếu cân đã vào mẻ sao, không huỷ được (GĐ2) |
 | 409 | STOCK_CHANGED | Tồn chè khô đổi từ lúc chọn, kèm `stock` (GĐ2) |
 | 409 | CERTIFICATE_REVOKED | Chứng nhận đã thu hồi (GĐ2) |
+| 409 | LOT_STOCK_SHORT, OVERPAYMENT | Lô không còn đủ để bán, kèm `stock`; khoản thu vượt số còn phải thu, kèm `outstanding_vnd` (GĐ3) |
+| 409 | ORDER_CANCELLED, ORDER_PAID, ORDER_HAS_PAYMENTS | Đơn đã huỷ; đơn đã thu đủ; đơn có khoản thu không huỷ được (GĐ3) |
 | 422 | DOMAIN_ERROR | Business rule violated (e.g., approve already-approved entry) |
 | 422 | WITHDRAWAL_BELOW_FLOOR | Số ngày cách ly thấp hơn mức sàn của thuốc (GĐ1 S1) |
 | 422 | BATCH_EMPTY, DEVIATION_NOTE_REQUIRED | Mẻ chưa có phiếu hoặc sản lượng; tỷ lệ ngoài khoảng chuẩn thiếu giải trình (GĐ2) |
 | 422 | GRADE_MISMATCH, WITHDRAWAL_NOT_PASSED | Dòng tồn khác hạng với lô; phiếu nguồn chưa qua cách ly (GĐ2) |
+| 422 | LOT_NOT_SELLABLE, NOT_WHOLESALE | Lô chưa xuất QR hoặc chưa có khối lượng; chỉ đơn sỉ mới có hạn thanh toán (GĐ3) |
 | 422 | LOT_WITHOUT_BATCH, CERTIFICATE_NOT_VALID | Lô không có nguồn mẻ; chứng nhận hết hạn, thu hồi hoặc không thuộc HTX (GĐ2) |
+| 503 | SECTION_UNAVAILABLE | Phần báo cáo chưa có dữ liệu để xuất CSV (GĐ3) |
 | 400 | FILE_TOO_LARGE, FILE_TYPE | Tệp chứng nhận quá 10 MB hoặc không phải PDF, JPG, PNG (GĐ2) |
 | 500 | INTERNAL_ERROR | Unhandled server error |
 | 503 | AI_UNAVAILABLE | Ollama or FastAPI not responding |

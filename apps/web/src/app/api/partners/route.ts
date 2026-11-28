@@ -10,7 +10,8 @@ import { partnerCreateSchema } from '@/lib/validations/partner.schema'
 
 async function getPartners(request: Request) {
   const { role, htxProfileId } = await requireTenant()
-  if (role !== 'manager' && role !== 'officer') throw new ForbiddenError('Forbidden')
+  // The accountant reads partners to pick the buyer of a wholesale order; only the head edits them.
+  if (role !== 'manager' && role !== 'officer' && role !== 'accountant') throw new ForbiddenError('Forbidden')
   const url = new URL(request.url)
   const type = url.searchParams.get('type')
   const where: any = { htx_profile_id: htxProfileId }

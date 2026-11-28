@@ -20,6 +20,7 @@ BEGIN
                            'leaf_grades','daily_leaf_prices','fresh_leaf_tickets',
                            'input_items','input_advances','settlement_periods','member_settlements','member_ledger_entries',
                            'processing_batches','processing_batch_outputs','lot_batch_sources',
+                           'sales_orders','sales_order_lines','sales_payments',
                            'htx_certificates','lot_certificates'] LOOP
     IF to_regclass('public.' || t) IS NOT NULL THEN
       EXECUTE format('CREATE OR REPLACE TRIGGER dxos_audit_row AFTER INSERT OR UPDATE OR DELETE ON public.%I '

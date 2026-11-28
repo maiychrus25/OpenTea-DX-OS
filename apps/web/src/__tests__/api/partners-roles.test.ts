@@ -42,6 +42,18 @@ describe('partners roles', () => {
     expect(prisma.partner.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { htx_profile_id: 'htx-TC' } }))
   })
 
+  test('GET as accountant lists the partners of the caller HTX, for wholesale orders', async () => {
+    signIn('accountant')
+    expect((await partners.GET(json('GET'), {})).status).toBe(200)
+    expect(prisma.partner.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { htx_profile_id: 'htx-TC' } }))
+  })
+
+  test('POST as accountant answers 403 and writes nothing', async () => {
+    signIn('accountant')
+    expect((await partners.POST(json('POST', newPartner), {})).status).toBe(403)
+    expect(prisma.partner.create).not.toHaveBeenCalled()
+  })
+
   test('POST as officer answers 403 and writes nothing', async () => {
     signIn('officer')
     expect((await partners.POST(json('POST', newPartner), {})).status).toBe(403)
@@ -60,6 +72,8 @@ describe('partners roles', () => {
     ['PUT', 'farmer'],
     ['DELETE', 'officer'],
     ['DELETE', 'farmer'],
+    ['PUT', 'accountant'],
+    ['DELETE', 'accountant'],
   ])('%s as %s answers 403', async (method, role) => {
     signIn(role)
     const handler = method === 'PUT' ? partnerById.PUT : partnerById.DELETE

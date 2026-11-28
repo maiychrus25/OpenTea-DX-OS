@@ -1,0 +1,67 @@
+/* SPDX-License-Identifier: MIT */
+/* Copyright (c) 2026 OpenTea Developers */
+
+.pad { padding: 14px 18px; }
+.center { display: flex; justify-content: center; }
+.grow { flex: 1 1 200px; min-width: 0; }
+.error { margin: 0; color: var(--color-danger); font-weight: 600; font-size: 13px; }
+.status { margin: 0; color: var(--color-success); font-weight: 600; font-size: 13px; }
+.total { margin: 0; font-size: 15px; }
+.bigLine { margin: 0 0 6px; font-size: 15px; }
+.subhead { margin: 0 0 10px; font-size: 14px; }
+.plainList { margin: 0; padding-left: 18px; font-size: 14px; display: flex; flex-direction: column; gap: 4px; }
+.link, .jumpLink { color: var(--color-primary); font-weight: 600; text-decoration: none; font-size: 14px; }
+.primaryLink { display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px; border-radius: 12px; background: var(--color-primary); color: var(--color-primary-foreground); font-weight: 700; font-size: 14px; text-decoration: none; }
+.link:focus-visible, .jumpLink:focus-visible, .primaryLink:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; border-radius: 6px; }
+
+.listLayout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 360px); gap: 20px; align-items: start; min-width: 0; }
+.detailLayout { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
+.filters > label { flex: 1 1 140px; min-width: 0; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; padding: 12px 18px; border-bottom: 1px solid var(--color-border-row); font-size: 13.5px; }
+.row > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.badges { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.overdue { display: inline-block; padding: 3px 10px; border-radius: 999px; background: var(--color-danger-subtle); color: var(--color-danger); font-size: 12px; font-weight: 700; }
+.partnerRow { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 12px; font-size: 13.5px; padding: 8px 0; border-bottom: 1px solid var(--color-border-row); list-style: none; }
+
+.form { display: flex; flex-direction: column; gap: 14px; padding: 18px; }
+.formGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.fieldset { margin: 0; padding: 14px 18px; border: 0; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.fieldset legend { padding: 0; font-size: 13px; font-weight: 600; color: var(--color-ink-secondary); margin-bottom: 6px; }
+.lineRow { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) auto; gap: 10px; align-items: end; }
+.lineAmount { margin: 0; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0; }
+.metrics dt { font-size: 12.5px; color: var(--color-ink-secondary); }
+.metrics dd { margin: 2px 0 0; font-size: 17px; font-weight: 700; color: var(--color-ink-heading); overflow-wrap: anywhere; }
+
+.deliveryNote { display: flex; flex-direction: column; gap: 12px; padding: 18px; border-radius: 16px; background: var(--color-surface-card); border: 1px solid var(--color-border); }
+.noteActions { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; }
+.printArea { display: flex; flex-direction: column; gap: 8px; max-width: 148mm; padding: 8mm; background: var(--color-surface-card); color: var(--color-ink-primary); font-size: 12px; }
+.noteTitle { margin: 0; font-size: 18px; text-align: center; }
+.noteTable { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+.noteTable th, .noteTable td { padding: 4px; border-bottom: 1px solid var(--color-border-row); text-align: left; }
+.signRow { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 12mm; text-align: center; }
+.signRow span { border-top: 1px solid var(--color-ink-primary); padding-top: 4px; }
+
+.listLayout input:focus-visible, .listLayout select:focus-visible, .listLayout textarea:focus-visible,
+.detailLayout input:focus-visible, .detailLayout select:focus-visible, .detailLayout textarea:focus-visible,
+.form input:focus-visible, .form select:focus-visible, .form textarea:focus-visible,
+.fieldset input:focus-visible, .fieldset select:focus-visible, .fieldset textarea:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; }
+
+@media (max-width: 900px) {
+  .listLayout { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 480px) {
+  .formGrid, .metrics { grid-template-columns: minmax(0, 1fr); }
+  .lineRow { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media print {
+  @page { size: A5 portrait; margin: 10mm; }
+  /* The local class sits inside :not() so each selector stays pure for CSS modules. */
+  :global(body) *:not(.printArea) { visibility: hidden; }
+  :global(body) .printArea,
+  :global(body) .printArea * { visibility: visible; }
+  :global(body) .printArea { position: absolute; left: 0; top: 0; width: 148mm; max-width: none; padding: 0; }
+}

@@ -10,7 +10,7 @@ Các app mẫu trong repo:
 - [`miniapps/hello`](../miniapps/hello/README.md): khoảng 80 dòng Python, chỉ dùng thư viện chuẩn, không có database. Nên đọc trước.
 - [`miniapps/hub-mobile`](../miniapps/hub-mobile/README.md): trang tải app OpenTea trên điện thoại (APK Android, thêm bản web vào màn hình chính trên iPhone); chỉ hiển thị liên kết, không lưu dữ liệu.
 - [`miniapps/tea-tour`](../miniapps/tea-tour/): FastAPI và Jinja2, có database, route công khai và route theo vai trò.
-- Ba app nghiệp vụ cùng khuôn với `tea-tour` (mỗi app có README riêng): [`miniapps/leaf-purchase`](../miniapps/leaf-purchase/README.md) (thu mua búp tươi, route theo ba vai trò, đọc nông hộ qua Hasura bằng token của người gọi), [`miniapps/tea-shop`](../miniapps/tea-shop/README.md) (cửa hàng, đặt hàng công khai, tồn kho) và [`miniapps/farm-supply`](../miniapps/farm-supply/README.md) (đợt mua chung vật tư).
+- Ba app nghiệp vụ cùng khuôn với `tea-tour` (mỗi app có README riêng): [`miniapps/leaf-purchase`](../miniapps/leaf-purchase/README.md) (thu mua búp tươi, route theo ba vai trò, đọc nông hộ qua Hasura bằng token của người gọi), [`miniapps/tea-shop`](../miniapps/tea-shop/README.md) (cửa hàng, đặt hàng công khai, tồn kho; từ 0.4.0 bán gói chè từ lô thật của HTX và xác nhận đơn qua lõi, xem "Ghi vào lõi" ở mục 3) và [`miniapps/farm-supply`](../miniapps/farm-supply/README.md) (đợt mua chung vật tư).
 - [`miniapps/htx-dashboard`](../miniapps/htx-dashboard/README.md): app chỉ đọc, **không có database** (xem "App chỉ đọc không database" ở §5): đọc số liệu của HTX từ lõi qua Hasura bằng token của người gọi và vẽ biểu đồ bằng SVG dựng ở server.
 
 App có `description` trong manifest sẽ hiện thành thẻ trong **Kho ứng dụng** của trưởng HTX (§8). Chỉ app nằm trong `miniapps/` của repo mới có thẻ.
@@ -55,7 +55,7 @@ Chuẩn là JSON Schema tại [`platform/apps/manifest.schema.json`](../platform
 | `version` | có | SemVer, ví dụ `0.1.0` |
 | `license` | có | thuộc danh sách OSI của CLI: `MIT`, `Apache-2.0`, `BSD-2-Clause`, `BSD-3-Clause`, `ISC`, `MPL-2.0`, `EPL-2.0`, `LGPL-3.0-only`, `LGPL-3.0-or-later`, `GPL-2.0-only`, `GPL-3.0-only`, `GPL-3.0-or-later`, `AGPL-3.0-only`, `AGPL-3.0-or-later` |
 | `publisher` | có | 1–80 ký tự |
-| `requires.core` | có | `>=X.Y.Z`. Lõi hiện tại là `version` trong `apps/web/package.json` (`1.20.0`) |
+| `requires.core` | có | `>=X.Y.Z`. Lõi hiện tại là `version` trong `apps/web/package.json` (`1.21.0`) |
 | `runtime.build` / `runtime.image` | đúng một trong hai | `build`: thư mục tương đối trong thư mục app (thường là `.`). `image`: phải ghim digest, dạng `<ref>@sha256:<64 ký tự hex>` |
 | `runtime.port` | có | 1–65535, cổng app nghe trong container |
 | `runtime.health` | có | đường dẫn health check (đã cắt tiền tố), ví dụ `/healthz`, phải trả 2xx |
@@ -163,6 +163,10 @@ Trên route cần đăng nhập, app nhận `Authorization: Bearer <access token
 - Trên route công khai, app không nhận header `Authorization` (web bỏ header của trình duyệt), nên phải tự validate mọi dữ liệu vào.
 
 **Đọc dữ liệu lõi:** gọi `http://apisix:9081/api/data/graphql` và chuyển tiếp nguyên header `Authorization` của người dùng (xem `miniapps/tea-tour/tea_tour/core_client.py`). Hasura áp quyền theo dòng bằng `htx_code` của chính token, nên app chỉ thấy dữ liệu của HTX người dùng. App không đọc bảng lõi trực tiếp.
+
+**Ghi vào lõi (Core Action API, từ lõi 1.21.0):** app muốn ghi một việc vào dữ liệu của lõi (không giữ bảng cô lập) gọi `POST` hoặc `GET` tới `${DXOS_CORE_INTERNAL_URL}/api/internal/apps/...` (mặc định `http://apisix:9081`, chỉ cổng nội bộ) và chuyển nguyên header `Authorization` của người dùng. Lõi kiểm lại token (client đăng nhập của web, không nhận token dịch vụ), đòi vai `manager` và lấy HTX từ claim `htx_code`, nên app không thể ghi cho HTX khác; chi tiết ở [rules-and-limits.md](./rules-and-limits.md) mục 3.29 và [api-contract.md](./api-contract.md). Hành động hiện có là bán hàng: `GET /api/internal/apps/sales/sellable-lots`, `POST /api/internal/apps/sales/retail-orders` và `POST /api/internal/apps/sales/retail-orders/<external_ref>/cancel`. App gửi `external_ref` ổn định (mã đơn của app) để gửi lại không tạo bản thứ hai, chờ tối đa 5 giây, và coi 4xx là bị lõi từ chối còn 5xx hay hết thời gian là lõi chưa trả lời. App dùng API này khai `requires.core: ">=1.21.0"` (như `tea-shop` 0.4.0).
+
+**tea-shop 0.4.0:** sản phẩm có thêm `lot_id` (lô `QR_EXPORTED` của HTX, chọn từ `sellable-lots`) và `pack_net_g` (gam tịnh mỗi gói), cùng có hoặc cùng rỗng (`migrations/003_core_lots.sql`, kèm `orders.core_order_no`). Khi trưởng HTX xác nhận đơn, app ghi đơn lẻ vào sổ bán hàng của lõi trước rồi mới chuyển `CONFIRMED`; lô không đủ (409 `LOT_STOCK_SHORT`) hoặc lõi không trả lời thì đơn giữ nguyên trạng thái và trang báo lỗi. Huỷ đơn đã ghi gọi huỷ ở lõi trước để trả lại tồn lô. Đơn không có dòng gắn lô không gọi lõi. Cấu hình: biến `DXOS_CORE_INTERNAL_URL`. Chi tiết ở README của app.
 
 ## 4. Giao diện: HTML không script
 

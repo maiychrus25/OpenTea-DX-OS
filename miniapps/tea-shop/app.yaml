@@ -4,10 +4,10 @@ apiVersion: dxos/v1
 id: tea-shop
 name: Cửa hàng chè
 description: Giới thiệu sản phẩm chè, nhận đơn đặt hàng và theo dõi đơn.
-version: 0.3.0
+version: 0.4.0
 license: MIT
 publisher: OpenTea Developers
-requires: { core: ">=1.10.0" }
+requires: { core: ">=1.21.0" }
 runtime:
   build: .
   port: 8080
@@ -49,10 +49,13 @@ store:
     Trưởng HTX đặt khuyến mãi theo phần trăm cho từng sản phẩm, trang đặt hàng hiện giá đã giảm và đơn tính theo giá đó. Trợ lý đề xuất giảm giá cho sản phẩm tồn kho nhiều mà lâu chưa bán được; chỉ khi trưởng HTX đồng ý thì khuyến mãi mới được tạo.
 
     Đơn mới trừ tồn kho ngay, đơn huỷ trả lại tồn kho. Sản phẩm có mã lô sẽ có đường dẫn xem nguồn gốc.
+
+    Sản phẩm có thể gắn với một lô chè đã xuất QR của HTX kèm trọng lượng tịnh mỗi gói. Khi trưởng HTX xác nhận đơn, số gam của các gói được ghi vào sổ bán hàng của HTX và trừ vào tồn của lô; nếu lô không còn đủ thì đơn chưa được xác nhận. Huỷ đơn trả lại tồn của lô.
   data:
     - "Sản phẩm: tên, quy cách, giá, tồn kho, mã lô, đang bán hay ngừng"
     - "Đơn hàng: mã đơn, tên khách, số điện thoại, địa chỉ, ghi chú, tổng tiền, tình trạng"
     - "Dòng đơn: sản phẩm, quy cách, giá và số lượng tại lúc đặt"
+    - "Gắn lô: mã lô của HTX, trọng lượng tịnh mỗi gói, số đơn trong sổ bán hàng của HTX"
     - "Khuyến mãi: sản phẩm, phần trăm giảm, ngày bắt đầu và kết thúc, người tạo"
   personal_data: "Lưu tên, số điện thoại, địa chỉ và ghi chú của khách đặt hàng. Chỉ trưởng HTX xem được. Khách chỉ tra được đơn của mình khi nhập đúng mã đơn và số điện thoại."
   screenshots:

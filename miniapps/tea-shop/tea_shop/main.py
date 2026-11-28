@@ -21,7 +21,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, Red
 from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException
 
-from tea_shop import appkit, store
+from tea_shop import appkit, core, store
 from tea_shop.claims import Claims, read_claims
 
 PREFIX = "/apps/tea-shop"
@@ -29,12 +29,16 @@ VN_TZ = timezone(timedelta(hours=7))  # Asia/Ho_Chi_Minh: UTC+7 with no DST sinc
 THEMES = ("light", "dark")  # the shell passes ?theme=; without it /dxos-app.css follows the system setting
 HTX_RE = re.compile(r"[A-Za-z0-9_-]{1,20}")
 LOT_RE = re.compile(r"[A-Za-z0-9-]{1,40}")
+LOT_ID_RE = re.compile(r"[A-Za-z0-9_-]{1,64}")
 MAX_LINES = 100  # product lines one order form may carry
 ERRORS = {401: "Cần đăng nhập để xem trang này.", 403: "Tài khoản của bạn không được vào trang này.",
           404: "Không có trang này.", 405: "Không có trang này.",
           503: "Hệ thống đang bận. Vui lòng thử lại sau ít phút."}
 ORDER_STATUS = {"NEW": "Mới", "CONFIRMED": "Đã xác nhận", "SHIPPING": "Đang giao", "DONE": "Hoàn tất",
                 "CANCELLED": "Đã huỷ"}
+CORE_DOWN = "Chưa ghi được vào sổ bán hàng của HTX. Thử lại sau."
+CORE_REFUSED = {"LOT_NOT_SELLABLE": "Lô không còn bán được, không ghi được đơn này.",
+                "UNAUTHORIZED": "Tài khoản của bạn không được ghi vào sổ bán hàng."}
 NOT_FOUND_ORDER = "Không tìm thấy đơn hàng với mã và số điện thoại này."
 # Fixed keys only: ?notice= never carries free text into the page.
 NOTICES = {"unchanged": "Không có gì thay đổi: đơn đã được xử lý trước đó.", "saved": "Đã lưu sản phẩm.",
@@ -178,9 +182,10 @@ def manager_home(request: Request, claims: Claims = Depends(role("manager")), co
 
 
 def product_form(name: str = Form(""), pack: str = Form(""), price_vnd: str = Form(""), stock: str = Form(""),
-                 lot_code: str = Form(""), active: str = Form(""), stock_delta: str = Form("0")) -> dict:
+                 lot_code: str = Form(""), active: str = Form(""), stock_delta: str = Form("0"),
+                 lot_id: str = Form(""), pack_net_g: str = Form("")) -> dict:
     return {"name": name, "pack": pack, "price_vnd": price_vnd, "stock": stock, "lot_code": lot_code, "active": active,
-            "stock_delta": stock_delta}
+            "stock_delta": stock_delta, "lot_id": lot_id, "pack_net_g": pack_net_g}
 
 
 def parse_delta(raw: str) -> int | None:
@@ -204,10 +209,18 @@ def read_product_form(form: dict, creating: bool) -> tuple[dict, list[str]]:
         errors.append("Tồn kho phải là số nguyên, không âm." if creating else "Điều chỉnh tồn kho phải là số nguyên từ -9999 đến 9999.")
     if lot_code and not LOT_RE.fullmatch(lot_code):
         errors.append("Mã lô chỉ gồm chữ, số và dấu gạch ngang, tối đa 40 ký tự.")
+    lot_id, net_raw = form["lot_id"].strip(), form["pack_net_g"].strip()
+    net_g = parse_int(net_raw) if net_raw else None
+    if not creating and bool(lot_id) != bool(net_raw):
+        errors.append("Chọn lô thì cần nhập trọng lượng tịnh mỗi gói, và ngược lại.")
+    elif not creating and lot_id and not (LOT_ID_RE.fullmatch(lot_id) and net_g is not None and 1 <= net_g <= 100000):
+        errors.append("Trọng lượng tịnh mỗi gói là số gam từ 1 đến 100000, và lô phải chọn từ danh sách.")
     if errors:
         return {}, errors
     values = {"name": name, "pack": pack, "price_vnd": price, "lot_code": lot_code or None, "active": bool(form["active"])}
-    return {**values, ("stock" if creating else "stock_delta"): stock}, []
+    if creating:
+        return {**values, "stock": stock}, []
+    return {**values, "stock_delta": stock, "lot_id": lot_id or None, "pack_net_g": net_g if lot_id else None}, []
 
 
 @app.post("/products")
@@ -220,11 +233,34 @@ def create_product(request: Request, claims: Claims = Depends(role("manager")), 
     return redirect(request, "/")
 
 
-def edit_page(request, product, status=200, errors=(), form=None):
+def kg_text(grams: int) -> str:
+    """Kilograms with one decimal and a comma, cut down (never more than the grams there are)."""
+    return f"{grams // 100 / 10:.1f}".replace(".", ",")
+
+
+def lot_choices(authorization: str | None, product) -> tuple[list[dict], bool]:
+    """(lots to pick from, whether the list could be read). The product's own lot stays pickable when sold out."""
+    try:
+        lots = core.sellable_lots(authorization)
+    except (core.CoreRefused, core.CoreUnavailable):
+        return [], False
+    choices = [{"lot_id": lot["lot_id"], "lot_code": lot.get("lot_code", ""),
+                "label": " · ".join(filter(None, [lot.get("lot_code"), lot.get("dry_grade") or lot.get("quality_grade"),
+                                                  f"còn {kg_text(lot.get('remaining_g', 0))} kg"]))} for lot in lots]
+    if product.lot_id and all(c["lot_id"] != product.lot_id for c in choices):
+        choices.append({"lot_id": product.lot_id, "lot_code": product.lot_code or "",
+                        "label": f"{product.lot_code or product.lot_id} · đã hết hoặc không còn bán được"})
+    return choices, True
+
+
+def edit_page(request, product, authorization=None, status=200, errors=(), form=None):
     form = form or {"name": product.name, "pack": product.pack, "price_vnd": str(product.price_vnd),
                     "stock_delta": "0", "lot_code": product.lot_code or "",
-                    "active": "on" if product.active else ""}
-    return page(request, "product_edit.html", status, product=product, errors=errors, form=form)
+                    "active": "on" if product.active else "", "lot_id": product.lot_id or "",
+                    "pack_net_g": str(product.pack_net_g or "")}
+    lots, lots_ok = lot_choices(authorization, product)
+    return page(request, "product_edit.html", status, product=product, errors=errors, form=form, lots=lots,
+                lots_ok=lots_ok)
 
 
 def existing_product(conn, htx_code: str, product_id: UUID) -> store.Product:
@@ -235,22 +271,27 @@ def existing_product(conn, htx_code: str, product_id: UUID) -> store.Product:
 
 
 @app.get("/products/{product_id}/edit")
-def edit_product_form(request: Request, product_id: UUID, claims: Claims = Depends(role("manager")), conn=Depends(db)):
-    return edit_page(request, existing_product(conn, claims.htx_code, product_id))
+def edit_product_form(request: Request, product_id: UUID, claims: Claims = Depends(role("manager")), conn=Depends(db),
+                      authorization: str | None = Header(None)):
+    return edit_page(request, existing_product(conn, claims.htx_code, product_id), authorization)
 
 
 @app.post("/products/{product_id}/edit")
 def edit_product(request: Request, product_id: UUID, claims: Claims = Depends(role("manager")), conn=Depends(db),
-                 form: dict = Depends(product_form)):
+                 form: dict = Depends(product_form), authorization: str | None = Header(None)):
     product = existing_product(conn, claims.htx_code, product_id)
     values, errors = read_product_form(form, creating=False)
     if errors:
-        return edit_page(request, product, 400, errors, form)
+        return edit_page(request, product, authorization, 400, errors, form)
+    if values["lot_id"] and not values["lot_code"]:  # the traceability code follows the picked lot
+        picked = next((c for c in lot_choices(authorization, product)[0] if c["lot_id"] == values["lot_id"]), None)
+        if picked and LOT_RE.fullmatch(picked["lot_code"]):
+            values["lot_code"] = picked["lot_code"]
     saved = store.edit_product(conn, claims.htx_code, product_id, **values)
     if saved is None:
         raise HTTPException(404)
     if isinstance(saved, store.Refusal):
-        return edit_page(request, store.get_product(conn, claims.htx_code, product_id) or product, 400,
+        return edit_page(request, store.get_product(conn, claims.htx_code, product_id) or product, authorization, 400,
                          [saved.message], form)
     return redirect(request, "/", notice="saved")
 
@@ -336,8 +377,33 @@ def order_detail(request: Request, order_id: UUID, claims: Claims = Depends(role
     if found is None:
         raise HTTPException(404)
     order, items = found
-    return page(request, "order_detail.html", order=order, items=items,
-                notice=NOTICES.get(request.query_params.get("notice", "")))
+    return order_page(request, order, items, notice=NOTICES.get(request.query_params.get("notice", "")))
+
+
+def order_page(request, order, items, status=200, notice=None, errors=()):
+    return page(request, "order_detail.html", status, order=order, items=items, notice=notice, errors=errors)
+
+
+def core_failure(err: Exception, lines: list[dict], lot_codes: dict[str, str]) -> tuple[int, str]:
+    """(HTTP status, Vietnamese message) for a failed call to the core, shown on the order page."""
+    if isinstance(err, core.CoreRefused):
+        if err.code == "LOT_STOCK_SHORT":
+            return 409, stock_short_text(err.body, lines, lot_codes)
+        return 409, CORE_REFUSED.get(err.code, CORE_DOWN)
+    return 503, CORE_DOWN
+
+
+def stock_short_text(body: dict, lines: list[dict], lot_codes: dict[str, str]) -> str:
+    """Name the first lot whose remaining grams are below what the order draws from it."""
+    error = body.get("error")
+    stock = body.get("stock") or (error.get("stock") if isinstance(error, dict) else None) or []
+    needed: dict[str, int] = {}
+    for line in lines:
+        needed[line["lot_id"]] = needed.get(line["lot_id"], 0) + line["pack_count"] * line["pack_net_g"]
+    short = next((e for e in stock if isinstance(e, dict) and e.get("remaining_g", 0) < needed.get(e.get("lot_id"), 0)),
+                 stock[0] if stock and isinstance(stock[0], dict) else {})
+    lot_id = short.get("lot_id", lines[0]["lot_id"])
+    return f"Lô {lot_codes.get(lot_id, lot_id)} chỉ còn {kg_text(int(short.get('remaining_g', 0)))} kg, không đủ cho đơn này."
 
 
 def move_order(request, moved: bool | None, order_id: UUID):
@@ -346,14 +412,38 @@ def move_order(request, moved: bool | None, order_id: UUID):
     return redirect(request, f"/orders/{order_id}", **({} if moved else {"notice": "unchanged"}))
 
 
+def core_step(request, conn, claims, order_id: UUID, authorization: str | None, confirm: bool):
+    """The core's side of confirming (NEW -> CONFIRMED, with lot lines) or of cancelling an order that has a core
+    number. Returns None to carry on with the local move, or the page that says why the core refused or is down."""
+    found = store.get_order(conn, claims.htx_code, order_id)
+    if found is None:
+        raise HTTPException(404)
+    order, items = found
+    lines, lot_codes = store.lot_lines(conn, claims.htx_code, order_id)
+    try:
+        if confirm and order.status == "NEW" and lines:
+            number = core.confirm_retail(authorization, str(order_id), lines, order.customer_name)["order_no"]
+            return move_order(request, store.confirm_with_core(conn, claims.htx_code, order_id, number), order_id)
+        if not confirm and order.core_order_no and order.status in store.CANCELLABLE:
+            core.cancel_retail(authorization, str(order_id))
+    except (core.CoreRefused, core.CoreUnavailable) as err:
+        status, message = core_failure(err, lines, lot_codes)
+        return order_page(request, order, items, status, errors=[message])
+    return None
+
+
 @app.post("/orders/{order_id}/advance")
-def advance_order(request: Request, order_id: UUID, claims: Claims = Depends(role("manager")), conn=Depends(db)):
-    return move_order(request, store.advance_order(conn, claims.htx_code, order_id), order_id)
+def advance_order(request: Request, order_id: UUID, claims: Claims = Depends(role("manager")), conn=Depends(db),
+                  authorization: str | None = Header(None)):
+    return (core_step(request, conn, claims, order_id, authorization, True)
+            or move_order(request, store.advance_order(conn, claims.htx_code, order_id), order_id))
 
 
 @app.post("/orders/{order_id}/cancel")
-def cancel_order(request: Request, order_id: UUID, claims: Claims = Depends(role("manager")), conn=Depends(db)):
-    return move_order(request, store.cancel_order(conn, claims.htx_code, order_id), order_id)
+def cancel_order(request: Request, order_id: UUID, claims: Claims = Depends(role("manager")), conn=Depends(db),
+                 authorization: str | None = Header(None)):
+    return (core_step(request, conn, claims, order_id, authorization, False)
+            or move_order(request, store.cancel_order(conn, claims.htx_code, order_id), order_id))
 
 
 # ---------- Promotions ----------
