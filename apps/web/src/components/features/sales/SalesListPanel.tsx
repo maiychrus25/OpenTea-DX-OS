@@ -44,8 +44,8 @@ export function SalesListPanel({ basePath, initialOverdue }: Props) {
     fetchJson<{ data: Partner[] }>('/api/partners')
       .then(body => setPartners(body.data))
       .catch(() => setPartners(null))
-    fetchJson<ReceivablesSummary>('/api/sales/receivables')
-      .then(body => setReceivables(body))
+    fetchJson<{ data: ReceivablesSummary }>('/api/sales/receivables')
+      .then(body => setReceivables(body.data))
       .catch(() => setReceivables(null))
   }, [])
 
