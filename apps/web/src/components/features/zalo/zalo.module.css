@@ -1,0 +1,23 @@
+/* SPDX-License-Identifier: MIT
+   SPDX-FileCopyrightText: 2026 OpenTea Developers */
+
+.body { display: flex; flex-direction: column; gap: 8px; padding: 16px 18px; }
+.title { margin: 0; font-size: 16px; font-weight: 700; color: var(--color-ink-heading); }
+.status { margin: 0; font-size: 15px; font-weight: 700; color: var(--color-ink-primary); }
+.meta { margin: 0; font-size: 13px; color: var(--color-ink-secondary); }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+.farmerBody { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 14px 18px 18px; }
+.form { display: flex; flex-direction: column; gap: 14px; }
+.field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; color: var(--color-ink-secondary); }
+.input, .select { box-sizing: border-box; height: 38px; min-width: 0; padding: 0 10px; border: 1px solid var(--color-border-input); border-radius: var(--radius-button); background: var(--color-surface-card); color: var(--color-ink-primary); font: inherit; }
+.input:focus-visible, .select:focus-visible, .check input:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 1px; }
+.input { width: 160px; }
+.check { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--color-ink-primary); }
+.fieldset { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 12px; border: 1px solid var(--color-border-subtle); border-radius: var(--radius-button); }
+.fieldset legend { padding: 0 6px; font-size: 13px; font-weight: 700; color: var(--color-ink-primary); }
+.filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+.tableWrap { overflow-x: auto; }
+.table { width: 100%; min-width: 720px; border-collapse: collapse; font-size: 13.5px; } /* scrolls inside .tableWrap on a phone instead of squeezing the reason column */
+.table th, .table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--color-border-row); vertical-align: top; color: var(--color-ink-primary); }
+.table th { font-size: 12.5px; font-weight: 700; color: var(--color-ink-secondary); }
+.checks { display: flex; flex-wrap: wrap; gap: 10px 18px; }

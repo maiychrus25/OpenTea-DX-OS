@@ -38,7 +38,7 @@ def test_user_routes_refuse_agent_telegram_and_staff_tokens():
     for route_id in ("workflow", "disease", "llm-chat"):
         schema = routes[route_id]["plugins"]["openid-connect"]["claim_schema"]
         assert schema["properties"]["realm_access"]["properties"]["roles"] == {
-            "not": {"contains": {"enum": ["agent", "telegram", "staff-sync", "web-service"]}}
+            "not": {"contains": {"enum": ["agent", "telegram", "zalo", "staff-sync", "web-service"]}}
         }, route_id
 
 
@@ -72,6 +72,29 @@ def test_telegram_route_needs_the_relay_client_and_role_on_the_internal_port():
     assert schema["properties"]["realm_access"]["properties"]["roles"]["contains"] == {"enum": ["telegram"]}
     assert route["plugins"]["limit-count"]["key"] == "$http_authorization"
     assert "X-Dxos-Gateway" in route["plugins"]["proxy-rewrite"]["headers"]["set"]
+
+
+def test_zalo_route_needs_the_relay_client_and_role_on_the_internal_port():
+    route = load_routes()["internal-zalo"]
+    assert route["uri"] == "/api/internal/zalo/*"
+    assert route["vars"] == [["server_port", "==", "9081"]]
+    assert route["upstream_id"] == "web"
+    schema = route["plugins"]["openid-connect"]["claim_schema"]
+    assert schema["required"] == ["aud", "azp", "realm_access"]
+    assert schema["properties"]["azp"] == {"enum": ["dxos-zalo"]}
+    assert schema["properties"]["aud"]["anyOf"][0] == {"enum": ["dx-os-core"]}
+    assert schema["properties"]["realm_access"]["properties"]["roles"]["contains"] == {"enum": ["zalo"]}
+    limit = route["plugins"]["limit-count"]
+    assert (limit["count"], limit["time_window"], limit["key"]) == (120, 60, "$http_authorization")
+    assert "X-Dxos-Gateway" in route["plugins"]["proxy-rewrite"]["headers"]["set"]
+
+
+def test_zalo_and_telegram_routes_do_not_accept_each_others_tokens():
+    routes = load_routes()
+    zalo = routes["internal-zalo"]["plugins"]["openid-connect"]["claim_schema"]["properties"]
+    telegram = routes["internal-telegram"]["plugins"]["openid-connect"]["claim_schema"]["properties"]
+    assert zalo["azp"] != telegram["azp"]
+    assert zalo["realm_access"]["properties"]["roles"]["contains"] != telegram["realm_access"]["properties"]["roles"]["contains"]
 
 
 def test_web_disease_route_takes_only_the_web_service_client_on_the_internal_port():
@@ -140,6 +163,21 @@ def test_release_web_refuses_the_dev_or_empty_telegram_callback_key(value):
     assert svc["environment"]["DXOS_TELEGRAM_CALLBACK_KEY"].startswith("${DXOS_TELEGRAM_CALLBACK_KEY:?")
     refused = run_release_wrapper("web", DXOS_INTERNAL_GATEWAY_SECRET="long-random-value", DXOS_TELEGRAM_CALLBACK_KEY=value)
     assert refused.returncode == 1 and "DXOS_TELEGRAM_CALLBACK_KEY" in refused.stderr and "started" not in refused.stdout
+
+
+DEV_ZALO_TOKEN_KEY = "6465762d7a616c6f2d746f6b656e2d6b65792d6e6f742d666f722d70726f6421"
+
+
+def test_zalo_token_key_has_a_dev_default_that_never_reaches_a_release():
+    assert load_compose(COMPOSE)["web"]["environment"]["DXOS_ZALO_TOKEN_KEY"] == "${DXOS_ZALO_TOKEN_KEY:-" + DEV_ZALO_TOKEN_KEY + "}"
+    # Zalo is optional, so a release may run without the key, but never with the public dev one.
+    assert load_compose(RELEASE)["web"]["environment"]["DXOS_ZALO_TOKEN_KEY"] == "${DXOS_ZALO_TOKEN_KEY:-}"
+    ok = {"DXOS_INTERNAL_GATEWAY_SECRET": "long-random-value"}
+    refused = run_release_wrapper("web", **ok, DXOS_ZALO_TOKEN_KEY=DEV_ZALO_TOKEN_KEY)
+    assert refused.returncode == 1 and "DXOS_ZALO_TOKEN_KEY" in refused.stderr and "started" not in refused.stdout
+    for value in ("", "a" * 64):
+        started = run_release_wrapper("web", **ok, DXOS_ZALO_TOKEN_KEY=value)
+        assert started.returncode == 0 and "started" in started.stdout
 
 
 def test_telegram_credentials_are_separate_volumes_mounted_read_only():
@@ -269,7 +307,7 @@ def test_mcp_route_takes_only_the_bridge_client_and_no_service_role():
     assert schema["properties"]["azp"] == {"enum": ["dxos-mcp"]}
     assert schema["properties"]["aud"]["anyOf"][0] == {"enum": ["dx-os-core"]}
     assert schema["properties"]["realm_access"]["properties"]["roles"] == {
-        "not": {"contains": {"enum": ["agent", "telegram", "staff-sync", "web-service"]}}
+        "not": {"contains": {"enum": ["agent", "telegram", "zalo", "staff-sync", "web-service"]}}
     }
 
 
@@ -347,6 +385,53 @@ def test_apps_route_takes_a_user_token_on_the_internal_port_and_refuses_service_
     assert route["vars"] == [["server_port", "==", "9081"]]
     schema = route["plugins"]["openid-connect"]["claim_schema"]
     assert schema == load_routes()["workflow"]["plugins"]["openid-connect"]["claim_schema"]
-    assert schema["properties"]["realm_access"]["properties"]["roles"]["not"]["contains"]["enum"] == ["agent", "telegram", "staff-sync", "web-service"]
+    assert schema["properties"]["realm_access"]["properties"]["roles"]["not"]["contains"]["enum"] == ["agent", "telegram", "zalo", "staff-sync", "web-service"]
     assert route["plugins"]["limit-count"]["count"] == 120 and route["plugins"]["limit-count"]["key"] == "$http_authorization"
     assert "X-Dxos-Gateway" in route["plugins"]["proxy-rewrite"]["headers"]["set"]
+
+
+def test_zalo_credentials_live_in_their_own_volume_written_by_a_root_helper():
+    doc = load_document(COMPOSE)
+    assert doc["services"]["dxos-zalo"]["volumes"] == ["dxos-zalo-env:/run/dxos-zalo:ro"]
+    helper = doc["services"]["dxos-zalo-env"]
+    assert helper["profiles"] == ["tools"] and helper["user"] == "0:0" and helper["network_mode"] == "none"
+    assert helper["volumes"] == ["dxos-zalo-env:/run/dxos-zalo"]
+    assert "dxos-zalo-env" in doc["volumes"]
+
+
+def test_zalo_stub_is_test_only_and_loopback_published_on_8084():
+    stub = load_compose(COMPOSE)["dxos-zalo-stub"]
+    assert stub["profiles"] == ["zalo-test"]
+    assert stub["ports"] == ["127.0.0.1:8084:8084"]
+    assert "dxos-zalo-stub" not in load_compose(RELEASE)
+
+
+def test_zalo_relay_reaches_the_web_on_the_internal_port_and_takes_app_keys_from_the_operator():
+    env = load_compose(COMPOSE)["dxos-zalo"]["environment"]
+    assert env["DXOS_GATEWAY_URL"] == "http://apisix:9081"
+    assert env["ZALO_API_BASE"].startswith("${ZALO_API_BASE:-")
+    assert env["ZALO_APP_ID"] == "${ZALO_APP_ID:-}" and env["ZALO_APP_SECRET"] == "${ZALO_APP_SECRET:-}"
+    assert "ZALO_APP_SECRET" not in load_compose(COMPOSE)["web"]["environment"]
+
+
+def test_zalo_container_is_hardened_and_started_with_the_agent_extras():
+    svc = load_compose(COMPOSE)["dxos-zalo"]
+    assert svc["mem_limit"] == "128m" and svc["read_only"] is True and svc["cap_drop"] == ["ALL"]
+    assert svc["tmpfs"] == ["/tmp:size=16m"] and svc["pids_limit"] == 64 and svc["cpus"] == "0.5"
+    assert "/tmp/dxos-zalo.heartbeat" in svc["healthcheck"]["test"][3]
+    makefile = (ROOT / "Makefile").read_text()
+    assert "EXTRAS_AGENT := dxos-agent dxos-telegram dxos-zalo" in makefile
+
+
+def test_release_pulls_the_zalo_service_and_helper_from_the_registry():
+    release = load_compose(RELEASE)
+    for name in ("dxos-zalo", "dxos-zalo-env"):
+        assert release[name]["image"].startswith("${OPENTEA_IMAGE_PREFIX:-ghcr.io/maiychrus25/opentea-dx-os}-zalo:")
+        assert release[name]["build"] is None
+
+
+def test_zalo_image_is_built_and_released_like_telegram():
+    for name in ("docker-publish.yml", "release.yml"):
+        text = (ROOT / ".github" / "workflows" / name).read_text()
+        assert "- service: zalo\n            context: ./platform/zalo" in text, name
+    assert "cd platform/zalo && python -m pip install -r requirements-dev.txt" in (ROOT / ".github" / "workflows" / "ci.yml").read_text()

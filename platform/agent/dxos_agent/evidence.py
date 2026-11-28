@@ -167,6 +167,34 @@ def market_evidence_row(row: Mapping[str, Any]) -> dict[str, Any]:
     return _row("market_data", row["id"], values)
 
 
+def advance_evidence_row(advance: Mapping[str, Any]) -> dict[str, Any]:
+    """Build a verifiable `input_advances` evidence row; the money columns are not read, so none is in it."""
+    values = {
+        "id": advance["id"],
+        "household_id": advance["household_id"],
+        "item_id": advance["item_id"],
+        "quantity_milli": _milli(advance.get("quantity")),
+        "advanced_on": str(advance["advanced_on"])[:10],
+        "status": advance["status"],
+        "settlement_id": advance.get("settlement_id"),
+    }
+    return _row("input_advances", advance["id"], values)
+
+
+def ticket_evidence_row(ticket: Mapping[str, Any]) -> dict[str, Any]:
+    """Build a verifiable `fresh_leaf_tickets` evidence row; the price columns are not read, so none is in it."""
+    values = {
+        "id": ticket["id"],
+        "household_id": ticket["household_id"],
+        "parcel_id": ticket["parcel_id"],
+        "cycle_id": ticket.get("cycle_id"),
+        "weighed_at": normalize_iso_millis(ticket["weighed_at"]),
+        "net_kg_milli": _milli(ticket.get("net_kg")),
+        "status": ticket["status"],
+    }
+    return _row("fresh_leaf_tickets", ticket["id"], values)
+
+
 def build_evidence(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     """Assemble proposal evidence payload and root SHA-256 digest over source rows."""
     digest_input = [{"table": row["table"], "id": row["id"], "sha256": row["sha256"]} for row in rows]

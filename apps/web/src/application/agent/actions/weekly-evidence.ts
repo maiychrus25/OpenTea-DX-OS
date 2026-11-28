@@ -1,12 +1,19 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
+import { milli } from './field-evidence'
 import type { AgentSettingsValues } from '@/domain/agent/ports/AgentSettingsRepository'
 import type { Improvement } from '@/domain/agent/ports/ImprovementRepository'
 
 /** Evidence values of an agent's settings row: exactly what `agent.settings.update` may change. */
 export function agentSettingsValues(row: AgentSettingsValues): Record<string, unknown> {
-  return { thresholds: row.thresholds, schedule: row.schedule }
+  // Canonical JSON hashes only integers, so a decimal threshold is hashed as thousandths under `<key>_milli`.
+  const thresholds = Object.fromEntries(
+    Object.entries(row.thresholds).map(([key, value]) =>
+      typeof value === 'number' && !Number.isInteger(value) ? [`${key}_milli`, milli(value)] : [key, value]
+    )
+  )
+  return { thresholds, schedule: row.schedule }
 }
 
 /**

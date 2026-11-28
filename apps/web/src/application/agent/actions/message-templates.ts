@@ -45,6 +45,12 @@ const intRange = (min: number, max: number) => z.number().int().min(min).max(max
 const sensorSlot = z.enum(Object.keys(SENSOR_LABEL_VI) as [keyof typeof SENSOR_LABEL_VI, ...(keyof typeof SENSOR_LABEL_VI)[]])
 const diseaseSlot = z.enum(Object.keys(DISEASE_LABEL_VI) as [keyof typeof DISEASE_LABEL_VI, ...(keyof typeof DISEASE_LABEL_VI)[]])
 
+// Sorted and unique like `parcelCodes`, but a household may have no parcel at all.
+const householdParcelCodes = z
+  .array(parcelCode)
+  .max(20)
+  .refine((codes) => codes.every((code, i) => i === 0 || codes[i - 1] < code), 'sorted and unique')
+
 const codesText = (codes: string[]) => codes.join(', ')
 
 interface Template {
@@ -60,6 +66,30 @@ const TEMPLATES: Record<string, Template> = {
     render: (s) => ({
       title: 'Cảm biến không gửi số đo',
       body: `Cảm biến ${SENSOR_LABEL_VI[s.sensor as keyof typeof SENSOR_LABEL_VI]} ở thửa ${s.parcel_code} không gửi số đo ${s.hours} giờ. Cần kiểm tra pin hoặc kết nối.`,
+    }),
+  },
+  advance_without_spraying: {
+    audience: 'internal',
+    slots: z
+      .object({ household_id: z.string().min(1).max(64), parcel_codes: householdParcelCodes, advanced_on: isoDate, grace_days: intRange(1, 90) })
+      .strict(),
+    render: (s) => {
+      const [year, month, day] = String(s.advanced_on).split('-')
+      const who = s.parcel_codes.length > 0 ? `có thửa ${codesText(s.parcel_codes)}` : `mã ${s.household_id}`
+      return {
+        title: 'Ứng thuốc chưa ghi nhật ký phun',
+        body: `Hộ ${who} nhận vật tư thuốc ngày ${day}/${month}/${year} nhưng chưa ghi nhật ký phun sau ${s.grace_days} ngày. Cán bộ kiểm tra giúp.`,
+      }
+    },
+  },
+  weighing_over_norm: {
+    audience: 'internal',
+    slots: z
+      .object({ parcel_code: parcelCode, area_ha: z.number().positive().max(10000), kg: intRange(0, 10_000_000), norm_kg: intRange(0, 10_000_000) })
+      .strict(),
+    render: (s) => ({
+      title: 'Cân búp vượt định mức',
+      body: `Thửa ${s.parcel_code} (${s.area_ha} ha) đã cân ${s.kg} kg trong lứa này, vượt định mức ${s.norm_kg} kg. Kiểm tra búp gom từ thửa khác.`,
     }),
   },
   dry_soil: {

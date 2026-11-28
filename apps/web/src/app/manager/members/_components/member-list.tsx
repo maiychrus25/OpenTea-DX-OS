@@ -5,6 +5,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { Users, UserPlus, Download } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { SegmentedFilter } from '@/components/ui/SegmentedFilter';
@@ -25,7 +26,7 @@ export function MemberList() {
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [roleFilter, setRoleFilter] = useState<string>('ALL');
   // Parcels and area per household, matched to a farmer by phone number.
-  const [land, setLand] = useState<Record<string, { parcels: number; area: number }>>({});
+  const [land, setLand] = useState<Record<string, { id: string; parcels: number; area: number }>>({});
   const [query, setQuery] = useState('');
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -58,7 +59,7 @@ export function MemberList() {
     fetch('/api/farm/households')
       .then((res) => (res.ok ? res.json() : { data: [] }))
       .then((json) =>
-        setLand(Object.fromEntries((json.data || []).map((h: { phone?: string; parcel_count?: number; total_area_ha?: number }) => [h.phone, { parcels: h.parcel_count ?? 0, area: h.total_area_ha ?? 0 }])))
+        setLand(Object.fromEntries((json.data || []).map((h: { id: string; phone?: string; parcel_count?: number; total_area_ha?: number }) => [h.phone, { id: h.id, parcels: h.parcel_count ?? 0, area: h.total_area_ha ?? 0 }])))
       )
       .catch(() => setLand({}));
   }, []);
@@ -258,7 +259,11 @@ export function MemberList() {
                         </span>
                       </td>
                       <td>{phoneOf(member) || 'Chưa cập nhật'}</td>
-                      <td>{land[phoneOf(member)]?.parcels ?? '—'}</td>
+                      <td>
+                        {land[phoneOf(member)]
+                          ? <Link href={`/manager/households/${land[phoneOf(member)].id}`} aria-label={`Chi tiết hộ ${member.full_name || member.name}`}>{land[phoneOf(member)].parcels}</Link>
+                          : '—'}
+                      </td>
                       <td>{land[phoneOf(member)] ? `${hectares(land[phoneOf(member)].area)} ha` : '—'}</td>
                       <td>
                         <Pill tone={getStatusBadgeVariant(member.status)}>

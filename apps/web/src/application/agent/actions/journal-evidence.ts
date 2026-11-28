@@ -9,6 +9,8 @@ import { PrismaStrategyPlanRepository } from '@/infrastructure/db/agent/PrismaSt
 import {
   findCropCycleForEvidence,
   findDiseaseReportForEvidence,
+  findFreshLeafTicketForEvidence,
+  findInputAdvanceForEvidence,
   findJournalEntryForEvidence,
   findMarketDataForEvidence,
   findParcelForEvidence,
@@ -26,6 +28,7 @@ import { loadRequestEvidence } from '@/application/appbuilder/evidence'
 import { PrismaAppBuildRepository } from '@/infrastructure/db/appbuilder/PrismaAppBuildRepository'
 import { agentSettingsValues, improvementValues, settingsAgentOf } from './weekly-evidence'
 import { strategyPlanValues } from './strategy-evidence'
+import { advanceValues, ticketValues } from './cross-check-evidence'
 
 // Evidence contract version 2, see platform/agent/tests/fixtures/evidence-vectors.json.
 export interface EvidenceJournalEntry {
@@ -140,6 +143,14 @@ export const EVIDENCE_LOADERS: EvidenceLoaders = {
   strategy_plans: async (htxCode, id) => {
     const row = await new PrismaStrategyPlanRepository().findById(htxCode, id)
     return row ? strategyPlanValues(row) : null
+  },
+  input_advances: async (htxCode, id) => {
+    const row = await findInputAdvanceForEvidence(htxCode, id)
+    return row ? advanceValues(row) : null
+  },
+  fresh_leaf_tickets: async (htxCode, id) => {
+    const row = await findFreshLeafTicketForEvidence(htxCode, id)
+    return row ? ticketValues(row) : null
   },
   // Shared reference data: every cooperative reads the same rows, so the cooperative is not checked.
   market_data: async (_htxCode, id) => {

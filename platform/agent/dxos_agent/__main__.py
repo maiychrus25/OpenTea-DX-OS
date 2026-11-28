@@ -12,7 +12,7 @@ import threading
 import time as time_module
 
 from . import __version__
-from .agents import app_builder, app_suggestions, bulletin, daily_campaign, disease_watch, field_watch, harvest_ready, improvement, staff_tasks, strategy
+from .agents import app_builder, app_suggestions, bulletin, cross_check, daily_campaign, disease_watch, field_watch, harvest_ready, improvement, staff_tasks, strategy
 from .agents.assistant import run_assistant_once
 from .agents.digest import DigestSchedule, run_digest
 from .agents.journal_review import (
@@ -40,6 +40,7 @@ FIELD_WATCH_INTERVAL = timedelta(minutes=30)
 APP_SUGGESTIONS_INTERVAL = timedelta(minutes=30)  # the web repeats no app proposal within 24 h, so asking often costs little
 HARVEST_READY_AT = time(5, 30)  # Vietnam time; early, so A9 at 06:00 reads its warnings
 DISEASE_WATCH_AT = time(5, 40)  # Vietnam time
+CROSS_CHECK_AT = time(5, 45)  # Vietnam time, after A3 and before A8 and A9
 STAFF_TASKS_AT = time(5, 50)  # Vietnam time, after A4 and A3 and before A9, which reads the tasks
 CAMPAIGN_AT = time(6, 0)  # Vietnam time, after A2, A4 and A3 (contract C5)
 BULLETIN_AT = time(5, 0)  # Vietnam time
@@ -93,6 +94,7 @@ class _CooperativeRuntime:
     field_watch: IntervalSchedule = field(default_factory=lambda: IntervalSchedule(FIELD_WATCH_INTERVAL))
     harvest_ready: DailySchedule = field(default_factory=lambda: DailySchedule(HARVEST_READY_AT))
     disease_watch: DailySchedule = field(default_factory=lambda: DailySchedule(DISEASE_WATCH_AT))
+    cross_check: DailySchedule = field(default_factory=lambda: DailySchedule(CROSS_CHECK_AT))
     disease_fingerprint: str | None = None
     staff_tasks: DailySchedule = field(default_factory=lambda: DailySchedule(STAFF_TASKS_AT))
     app_suggestions: IntervalSchedule = field(default_factory=lambda: IntervalSchedule(APP_SUGGESTIONS_INTERVAL))
@@ -265,6 +267,11 @@ def _run_m4_agents(runtime: _CooperativeRuntime, now: datetime, settings: AgentS
             runtime.disease_watch.record(now)
         runtime.disease_fingerprint = fingerprint
 
+    def cross_check_cycle() -> None:
+        if runtime.cross_check.is_due(now):
+            cross_check.run_cross_check(gateway, now, settings.thresholds_for(cross_check.AGENT_NAME))
+            runtime.cross_check.record(now)  # only after a run that did not fail, so a failed run is retried
+
     def staff_tasks_cycle() -> None:
         if runtime.staff_tasks.is_due(now):
             staff_tasks.run_staff_tasks(gateway, now)
@@ -336,6 +343,7 @@ def _run_m4_agents(runtime: _CooperativeRuntime, now: datetime, settings: AgentS
     _guarded("A2 field-watch", htx, field_watch_cycle)
     _guarded("A4 harvest-ready", htx, harvest_cycle)
     _guarded("A3 disease-watch", htx, disease_cycle)
+    _guarded("A13 cross-check", htx, cross_check_cycle)
     labs = labs_enabled()  # frozen agents are not scheduled at all, so no call reaches a 404 route
     if labs:
         _guarded("A8 staff-tasks", htx, staff_tasks_cycle)

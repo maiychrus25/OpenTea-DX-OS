@@ -71,7 +71,7 @@ KHÔNG trust client-side role claims — luôn verify từ Keycloak token server
 |----------|---------|---------|
 | `POST /api/chatbot` | 20 requests/minute | Ollama sequential queue |
 | `POST /api/diagnosis` | 10 requests/minute | FastAPI + image processing |
-| `POST /api/tts` | 30 requests/minute | Piper TTS |
+| `POST /api/tts` | 20 requests/minute per user | Piper TTS; **áp dụng thật từ GĐ4** (mục 3.34) |
 | `POST /api/journal/batch-approve` | 5 requests/minute | DB transaction heavy |
 | `GET /api/notifications/stream` | 1 SSE connection per user | Browser limit |
 
@@ -691,6 +691,67 @@ Cách một mini-app ghi vào lõi mà không giữ bảng cô lập (`/api/inte
 - **Bảy phần, mỗi phần tính riêng**; phần lỗi thành `null` (ghi log, trang hiện "Chưa tải được phần này") và các phần còn lại vẫn có.
 - **Cách tính theo kỳ.** (1) Thành viên: số hộ, số thửa, diện tích, tính **tại thời điểm xem**, không theo kỳ. (2) Thu mua: phiếu cân `VALID` theo ngày cân (giờ Việt Nam), gộp theo tháng và theo phẩm cấp. (3) Tiền xã viên: kỳ quyết toán theo `closed_at` (số kỳ đã chốt, tiền đã chi trả, còn phải trả của kỳ đó), cộng tiền phiếu ứng `VALID` theo `advanced_on`. (4) Chế biến: mẻ `FINISHED` theo `finished_at` (số mẻ, kg tươi, kg khô, tỷ lệ bình quân = tổng tươi / tổng khô làm tròn 2 chữ số, số mẻ lệch, kg khô theo năm hạng). (5) Lô: lô theo `created_at` (số lô, số lô đã xuất QR, kg; lô từ mẻ tính theo kg nguồn mẻ, lô cũ theo khối lượng khai trên lô); chứng nhận còn hiệu lực **vào ngày `to`** (chưa thu hồi, đã cấp đến hết `to`, hết hạn từ `to` trở đi). (6) Bán hàng, theo kế hoạch: doanh thu sỉ và lẻ của đơn `CONFIRMED` theo `ordered_on`; kg bán; phải thu cuối kỳ của đơn sỉ, chỉ tính các khoản thu có `paid_on` đến hết `to`; 10 thương lái có doanh số lớn nhất. (7) An toàn: số lần phun `SPRAYING` đã `APPROVED` theo `entry_date`, và số lứa được thu hoạch (`parcel_crop_cycles.harvested_at`) trong kỳ.
 - **CSV theo phần.** `GET /api/reports/season.csv?from=&to=&section=`, mỗi phần một bảng cột tiếng Việt (UTF-8 có BOM). Phần chưa có dữ liệu để xuất (phần đã hỏng, hoặc `null`) trả **503 `SECTION_UNAVAILABLE`**, không phải tệp rỗng.
+
+### 3.31 Agent đối soát chéo (A13, GĐ4-A)
+
+Agent `cross-check` chạy mỗi ngày lúc 05:45 theo từng HTX, chỉ dùng luật, không dùng LLM. Kết quả là đề xuất `notification.internal` gửi cán bộ và Trưởng HTX, có bằng chứng; **không thay đổi dữ liệu nào**. Vai `agent` đọc `input_advances`, `input_items`, `fresh_leaf_tickets`, `processing_batches` và `processing_batch_outputs` qua Hasura **không có cột tiền, tên hay số điện thoại**.
+
+- **Ngưỡng mặc định** (Trưởng HTX sửa ở `/manager/ai/settings`, `PUT /api/agent/settings/cross-check`):
+
+  | Khoá | Mặc định | Khoảng cho phép |
+  |------|---------|-----------------|
+  | `grace_days` | 10 | 3–30 ngày |
+  | `fresh_norm_kg_per_ha_flush` | 1.800 kg búp tươi/ha/lứa | 300–6.000 |
+  | `norm_tolerance` | 1,35 (ngưỡng 2.430 kg/ha/lứa) | 1,00–3,00, hai chữ số thập phân |
+  | `realert_extra` | 0,2 | 0,05–1,00 |
+
+- **R1, ứng thuốc mà không ghi phun.** Phiếu ứng `VALID` của vật tư `kind = PESTICIDE`, ứng ngày `d`, được báo khi hôm nay đã qua `d + grace_days` mà chưa có nhật ký `SPRAYING` (khác `DRAFT` và `REJECTED`) trên **bất kỳ thửa nào của cùng hộ** có ngày trong `[d, d + grace_days]` và hoạt động cùng `pesticide_product_id` với vật tư. Vật tư không gắn mã thuốc thì lần phun bất kỳ đều tính. Phiếu ứng của hộ khác hay phiếu đã huỷ không bao giờ gây cảnh báo. Mỗi phiếu ứng báo một lần (khoá `cross-check:advance:<id>`). Agent chỉ xét phiếu ứng trong 60 ngày gần nhất, để lần chạy đầu không dồn cảnh báo cũ. Lời gọi hộ bằng mã các thửa của hộ (tối đa vài mã), vì agent không đọc tên.
+- **R2, cân búp vượt định mức.** Theo từng thửa và lứa (`cycle_id`), tổng `net_kg` của phiếu cân `VALID` so với `area_ha × fresh_norm_kg_per_ha_flush × norm_tolerance`. Phiếu không gắn lứa gom theo cửa sổ 30 ngày tới hôm nay. Khoá `cross-check:norm:<parcel>:<cycle|window>:<bậc>`, với bậc = ⌊(tổng ÷ ngưỡng − 1) ÷ `realert_extra`⌋: báo một lần ở bậc 0, rồi chỉ báo lại khi tổng lên bậc cao hơn bậc đã báo (mỗi bậc là thêm 20% **của ngưỡng**). Agent đọc lại các đề xuất cross-check của chính nó để biết bậc đã báo. Bằng chứng gồm thửa và tối đa 48 phiếu lớn nhất; lứa nhiều phiếu hơn ghi thêm "({n} phiếu; bằng chứng gồm 48 phiếu lớn nhất)". Tổng luôn tính trên mọi phiếu.
+
+### 3.32 Dự báo búp và chè khô 14 ngày (GĐ4-A)
+
+`ForecastUseCase` tính ở lõi, không dùng LLM và không dùng thời tiết.
+
+- **Phạm vi:** lứa còn mở (`harvested_at` rỗng) có `estimated_harvest_date` trong `[hôm nay, hôm nay + 14]` (ngày Việt Nam).
+- **Kg búp tươi của thửa:** trung vị tổng `net_kg` phiếu `VALID` của tối đa 3 lứa đã đóng gần nhất có phiếu cân (`source = HISTORY`). Thửa chưa có lứa như vậy dùng `area_ha × fresh_norm_kg_per_ha_flush` của HTX (mặc định 1.800, mục 3.31), `source = NORM`, hiện nhãn "Theo định mức".
+- **Kg chè khô** = búp tươi ÷ 4,75, làm tròn một chữ số thập phân. Tổng theo tuần (tuần bắt đầu thứ Hai) và tổng chung cộng các dòng đã làm tròn, nên số trên màn hình luôn khớp.
+- **Hiển thị:** khối "Dự báo 14 ngày tới" trên `/officer/processing` và `/manager/processing`; khối tồn chè khô của bảng điều hành (mục 3.27) thêm dòng "Dự kiến 14 ngày tới: {kg} kg chè khô". Dự báo lỗi thì khối đó thành `null`, phần còn lại của trang vẫn có.
+
+### 3.33 Chatbot kỹ thuật đọc PDF và cẩm nang chè (GĐ4-A)
+
+- **Nguồn:** tệp `.md`, `.txt` và `.pdf` trong `para/<htx>/Resources/` và `para/<htx>/Areas/`, đi sâu tối đa 4 tầng thư mục, lấy 30 tệp mới nhất.
+- **Loại trừ:** tệp có front-matter `ai: false`, và mọi tệp trong thư mục chứa `.ai-ignore` (kể cả thư mục con). Bảng tra thuốc cho cán bộ của bộ cẩm nang mang `ai: false`.
+- **PDF:** trích chữ bằng `unpdf` ở lần đọc đầu tiên rồi lưu tệp chữ đi kèm `<key>.txt` cạnh tệp gốc; mỗi câu hỏi trích tối đa 3 PDF mới. PDF scan (dưới 20 ký tự chữ, không kể khoảng trắng) và PDF lớn hơn 15 MB đều lưu tệp chữ rỗng và được ghi vào ngữ cảnh là "không đọc được (PDF scan, không có lớp chữ), không dùng làm căn cứ"; không OCR.
+- **Chọn đoạn:** cắt đoạn 1.200 ký tự chồng nhau 150 ký tự, chấm BM25 (k1 1,2; b 0,75) trên từ đã bỏ dấu và viết thường, nên câu hỏi có dấu hay không dấu cho cùng kết quả. Lấy 4 đoạn tốt nhất, mỗi đoạn ghi tên tệp làm nguồn. Không có kho vector.
+- **Cẩm nang chè** nằm ở `docs/templates/para-tea-cooperative/`; `./dxos para seed <HTX>` chỉ chép tệp còn thiếu vào kho tài liệu của HTX, không ghi đè.
+
+### 3.34 Nút "Nghe" và giới hạn đọc thành tiếng (GĐ4-A)
+
+- Nút "Nghe" có trên bốn trang của nông dân: giá hôm nay và ngày được hái, hướng dẫn của hoạt động trong nhật ký, kế hoạch chăm sóc của chẩn đoán, và số dư sổ tiền. Câu đọc dựng từ những gì đang hiện trên màn hình và **không bao giờ đọc số tài khoản ngân hàng**. Máy chủ không có Piper thì dùng giọng của trình duyệt.
+- `POST /api/tts` giới hạn **20 lần mỗi phút cho mỗi người** (cửa sổ trượt trong từng tiến trình web), vượt thì 429 `RATE_LIMITED` kèm `Retry-After: 60` và lời "Bạn nghe nhiều quá, thử lại sau một phút."
+- Âm thanh được lưu đệm 7 ngày trong `para/_tts-cache/`, khoá là `sha256(giọng + văn bản)`; lần đọc lại trong hạn không gọi Piper.
+
+### 3.35 Tin Zalo ZNS cho xã viên (GĐ4-C)
+
+Một Zalo OA chung của nền tảng; web giữ hàng đợi, người nhận, đồng ý, cài đặt và mẫu tin; relay `dxos-zalo` chỉ vận chuyển.
+
+- **Bốn loại tin**, mỗi loại một mẫu ZNS do `platform_admin` khai báo:
+
+  | Sự kiện | Mẫu | Người nhận | Khoá chống lặp |
+  |---------|-----|-----------|----------------|
+  | `PRICE_PUBLISHED` | `price_today` | mọi hộ đã đồng ý | `<htx>:<ngày>:<sha256 giá>`; công bố lại cùng giá không gửi lại, đổi giá thì gửi tin thứ hai |
+  | `TICKET_RECEIPT` | `ticket_receipt` | hộ của phiếu | id phiếu |
+  | `WITHDRAWAL_ENDED` | `withdrawal_ended` | hộ có thửa hết cách ly hôm nay | `<thửa>:<ngày>` |
+  | `SETTLEMENT_CLOSED` | `settlement_closed` | từng hộ có dòng quyết toán | id dòng quyết toán; kèm đường dẫn tới phiếu của dòng |
+
+  Tham số chỉ được lấy từ danh sách cho phép của từng mẫu; không mẫu nào có số tài khoản, tên thuốc hay tên người khác ngoài chủ hộ.
+- **Sự kiện được ghi sau khi việc gốc đã lưu xong**; ghi tin lỗi không bao giờ làm hỏng phiếu cân, bảng giá hay quyết toán. Quét hết cách ly chạy mỗi lần relay gọi `tick` (5 phút một lần), khoá theo thửa và ngày nên chỉ ra một tin mỗi ngày.
+- **Khi HTX tắt Zalo thì không ghi dòng nào.** Khi đã bật, dòng được ghi `skipped` kèm lý do (không bao giờ gửi) khi: loại tin bị tắt; hộ chưa có dòng đồng ý `OPTED_IN` mới nhất; chưa có mẫu; mẫu có tham số không hợp lệ; số điện thoại không hợp lệ; đã đủ hạn mức tháng. Lúc relay thuê dòng, web kiểm lại cài đặt, mẫu và đồng ý: hộ tắt nhận tin sau khi tin đã xếp hàng thì tin thành `skipped` (`CONSENT_REVOKED`).
+- **Hạn mức** mặc định 2.000 tin mỗi tháng Việt Nam mỗi HTX, đếm mọi dòng không phải `skipped`.
+- **Giờ im lặng** mặc định 21:00–06:00 giờ Việt Nam: tin rơi vào khoảng này dời tới 06:00; giá ngày và hết cách ly được gửi từ 05:00.
+- **Thử lại:** tối đa 10 lần, chờ `min(5 × 2^(n−1), 900)` giây (hoặc theo `retry_after_seconds` của relay), vẫn tôn trọng giờ im lặng. Lỗi vĩnh viễn (sai mẫu, số không dùng Zalo, hết hạn mức của Zalo) dừng ngay và hiện lý do tiếng Việt ở `/manager/zalo`. Bảng mã lỗi ZNS trong `platform/zalo/dxos_zalo/zns_api.py` **chưa được đối chiếu với tài liệu Zalo**; phải kiểm trước khi chạy thật.
+- **Đồng ý nhận tin** (`zalo_consents`, chỉ thêm dòng, dòng mới nhất là trạng thái hiện hành, có trigger kiểm toán): cán bộ và Trưởng HTX ghi `OPTED_IN` hoặc `OPTED_OUT` cho mọi hộ của HTX; nông dân chỉ được ghi `OPTED_OUT` (nguồn `MEMBER`) cho hộ gắn với chính tài khoản của mình; mọi trường hợp khác 403. Mỗi dòng ghi người ghi và thời điểm.
+- **Token OA** chỉ `platform_admin` nhập ở `/platform/zalo`; web lưu mã hoá AES-256-GCM bằng khoá `DXOS_ZALO_TOKEN_KEY` và chỉ hiện lại 4 ký tự cuối. Bản dev và CI dùng một khoá dev công khai; bản release bỏ khoá đó và từ chối khởi động nếu gặp lại nó, còn thiếu khoá thì web chỉ từ chối lưu token (422 `ZALO_TOKEN_KEY_MISSING`). Relay đọc token qua route nội bộ và tự làm mới bằng `ZALO_APP_ID`/`ZALO_APP_SECRET`. Không ghi log token; số điện thoại chỉ hiện 3 số cuối. Chưa có token thì relay chỉ cập nhật nhịp tim và vẫn khoẻ.
 
 ## 4. Security Rules
 

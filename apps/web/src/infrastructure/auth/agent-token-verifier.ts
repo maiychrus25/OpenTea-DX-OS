@@ -9,6 +9,7 @@ import {
   type TelegramTokenVerifier,
   type VerifiedTelegramToken,
 } from '@/domain/telegram/ports/TelegramTokenVerifier'
+import { ZALO_CLIENT_ID, type VerifiedZaloToken, type ZaloTokenVerifier } from '@/domain/zalo/ports/ZaloTokenVerifier'
 import type { UserTokenVerifier, VerifiedUserToken } from '@/domain/auth/ports/UserTokenVerifier'
 import { MCP_CLIENT_ID, type McpTokenVerifier, type VerifiedMcpToken } from '@/domain/mcp/ports/McpTokenVerifier'
 import { ForbiddenError, UnauthorizedError } from '@/domain/errors'
@@ -288,6 +289,26 @@ export class KeycloakTelegramTokenVerifier implements TelegramTokenVerifier {
   }
 }
 
+/** Verifies the `dxos-zalo` service account: realm role `zalo`, no cooperative claim. */
+export class KeycloakZaloTokenVerifier implements ZaloTokenVerifier {
+  private readonly jwt: KeycloakJwtVerifier
+
+  constructor(options: KeycloakJwtVerifierOptions = {}) {
+    this.jwt = new KeycloakJwtVerifier(options)
+  }
+
+  async verify(token: string): Promise<VerifiedZaloToken> {
+    const { payload, roles } = await this.jwt.verifyClaims(token)
+    if (!roles.includes('zalo')) {
+      throw new ForbiddenError('Zalo role required')
+    }
+    if (payload.azp !== ZALO_CLIENT_ID) {
+      throw new ForbiddenError('Invalid zalo client binding')
+    }
+    return { sub: payload.sub as string, azp: ZALO_CLIENT_ID, roles }
+  }
+}
+
 /** Verifies a person's `dxos-mcp` access token. Role and cooperative are read live later, so only the token's identity is checked here. */
 export class KeycloakMcpTokenVerifier implements McpTokenVerifier {
   private readonly jwt: KeycloakJwtVerifier
@@ -305,7 +326,7 @@ export class KeycloakMcpTokenVerifier implements McpTokenVerifier {
   }
 }
 
-const SERVICE_ROLES = ['agent', 'telegram', 'staff-sync', 'web-service']
+const SERVICE_ROLES = ['agent', 'telegram', 'zalo', 'staff-sync', 'web-service']
 
 /**
  * Verifies a person's browser-session access token (client `KEYCLOAK_CLIENT_ID`, `nextjs-web` by default), forwarded by a mini-app.

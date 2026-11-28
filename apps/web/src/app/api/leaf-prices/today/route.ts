@@ -7,6 +7,7 @@ import { withErrorHandler } from '@/lib/api/withErrorHandler'
 import { jsonBody } from '@/lib/api/route-helpers'
 import { leafPricesPutSchema } from '@/lib/validations/weighing.schema'
 import { vnDayOf } from '@/application/agent/campaign/vn-day'
+import { zaloNotifier } from '@/application/zalo/zalo-services'
 import { PublishDailyPricesUseCase } from '@/application/weighing/PublishDailyPricesUseCase'
 import { PrismaLeafPriceRepository } from '@/infrastructure/db/weighing/PrismaLeafPriceRepository'
 
@@ -18,7 +19,7 @@ async function getToday() {
 async function putToday(request: Request) {
   const tenant = await requireTenant()
   const body = leafPricesPutSchema.parse(await jsonBody(request))
-  const data = await new PublishDailyPricesUseCase(new PrismaLeafPriceRepository()).execute(tenant, body.prices)
+  const data = await new PublishDailyPricesUseCase(new PrismaLeafPriceRepository(), undefined, zaloNotifier()).execute(tenant, body.prices)
   return NextResponse.json({ data })
 }
 

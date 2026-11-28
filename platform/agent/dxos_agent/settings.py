@@ -30,6 +30,7 @@ THRESHOLD_DEFAULTS: dict[str, dict[str, Any]] = {
     },
     "disease-watch": {"radius_m": 2000, "window_days": 7, "min_reports": 3},
     "harvest-ready": {"harvest_window_days": 3},
+    "cross-check": {"grace_days": 10, "fresh_norm_kg_per_ha_flush": 1800, "norm_tolerance": 1.35, "realert_extra": 0.2},
     "bulletin": {"commodity": "Tea", "market_hours": 48},
 }
 
@@ -91,7 +92,8 @@ def _typed(value: Any, default: Any) -> Any:
     """A web value of the default's type, else the default (a bool is not an integer here)."""
     if isinstance(default, str):
         return value.strip() if isinstance(value, str) and value.strip() else default
-    return value if isinstance(value, int) and not isinstance(value, bool) else default
+    kinds = (int, float) if isinstance(default, float) else int
+    return value if isinstance(value, kinds) and not isinstance(value, bool) else default
 
 
 def fetch_settings(gateway: CoreGatewayClient) -> AgentSettings:

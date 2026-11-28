@@ -1,0 +1,1182 @@
+[
+  {
+    "name": "advance without any spraying after the grace period",
+    "now": "2026-11-28T03:00:00Z",
+    "graphql": {
+      "CrossCheckAdvances": {
+        "input_advances": [
+          {
+            "id": "adv1",
+            "household_id": "hh1",
+            "item_id": "it_prod",
+            "quantity": 2,
+            "advanced_on": "2026-11-10",
+            "status": "VALID",
+            "settlement_id": null
+          }
+        ]
+      },
+      "CrossCheckItems": {
+        "input_items": [
+          {
+            "id": "it_prod",
+            "kind": "PESTICIDE",
+            "pesticide_product_id": "pp1",
+            "active": true
+          }
+        ]
+      },
+      "CrossCheckSprayings": {
+        "journal_entries": []
+      },
+      "CrossCheckParcels": {
+        "parcels": [
+          {
+            "id": "pa1",
+            "parcel_code": "TC-A1",
+            "household_id": "hh1",
+            "area_ha": 1.0,
+            "status": "TENDING",
+            "harvest_approved_at": null,
+            "updated_at": "2026-11-01T00:00:00+00:00"
+          },
+          {
+            "id": "pa2",
+            "parcel_code": "TC-A2",
+            "household_id": "hh1",
+            "area_ha": 0.5,
+            "status": "TENDING",
+            "harvest_approved_at": null,
+            "updated_at": "2026-11-01T00:00:00+00:00"
+          },
+          {
+            "id": "pb1",
+            "parcel_code": "TC-B1",
+            "household_id": "hh2",
+            "area_ha": 2.0,
+            "status": "TENDING",
+            "harvest_approved_at": null,
+            "updated_at": "2026-11-01T00:00:00+00:00"
+          }
+        ]
+      },
+      "CrossCheckTickets": {
+        "fresh_leaf_tickets": []
+      },
+      "CrossCheckAlerted": {
+        "platform_agent_proposals": []
+      }
+    },
+    "expected": {
+      "proposals": [
+        {
+          "kind": "notification.internal",
+          "subjects": [
+            "cross-check:advance:adv1"
+          ],
+          "payload": {
+            "template": "advance_without_spraying",
+            "slots": {
+              "household_id": "hh1",
+              "parcel_codes": [
+                "TC-A1",
+                "TC-A2"
+              ],
+              "advanced_on": "2026-11-10",
+              "grace_days": 10
+            },
+            "subjects": [
+              "cross-check:advance:adv1"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "spraying on another parcel of the same household clears the advance",
+    "now": "2026-11-28T03:00:00Z",
+    "graphql": {
+      "CrossCheckAdvances": {
+        "input_advances": [
+          {
+            "id": "adv1",
+            "household_id": "hh1",
+            "item_id": "it_prod",
+            "quantity": 2,
+            "advanced_on": "2026-11-10",
+            "status": "VALID",
+            "settlement_id": null
+          }
+        ]
+      },
+      "CrossCheckItems": {
+        "input_items": [
+          {
+            "id": "it_prod",
+            "kind": "PESTICIDE",
+            "pesticide_product_id": "pp1",
+            "active": true
+          }
+        ]
+      },
+      "CrossCheckSprayings": {
+        "journal_entries": [
+          {
+            "id": "je1",
+            "parcel_id": "pa2",
+            "entry_date": "2026-11-12T03:00:00+00:00",
+            "activity_type": "SPRAYING",
+            "status": "APPROVED",
+            "activities": [
+              {
+                "id": "je1-a",
+                "pesticide_product_id": "pp1"
+              }
+            ]
+          }
+        ]
+      },
+      "CrossCheckParcels": {
+        "parcels": [
+          {
+            "id": "pa1",
+            "parcel_code": "TC-A1",
+            "household_id": "hh1",
+            "area_ha": 1.0,
+            "status": "TENDING",
+            "harvest_approved_at": null,
+            "updated_at": "2026-11-01T00:00:00+00:00"
+          },
+          {
+            "id": "pa2",
+            "parcel_code": "TC-A2",
+            "household_id": "hh1",
+            "area_ha": 0.5,
+            "status": "TENDING",
+            "harvest_approved_at": null,
+            "updated_at": "2026-11-01T00:00:00+00:00"
+          },
+          {
+            "id": "pb1",
+            "parcel_code": "TC-B1",
+            "household_id": "hh2",
+            "area_ha": 2.0,
+            "status": "TENDING",
+            "harvest_approved_at": null,
+            "updated_at": "2026-11-01T00:00:00+00:00"
+          }
+        ]
+      },
+      "CrossCheckTickets": {
+        "fresh_leaf_tickets": []
+      },
+      "CrossCheckAlerted": {
+        "platform_agent_proposals": []
+      }
+    },
+    "expected": {
+      "proposals": []
+    }
+  },
+  {
+    "name": "spraying on another household's parcel does not clear it",
+    "now": "2026-11-28T03:00:00Z",
+    "graphql": {
+      "CrossCheckAdvances": {
+        "input_advances": [
+          {
+            "id": "adv1",
+            "household_id": "hh1",
+            "item_id": "it_prod",
+            "quantity": 2,
+            "advanced_on": "2026-11-10",
+            "status": "VALID",
+            "settlement_id": null
+          }
+        ]
+      },
+      "CrossCheckItems": {
+        "input_items": [
+          {
+            "id": "it_prod",
+            "kind": "PESTICIDE",
+            "pesticide_product_id": "pp1",
+            "active": true
+          }
+        ]
+      },
+      "CrossCheckSprayings": {
+        "journal_entries": [
+          {
+            "id": "je1",
+            "parcel_id": "pb1",
+            "entry_date": "2026-11-12T03:00:00+00:00",
+            "activity_type": "SPRAYING",
+            "status": "APPROVED",
+            "activities": [
+              {
+                "id": "je1-a",
+                "pesticide_product_id": "pp1"
+              }
+            ]
+          }
+        ]
+      },
+      "CrossCheckParcels": {
+        "parcels": [
+          {
+            "id": "pa1",
+            "parcel_code": "TC-A1",
+            "household_id": "hh1",
+            "area_ha": 1.0,
+            "status": "TENDING",
+            "harvest_approved_at": null,
+            "updated_at": "2026-11-01T00:00:00+00:00"
+          },
+          {
+            "id": "pa2",
+            "parcel_code": "TC-A2",
+            "household_id": "hh1",
+            "area_ha": 0.5,
+            "status": "TENDING",
+            "harvest_approved_at": null,
+            "updated_at": "2026-11-01T00:00:00+00:00"
+          },
+          {
+            "id": "pb1",
+            "parcel_code": "TC-B1",
+            "household_id": "hh2",
+            "area_ha": 2.0,
+            "status": "TENDING",
+            "harvest_approved_at": null,
+            "updated_at": "2026-11-01T00:00:00+00:00"
+          }
+        ]
+      },
+      "CrossCheckTickets": {
+        "fresh_leaf_tickets": []
+      },
+      "CrossCheckAlerted": {
+        "platform_agent_proposals": []
+      }
+    },
+    "expected": {
+      "proposals": [
+        {
+          "kind": "notification.internal",
+          "subjects": [
+            "cross-check:advance:adv1"
+          ],
+          "payload": {
+            "template": "advance_without_spraying",
+            "slots": {
+              "household_id": "hh1",
+              "parcel_codes": [
+                "TC-A1",
+                "TC-A2"
+              ],
+              "advanced_on": "2026-11-10",
+              "grace_days": 10
+            },
+            "subjects": [
+              "cross-check:advance:adv1"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "a draft or rejected spraying does not clear it (the query leaves them out, the rule too)",
+    "now": "2026-11-28T03:00:00Z",
+    "graphql": {
+      "CrossCheckAdvances": {
+        "input_advances": [
+          {
+            "id": "adv1",
+            "household_id": "hh1",
+            "item_id": "it_prod",
+            "quantity": 2,
+            "advanced_on": "2026-11-10",
+            "status": "VALID",
+            "settlement_id": null
+          }
+        ]
+      },
+      "CrossCheckItems": {
+        "input_items": [
+          {
+            "id": "it_prod",
+            "kind": "PESTICIDE",
+            "pesticide_product_id": "pp1",
+            "active": true
+          }
+        ]
+      },
+      "CrossCheckSprayings": {
+        "journal_entries": [
+          {
+            "id": "je1",
+            "parcel_id": "pa1",
+            "entry_date": "2026-11-12T03:00:00+00:00",
+            "activity_type": "SPRAYING",
+            "status": "DRAFT",
+            "activities": [
+              {
+                "id": "je1-a",
+                "pesticide_product_id": "pp1"
+              }
+            ]
+          },
+          {
+            "id": "je2",
+            "parcel_id": "pa1",
+            "entry_date": "2026-11-13T03:00:00+00:00",
+            "activity_type": "SPRAYING",
+            "status": "REJECTED",
+            "activities": [
+              {
+                "id": "je2-a",
+                "pesticide_product_id": "pp1"
+              }
+            ]
+          }
+        ]
+      },
+      "CrossCheckParcels": {
+        "parcels": [
+          {
+            "id": "pa1",
+            "parcel_code": "TC-A1",
+            "household_id": "hh1",
+            "area_ha": 1.0,
+            "status": "TENDING",
+            "harvest_approved_at": null,
+            "updated_at": "2026-11-01T00:00:00+00:00"
+          },
+          {
+            "id": "pa2",
+            "parcel_code": "TC-A2",
+            "household_id": "hh1",
+            "area_ha": 0.5,
+            "status": "TENDING",
+            "harvest_approved_at": null,
+            "updated_at": "2026-11-01T00:00:00+00:00"
+          },
+          {
+            "id": "pb1",
+            "parcel_code": "TC-B1",
+            "household_id": "hh2",
+            "area_ha": 2.0,
+            "status": "TENDING",
+            "harvest_approved_at": null,
+            "updated_at": "2026-11-01T00:00:00+00:00"
+          }
+        ]
+      },
+      "CrossCheckTickets": {
+        "fresh_leaf_tickets": []
+      },
+      "CrossCheckAlerted": {
+        "platform_agent_proposals": []
+      }
+    },
+    "expected": {
+      "proposals": [
+        {
+          "kind": "notification.internal",
+          "subjects": [
+            "cross-check:advance:adv1"
+          ],
+          "payload": {
+            "template": "advance_without_spraying",
+            "slots": {
+              "household_id": "hh1",
+              "parcel_codes": [
+                "TC-A1",
+                "TC-A2"
+              ],
+              "advanced_on": "2026-11-10",
+              "grace_days": 10
+            },
+            "subjects": [
+              "cross-check:advance:adv1"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "voided advance never alerts",
+    "now": "2026-11-28T03:00:00Z",
+    "graphql": {
+      "CrossCheckAdvances": {
+        "input_advances": [
+          {
+            "id": "adv1",
+            "household_id": "hh1",
+            "item_id": "it_prod",
+            "quantity": 2,
+            "advanced_on": "2026-11-10",
+            "status": "VOIDED",
+            "settlement_id": null
+          }
+        ]
+      },
+      "CrossCheckItems": {
+        "input_items": [
+          {
+            "id": "it_prod",
+            "kind": "PESTICIDE",
+            "pesticide_product_id": "pp1",
+            "active": true
+          }
+        ]
+      },
+      "CrossCheckSprayings": {
+        "journal_entries": []
+      },
+      "CrossCheckParcels": {
+        "parcels": [
+          {
+            "id": "pa1",
+            "parcel_code": "TC-A1",
+            "household_id": "hh1",
+            "area_ha": 1.0,
+            "status": "TENDING",
+            "harvest_approved_at": null,
+            "updated_at": "2026-11-01T00:00:00+00:00"
+          },
+          {
+            "id": "pa2",
+            "parcel_code": "TC-A2",
+            "household_id": "hh1",
+            "area_ha": 0.5,
+            "status": "TENDING",
+            "harvest_approved_at": null,
+            "updated_at": "2026-11-01T00:00:00+00:00"
+          },
+          {
+            "id": "pb1",
+            "parcel_code": "TC-B1",
+            "household_id": "hh2",
+            "area_ha": 2.0,
+            "status": "TENDING",
+            "harvest_approved_at": null,
+            "updated_at": "2026-11-01T00:00:00+00:00"
+          }
+        ]
+      },
+      "CrossCheckTickets": {
+        "fresh_leaf_tickets": []
+      },
+      "CrossCheckAlerted": {
+        "platform_agent_proposals": []
+      }
+    },
+    "expected": {
+      "proposals": []
+    }
+  },
+  {
+    "name": "advance still inside the grace period",
+    "now": "2026-11-28T03:00:00Z",
+    "graphql": {
+      "CrossCheckAdvances": {
+        "input_advances": [
+          {
+            "id": "adv1",
+            "household_id": "hh1",
+            "item_id": "it_prod",
+            "quantity": 2,
+            "advanced_on": "2026-11-20",
+            "status": "VALID",
+            "settlement_id": null
+          }
+        ]
+      },
+      "CrossCheckItems": {
+        "input_items": [
+          {
+            "id": "it_prod",
+            "kind": "PESTICIDE",
+            "pesticide_product_id": "pp1",
+            "active": true
+          }
+        ]
+      },
+      "CrossCheckSprayings": {
+        "journal_entries": []
+      },
+      "CrossCheckParcels": {
+        "parcels": [
+          {
+            "id": "pa1",
+            "parcel_code": "TC-A1",
+            "household_id": "hh1",
+            "area_ha": 1.0,
+            "status": "TENDING",
+            "harvest_approved_at": null,
+            "updated_at": "2026-11-01T00:00:00+00:00"
+          },
+          {
+            "id": "pa2",
+            "parcel_code": "TC-A2",
+            "household_id": "hh1",
+            "area_ha": 0.5,
+            "status": "TENDING",
+            "harvest_approved_at": null,
+            "updated_at": "2026-11-01T00:00:00+00:00"
+          },
+          {
+            "id": "pb1",
+            "parcel_code": "TC-B1",
+            "household_id": "hh2",
+            "area_ha": 2.0,
+            "status": "TENDING",
+            "harvest_approved_at": null,
+            "updated_at": "2026-11-01T00:00:00+00:00"
+          }
+        ]
+      },
+      "CrossCheckTickets": {
+        "fresh_leaf_tickets": []
+      },
+      "CrossCheckAlerted": {
+        "platform_agent_proposals": []
+      }
+    },
+    "expected": {
+      "proposals": []
+    }
+  },
+  {
+    "name": "advance already alerted is not raised again",
+    "now": "2026-11-28T03:00:00Z",
+    "graphql": {
+      "CrossCheckAdvances": {
+        "input_advances": [
+          {
+            "id": "adv1",
+            "household_id": "hh1",
+            "item_id": "it_prod",
+            "quantity": 2,
+            "advanced_on": "2026-11-10",
+            "status": "VALID",
+            "settlement_id": null
+          }
+        ]
+      },
+      "CrossCheckItems": {
+        "input_items": [
+          {
+            "id": "it_prod",
+            "kind": "PESTICIDE",
+            "pesticide_product_id": "pp1",
+            "active": true
+          }
+        ]
+      },
+      "CrossCheckSprayings": {
+        "journal_entries": []
+      },
+      "CrossCheckParcels": {
+        "parcels": [
+          {
+            "id": "pa1",
+            "parcel_code": "TC-A1",
+            "household_id": "hh1",
+            "area_ha": 1.0,
+            "status": "TENDING",
+            "harvest_approved_at": null,
+            "updated_at": "2026-11-01T00:00:00+00:00"
+          },
+          {
+            "id": "pa2",
+            "parcel_code": "TC-A2",
+            "household_id": "hh1",
+            "area_ha": 0.5,
+            "status": "TENDING",
+            "harvest_approved_at": null,
+            "updated_at": "2026-11-01T00:00:00+00:00"
+          },
+          {
+            "id": "pb1",
+            "parcel_code": "TC-B1",
+            "household_id": "hh2",
+            "area_ha": 2.0,
+            "status": "TENDING",
+            "harvest_approved_at": null,
+            "updated_at": "2026-11-01T00:00:00+00:00"
+          }
+        ]
+      },
+      "CrossCheckTickets": {
+        "fresh_leaf_tickets": []
+      },
+      "CrossCheckAlerted": {
+        "platform_agent_proposals": [
+          {
+            "subject_ids": [
+              "cross-check:advance:adv1"
+            ]
+          }
+        ]
+      }
+    },
+    "expected": {
+      "proposals": []
+    }
+  },
+  {
+    "name": "flush weighed above the norm",
+    "now": "2026-11-28T03:00:00Z",
+    "graphql": {
+      "CrossCheckAdvances": {
+        "input_advances": []
+      },
+      "CrossCheckItems": {
+        "input_items": [
+          {
+            "id": "it_prod",
+            "kind": "PESTICIDE",
+            "pesticide_product_id": "pp1",
+            "active": true
+          }
+        ]
+      },
+      "CrossCheckSprayings": {
+        "journal_entries": []
+      },
+      "CrossCheckParcels": {
+        "parcels": [
+          {
+            "id": "pa1",
+            "parcel_code": "TC-A1",
+            "household_id": "hh1",
+            "area_ha": 1.0,
+            "status": "TENDING",
+            "harvest_approved_at": null,
+            "updated_at": "2026-11-01T00:00:00+00:00"
+          },
+          {
+            "id": "pa2",
+            "parcel_code": "TC-A2",
+            "household_id": "hh1",
+            "area_ha": 0.5,
+            "status": "TENDING",
+            "harvest_approved_at": null,
+            "updated_at": "2026-11-01T00:00:00+00:00"
+          },
+          {
+            "id": "pb1",
+            "parcel_code": "TC-B1",
+            "household_id": "hh2",
+            "area_ha": 2.0,
+            "status": "TENDING",
+            "harvest_approved_at": null,
+            "updated_at": "2026-11-01T00:00:00+00:00"
+          }
+        ]
+      },
+      "CrossCheckTickets": {
+        "fresh_leaf_tickets": [
+          {
+            "id": "t1",
+            "household_id": "hh1",
+            "parcel_id": "pa1",
+            "cycle_id": "cy1",
+            "weighed_at": "2026-11-20T02:00:00+00:00",
+            "net_kg": 1500,
+            "status": "VALID"
+          },
+          {
+            "id": "t2",
+            "household_id": "hh1",
+            "parcel_id": "pa1",
+            "cycle_id": "cy1",
+            "weighed_at": "2026-11-22T02:00:00+00:00",
+            "net_kg": 1000,
+            "status": "VALID"
+          }
+        ]
+      },
+      "CrossCheckAlerted": {
+        "platform_agent_proposals": []
+      }
+    },
+    "expected": {
+      "proposals": [
+        {
+          "kind": "notification.internal",
+          "subjects": [
+            "cross-check:norm:pa1:cy1:0"
+          ],
+          "payload": {
+            "template": "weighing_over_norm",
+            "slots": {
+              "parcel_code": "TC-A1",
+              "area_ha": 1.0,
+              "kg": 2500,
+              "norm_kg": 2430
+            },
+            "subjects": [
+              "cross-check:norm:pa1:cy1:0"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "flush within the norm",
+    "now": "2026-11-28T03:00:00Z",
+    "graphql": {
+      "CrossCheckAdvances": {
+        "input_advances": []
+      },
+      "CrossCheckItems": {
+        "input_items": [
+          {
+            "id": "it_prod",
+            "kind": "PESTICIDE",
+            "pesticide_product_id": "pp1",
+            "active": true
+          }
+        ]
+      },
+      "CrossCheckSprayings": {
+        "journal_entries": []
+      },
+      "CrossCheckParcels": {
+        "parcels": [
+          {
+            "id": "pa1",
+            "parcel_code": "TC-A1",
+            "household_id": "hh1",
+            "area_ha": 1.0,
+            "status": "TENDING",
+            "harvest_approved_at": null,
+            "updated_at": "2026-11-01T00:00:00+00:00"
+          },
+          {
+            "id": "pa2",
+            "parcel_code": "TC-A2",
+            "household_id": "hh1",
+            "area_ha": 0.5,
+            "status": "TENDING",
+            "harvest_approved_at": null,
+            "updated_at": "2026-11-01T00:00:00+00:00"
+          },
+          {
+            "id": "pb1",
+            "parcel_code": "TC-B1",
+            "household_id": "hh2",
+            "area_ha": 2.0,
+            "status": "TENDING",
+            "harvest_approved_at": null,
+            "updated_at": "2026-11-01T00:00:00+00:00"
+          }
+        ]
+      },
+      "CrossCheckTickets": {
+        "fresh_leaf_tickets": [
+          {
+            "id": "t1",
+            "household_id": "hh1",
+            "parcel_id": "pa1",
+            "cycle_id": "cy1",
+            "weighed_at": "2026-11-20T02:00:00+00:00",
+            "net_kg": 2000,
+            "status": "VALID"
+          }
+        ]
+      },
+      "CrossCheckAlerted": {
+        "platform_agent_proposals": []
+      }
+    },
+    "expected": {
+      "proposals": []
+    }
+  },
+  {
+    "name": "voided ticket does not count",
+    "now": "2026-11-28T03:00:00Z",
+    "graphql": {
+      "CrossCheckAdvances": {
+        "input_advances": []
+      },
+      "CrossCheckItems": {
+        "input_items": [
+          {
+            "id": "it_prod",
+            "kind": "PESTICIDE",
+            "pesticide_product_id": "pp1",
+            "active": true
+          }
+        ]
+      },
+      "CrossCheckSprayings": {
+        "journal_entries": []
+      },
+      "CrossCheckParcels": {
+        "parcels": [
+          {
+            "id": "pa1",
+            "parcel_code": "TC-A1",
+            "household_id": "hh1",
+            "area_ha": 1.0,
+            "status": "TENDING",
+            "harvest_approved_at": null,
+            "updated_at": "2026-11-01T00:00:00+00:00"
+          },
+          {
+            "id": "pa2",
+            "parcel_code": "TC-A2",
+            "household_id": "hh1",
+            "area_ha": 0.5,
+            "status": "TENDING",
+            "harvest_approved_at": null,
+            "updated_at": "2026-11-01T00:00:00+00:00"
+          },
+          {
+            "id": "pb1",
+            "parcel_code": "TC-B1",
+            "household_id": "hh2",
+            "area_ha": 2.0,
+            "status": "TENDING",
+            "harvest_approved_at": null,
+            "updated_at": "2026-11-01T00:00:00+00:00"
+          }
+        ]
+      },
+      "CrossCheckTickets": {
+        "fresh_leaf_tickets": [
+          {
+            "id": "t1",
+            "household_id": "hh1",
+            "parcel_id": "pa1",
+            "cycle_id": "cy1",
+            "weighed_at": "2026-11-20T02:00:00+00:00",
+            "net_kg": 2000,
+            "status": "VALID"
+          },
+          {
+            "id": "t2",
+            "household_id": "hh1",
+            "parcel_id": "pa1",
+            "cycle_id": "cy1",
+            "weighed_at": "2026-11-20T02:00:00+00:00",
+            "net_kg": 900,
+            "status": "VOIDED"
+          }
+        ]
+      },
+      "CrossCheckAlerted": {
+        "platform_agent_proposals": []
+      }
+    },
+    "expected": {
+      "proposals": []
+    }
+  },
+  {
+    "name": "same step already alerted",
+    "now": "2026-11-28T03:00:00Z",
+    "graphql": {
+      "CrossCheckAdvances": {
+        "input_advances": []
+      },
+      "CrossCheckItems": {
+        "input_items": [
+          {
+            "id": "it_prod",
+            "kind": "PESTICIDE",
+            "pesticide_product_id": "pp1",
+            "active": true
+          }
+        ]
+      },
+      "CrossCheckSprayings": {
+        "journal_entries": []
+      },
+      "CrossCheckParcels": {
+        "parcels": [
+          {
+            "id": "pa1",
+            "parcel_code": "TC-A1",
+            "household_id": "hh1",
+            "area_ha": 1.0,
+            "status": "TENDING",
+            "harvest_approved_at": null,
+            "updated_at": "2026-11-01T00:00:00+00:00"
+          },
+          {
+            "id": "pa2",
+            "parcel_code": "TC-A2",
+            "household_id": "hh1",
+            "area_ha": 0.5,
+            "status": "TENDING",
+            "harvest_approved_at": null,
+            "updated_at": "2026-11-01T00:00:00+00:00"
+          },
+          {
+            "id": "pb1",
+            "parcel_code": "TC-B1",
+            "household_id": "hh2",
+            "area_ha": 2.0,
+            "status": "TENDING",
+            "harvest_approved_at": null,
+            "updated_at": "2026-11-01T00:00:00+00:00"
+          }
+        ]
+      },
+      "CrossCheckTickets": {
+        "fresh_leaf_tickets": [
+          {
+            "id": "t1",
+            "household_id": "hh1",
+            "parcel_id": "pa1",
+            "cycle_id": "cy1",
+            "weighed_at": "2026-11-20T02:00:00+00:00",
+            "net_kg": 2800,
+            "status": "VALID"
+          }
+        ]
+      },
+      "CrossCheckAlerted": {
+        "platform_agent_proposals": [
+          {
+            "subject_ids": [
+              "cross-check:norm:pa1:cy1:0"
+            ]
+          }
+        ]
+      }
+    },
+    "expected": {
+      "proposals": []
+    }
+  },
+  {
+    "name": "a further twenty percent raises the next step",
+    "now": "2026-11-28T03:00:00Z",
+    "graphql": {
+      "CrossCheckAdvances": {
+        "input_advances": []
+      },
+      "CrossCheckItems": {
+        "input_items": [
+          {
+            "id": "it_prod",
+            "kind": "PESTICIDE",
+            "pesticide_product_id": "pp1",
+            "active": true
+          }
+        ]
+      },
+      "CrossCheckSprayings": {
+        "journal_entries": []
+      },
+      "CrossCheckParcels": {
+        "parcels": [
+          {
+            "id": "pa1",
+            "parcel_code": "TC-A1",
+            "household_id": "hh1",
+            "area_ha": 1.0,
+            "status": "TENDING",
+            "harvest_approved_at": null,
+            "updated_at": "2026-11-01T00:00:00+00:00"
+          },
+          {
+            "id": "pa2",
+            "parcel_code": "TC-A2",
+            "household_id": "hh1",
+            "area_ha": 0.5,
+            "status": "TENDING",
+            "harvest_approved_at": null,
+            "updated_at": "2026-11-01T00:00:00+00:00"
+          },
+          {
+            "id": "pb1",
+            "parcel_code": "TC-B1",
+            "household_id": "hh2",
+            "area_ha": 2.0,
+            "status": "TENDING",
+            "harvest_approved_at": null,
+            "updated_at": "2026-11-01T00:00:00+00:00"
+          }
+        ]
+      },
+      "CrossCheckTickets": {
+        "fresh_leaf_tickets": [
+          {
+            "id": "t1",
+            "household_id": "hh1",
+            "parcel_id": "pa1",
+            "cycle_id": "cy1",
+            "weighed_at": "2026-11-20T02:00:00+00:00",
+            "net_kg": 3000,
+            "status": "VALID"
+          }
+        ]
+      },
+      "CrossCheckAlerted": {
+        "platform_agent_proposals": [
+          {
+            "subject_ids": [
+              "cross-check:norm:pa1:cy1:0"
+            ]
+          }
+        ]
+      }
+    },
+    "expected": {
+      "proposals": [
+        {
+          "kind": "notification.internal",
+          "subjects": [
+            "cross-check:norm:pa1:cy1:1"
+          ],
+          "payload": {
+            "template": "weighing_over_norm",
+            "slots": {
+              "parcel_code": "TC-A1",
+              "area_ha": 1.0,
+              "kg": 3000,
+              "norm_kg": 2430
+            },
+            "subjects": [
+              "cross-check:norm:pa1:cy1:1"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "both rules in one run",
+    "now": "2026-11-28T03:00:00Z",
+    "graphql": {
+      "CrossCheckAdvances": {
+        "input_advances": [
+          {
+            "id": "adv1",
+            "household_id": "hh2",
+            "item_id": "it_prod",
+            "quantity": 2,
+            "advanced_on": "2026-11-10",
+            "status": "VALID",
+            "settlement_id": null
+          }
+        ]
+      },
+      "CrossCheckItems": {
+        "input_items": [
+          {
+            "id": "it_prod",
+            "kind": "PESTICIDE",
+            "pesticide_product_id": "pp1",
+            "active": true
+          }
+        ]
+      },
+      "CrossCheckSprayings": {
+        "journal_entries": []
+      },
+      "CrossCheckParcels": {
+        "parcels": [
+          {
+            "id": "pa1",
+            "parcel_code": "TC-A1",
+            "household_id": "hh1",
+            "area_ha": 1.0,
+            "status": "TENDING",
+            "harvest_approved_at": null,
+            "updated_at": "2026-11-01T00:00:00+00:00"
+          },
+          {
+            "id": "pa2",
+            "parcel_code": "TC-A2",
+            "household_id": "hh1",
+            "area_ha": 0.5,
+            "status": "TENDING",
+            "harvest_approved_at": null,
+            "updated_at": "2026-11-01T00:00:00+00:00"
+          },
+          {
+            "id": "pb1",
+            "parcel_code": "TC-B1",
+            "household_id": "hh2",
+            "area_ha": 2.0,
+            "status": "TENDING",
+            "harvest_approved_at": null,
+            "updated_at": "2026-11-01T00:00:00+00:00"
+          }
+        ]
+      },
+      "CrossCheckTickets": {
+        "fresh_leaf_tickets": [
+          {
+            "id": "t1",
+            "household_id": "hh1",
+            "parcel_id": "pa2",
+            "cycle_id": "cy1",
+            "weighed_at": "2026-11-20T02:00:00+00:00",
+            "net_kg": 1300,
+            "status": "VALID"
+          }
+        ]
+      },
+      "CrossCheckAlerted": {
+        "platform_agent_proposals": []
+      }
+    },
+    "expected": {
+      "proposals": [
+        {
+          "kind": "notification.internal",
+          "subjects": [
+            "cross-check:advance:adv1"
+          ],
+          "payload": {
+            "template": "advance_without_spraying",
+            "slots": {
+              "household_id": "hh2",
+              "parcel_codes": [
+                "TC-B1"
+              ],
+              "advanced_on": "2026-11-10",
+              "grace_days": 10
+            },
+            "subjects": [
+              "cross-check:advance:adv1"
+            ]
+          }
+        },
+        {
+          "kind": "notification.internal",
+          "subjects": [
+            "cross-check:norm:pa2:cy1:0"
+          ],
+          "payload": {
+            "template": "weighing_over_norm",
+            "slots": {
+              "parcel_code": "TC-A2",
+              "area_ha": 0.5,
+              "kg": 1300,
+              "norm_kg": 1215
+            },
+            "subjects": [
+              "cross-check:norm:pa2:cy1:0"
+            ]
+          }
+        }
+      ]
+    }
+  }
+]

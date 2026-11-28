@@ -5,6 +5,7 @@ import { ConflictError, DomainError, ForbiddenError, NotFoundError, ValidationEr
 import { computeTicket } from '@/domain/weighing/ticket-math'
 import type { FreshLeafTicketPort, TicketUnit, TicketView } from '@/domain/weighing/ports/FreshLeafTicketPort'
 import { vnDayOf } from '@/application/agent/campaign/vn-day'
+import { dong, kg, raiseZaloEvents, type ZaloEventSink } from '@/application/zalo/zalo-events'
 import { viDate, weighingBlock } from './withdrawal-gate'
 
 export interface CreateTicketInput {
@@ -28,7 +29,7 @@ export interface TicketActor {
  * it runs inside the transaction that holds the parcel row lock.
  */
 export class CreateFreshLeafTicketUseCase {
-  constructor(private readonly port: FreshLeafTicketPort, private readonly clock: () => Date = () => new Date()) {}
+  constructor(private readonly port: FreshLeafTicketPort, private readonly clock: () => Date = () => new Date(), private readonly zalo?: ZaloEventSink) {}
 
   async execute(actor: TicketActor, input: CreateTicketInput): Promise<{ ticket: TicketView; created: boolean }> {
     if (actor.role !== 'accountant' && actor.role !== 'manager') throw new ForbiddenError('Forbidden')
@@ -40,6 +41,14 @@ export class CreateFreshLeafTicketUseCase {
 
     try {
       const ticket = await this.port.inTicketTransaction((unit) => this.write(unit, actor, input))
+      // After the commit, keyed by the ticket id: a failure here never undoes the weighing, and a replay raises nothing.
+      await raiseZaloEvents(this.zalo, [{
+        kind: 'TICKET_RECEIPT',
+        htxCode: actor.htxCode,
+        eventId: ticket.id,
+        householdId: ticket.household_id,
+        params: { ticket_no: ticket.ticket_no, date: viDate(vnDayOf(new Date(ticket.weighed_at))), net_kg: kg(ticket.net_kg), amount_vnd: dong(ticket.amount_vnd) },
+      }])
       return { ticket, created: true }
     } catch (err) {
       // Two replays racing past the pre-check: the unique key stopped the second, so hand back the first.

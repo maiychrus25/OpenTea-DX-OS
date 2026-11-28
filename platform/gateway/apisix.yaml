@@ -67,7 +67,7 @@ routes:
             realm_access:
               properties:
                 roles:
-                  not: { contains: { enum: ["agent", "telegram", "staff-sync", "web-service"] } }
+                  not: { contains: { enum: ["agent", "telegram", "zalo", "staff-sync", "web-service"] } }
       proxy-rewrite:
         regex_uri: ["^/api/workflow/(.*)", "/webhook/$1"]
   - id: disease
@@ -120,7 +120,7 @@ routes:
             realm_access:
               properties:
                 roles:
-                  not: { contains: { enum: ["agent", "telegram", "staff-sync", "web-service"] } }
+                  not: { contains: { enum: ["agent", "telegram", "zalo", "staff-sync", "web-service"] } }
   # Dedicated internal LLM route for dxos-agent so agent traffic has its own rate budget (spec §8.1).
   - id: internal-agent-llm
     uri: /api/internal/agent/llm/v1/chat/completions
@@ -182,6 +182,39 @@ routes:
                 roles:
                   type: array
                   contains: { enum: ["telegram"] }
+      limit-count:
+        count: 120
+        time_window: 60
+        key_type: var_combination
+        key: "$http_authorization"
+        rejected_code: 429
+      proxy-rewrite:
+        headers:
+          set:
+            X-Dxos-Gateway: "${{DXOS_INTERNAL_GATEWAY_SECRET:=dev-internal-gateway-secret}}"
+  # Internal-only route for the Zalo relay (dxos-zalo): unreachable on 9080, requires its client and the zalo role.
+  - id: internal-zalo
+    uri: /api/internal/zalo/*
+    upstream_id: web
+    vars: [["server_port", "==", "9081"]]
+    plugins:
+      openid-connect: &oidc_zalo
+        <<: *oidc
+        claim_schema:
+          required: [aud, azp, realm_access]
+          properties:
+            aud:
+              anyOf:
+                - { enum: ["dx-os-core"] }
+                - { type: array, contains: { enum: ["dx-os-core"] } }
+            azp:
+              enum: ["dxos-zalo"]
+            realm_access:
+              required: [roles]
+              properties:
+                roles:
+                  type: array
+                  contains: { enum: ["zalo"] }
       limit-count:
         count: 120
         time_window: 60

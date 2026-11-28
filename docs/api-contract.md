@@ -64,6 +64,8 @@ Or stream binary audio directly (Content-Type: audio/wav).
 
 **Roles:** manager, officer, farmer
 
+**GĐ4-A:** tối đa 20 lần mỗi phút cho mỗi người; vượt thì `429` `{ "error": { "code": "RATE_LIMITED", "message": "Bạn nghe nhiều quá, thử lại sau một phút." } }` kèm `Retry-After: 60`. Âm thanh cùng giọng và cùng văn bản được trả từ bộ đệm 7 ngày (`para/_tts-cache/`) mà không gọi Piper. `GET /api/tts/status` vẫn công khai.
+
 ---
 
 ## Chatbot (Manager & Officer)
@@ -1104,6 +1106,14 @@ Cấu hình AI của một HTX, gồm hạn mức USD hằng tháng. **Vai:** `p
 ### `GET /api/agent/settings` và `PUT` (thay đổi GĐ1)
 `GET` (`manager`, `officer`) chỉ đọc: `can_edit` luôn `false`. `PUT` không còn lưu gì và luôn trả 403 `FORBIDDEN` ("Cấu hình AI do quản trị nền tảng đặt.").
 
+### `GET /api/agent/settings/cross-check` và `PUT` (GĐ4-A)
+Ngưỡng của agent đối soát chéo, theo HTX của phiên. Quy tắc: [rules-and-limits.md](./rules-and-limits.md) mục 3.31.
+
+- **`GET`** (`manager`, `officer`): `{ "data": { "thresholds": { "grace_days": 10, "fresh_norm_kg_per_ha_flush": 1800, "norm_tolerance": 1.35, "realert_extra": 0.2 }, "can_edit": bool } }`; `can_edit` chỉ `true` với `manager`. Khoá chưa lưu trả giá trị mặc định.
+- **`PUT`** (`manager`): một phần bất kỳ của bốn khoá (ít nhất một), khoá lạ bị từ chối. Khoảng: `grace_days` nguyên 3–30, `fresh_norm_kg_per_ha_flush` nguyên 300–6000, `norm_tolerance` 1.00–3.00 (tối đa 2 chữ số thập phân), `realert_extra` 0.05–1.00. Trả `{ "data": { "thresholds", "can_edit": true } }`. Thay đổi được kiểm toán với tác nhân `user:<id>`.
+
+**Errors:** 400 `VALIDATION_ERROR`; 401 `UNAUTHORIZED`; 403 `FORBIDDEN`.
+
 ---
 
 ## Bàn cân và giá lá tươi (GĐ1 S3)
@@ -1668,3 +1678,27 @@ Trưởng HTX nhờ AI làm app; A12 chọn cách rẻ nhất (app trong Kho, m�
 ### Kho ứng dụng
 
 Danh mục có `owner_htx` chỉ hiện cho HTX đó (danh sách, chi tiết `404` cho HTX khác). Thẻ và trang chi tiết có `generated: true` và `buildRequestId`, hiển thị `App do AI xây` kèm liên kết tới `/manager/ai/apps/<request id>`.
+
+## Zalo OA/ZNS (GĐ4-C)
+
+Kênh Zalo cấp nền tảng, mặc định tắt theo từng HTX. Web quyết định mọi thứ; relay `dxos-zalo` chỉ thuê hàng đợi và gọi ZNS API. Tin chỉ đi theo mẫu (`template_key` → `zns_template_id`), không có văn bản tự do.
+
+### Internal Zalo API (`dxos-zalo` client, realm role `zalo`, APISIX `:9081`)
+
+Bearer token của client `dxos-zalo` cùng header `X-Dxos-Gateway`. Trả `{ "data": ... }` hoặc `{ "error": { "code", "message" } }`.
+
+- **`GET /api/internal/zalo/outbox?limit=`** (tối đa 50, mặc định 20, thuê 60 giây): kiểm lại đồng ý, cài đặt và mẫu lúc thuê; dòng không còn đủ điều kiện được đánh `skipped`. Trả `{ data: [{ id, phone: "84…", zns_template_id, template_data, tracking_id }] }`.
+- **`POST /api/internal/zalo/outbox/[id]/result`**: `{ ok: true, zalo_msg_id }` hoặc `{ ok: false, error, permanent?, retry_after_seconds? }`. Trả `{ data: { status: "sent|pending|failed" } }`. Tối đa 10 lần, backoff `min(5 × 2^(n−1), 900)` giây, không thử lại trong giờ im lặng; lỗi `permanent` dừng ngay.
+- **`POST /api/internal/zalo/tick`**: quét các thửa hết cách ly hôm nay (ngày Việt Nam), khoá `<parcel_id>:<ngày>` nên gọi lặp không gửi lại. Trả `{ data: { queued } }`.
+- **`POST /api/internal/zalo/heartbeat`**: `{ version? }` → `{ data: { ok: true } }`.
+- **`GET|POST /api/internal/zalo/credentials`**: GET trả `{ data: { access_token, refresh_token, expires_at } | null }`; POST lưu token đã làm mới. Token được mã hoá AES-256-GCM; thiếu `DXOS_ZALO_TOKEN_KEY` thì từ chối lưu (500). Không bao giờ ghi log token.
+
+### Cooperative and platform APIs
+
+- **`GET|PUT /api/zalo/settings`** (manager): `{ enabled, kinds[], quiet_start_hour (12–23), quiet_end_hour (1–11), monthly_quota (0–10000) }`; GET thêm `sent_this_month` và `kinds_without_template`.
+- **`GET /api/zalo/deliveries?status=&kind=`** (manager, accountant): 100 tin mới nhất, số điện thoại che còn 3 số cuối, `reason_vi` là lý do tiếng Việt của tin lỗi hoặc bị bỏ qua.
+- **`GET|POST /api/households/[id]/zalo-consent`**: `{ status: OPTED_IN|OPTED_OUT, source: REGISTRATION|OFFICER|MEMBER }`. Cán bộ và trưởng HTX ghi OPTED_IN hoặc OPTED_OUT (nguồn `REGISTRATION` hoặc `OFFICER`) cho mọi hộ của HTX. Xã viên chỉ ghi `OPTED_OUT` nguồn `MEMBER` cho hộ gắn với tài khoản của mình; mọi trường hợp khác `403`. Mỗi lần ghi lưu `recorded_by`.
+- **`GET|PUT /api/platform/zalo/templates`** (`platform_admin`): bốn khoá mẫu; tên tham số ngoài danh sách cho phép bị từ chối `400`.
+- **`GET|PUT /api/platform/zalo/credentials`** (`platform_admin`): PUT nhận `{ access_token, refresh_token, expires_at }`; GET chỉ trả `configured`, 4 ký tự cuối của access token và hạn. Máy chủ chưa đặt `DXOS_ZALO_TOKEN_KEY` thì PUT (và `POST /api/internal/zalo/credentials`) trả 422 `ZALO_TOKEN_KEY_MISSING`, không lưu gì.
+
+Sự kiện và khoá chống lặp: giá ngày `<htx>:<ngày>:<sha256(grade:price đã sắp xếp)>`, phiếu cân `<ticket_id>`, hết cách ly `<parcel_id>:<ngày>`, chốt kỳ `<settlement_line_id>`. Tin được ghi sau khi việc gốc đã commit; lỗi ghi tin không làm hỏng việc gốc.

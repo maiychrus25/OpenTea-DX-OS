@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
-import { MONEY_ALERTS, type BoardAlert, type BoardReceivables, type DirectorBoard, type LeafToday, type MemberPayable } from '@/domain/board/views'
+import { MONEY_ALERTS, type BoardAlert, type BoardReceivables, type DirectorBoard, type DryStock, type LeafToday, type MemberPayable } from '@/domain/board/views'
+import type { ForecastView } from '@/domain/forecast/views'
 import type { BoardSource } from '@/domain/board/ports/BoardSource'
 import { vnDayOf, vnDayStart } from '@/application/agent/campaign/vn-day'
 import { logger } from '@/lib/logger'
@@ -15,7 +16,8 @@ function shiftDay(day: string, n: number): string {
 }
 
 export class DirectorBoardUseCase {
-  constructor(private readonly source: BoardSource) {}
+  /** Without a forecast reader the board shows stock only and `forecast_dry_kg_14d` is null. */
+  constructor(private readonly source: BoardSource, private readonly forecast?: { read(htxProfileId: string, today: string): Promise<ForecastView> }) {}
 
   /** Each block loads on its own: one that throws is null and the rest still come back. */
   async read(htxProfileId: string, now: Date, role: 'manager' | 'accountant'): Promise<DirectorBoard> {
@@ -26,7 +28,7 @@ export class DirectorBoardUseCase {
       this.block('leaf', () => this.leaf(htxProfileId, today)),
       pricesBlock,
       this.block('payable', () => this.payable(htxProfileId)),
-      this.block('dry_stock', () => this.source.dryStock(htxProfileId)),
+      this.block('dry_stock', () => this.dryStock(htxProfileId, today)),
       receivablesBlock,
       this.block('alerts', () => this.alerts(htxProfileId, now, today, role, pricesBlock, receivablesBlock)),
     ])
@@ -49,6 +51,14 @@ export class DirectorBoardUseCase {
       this.source.leafBetween(htxProfileId, new Date(start.getTime() - DAY_MS), start),
     ])
     return { net_kg: day.net_kg, amount_vnd: day.amount_vnd.toString(), tickets: day.tickets, yesterday_net_kg: before.net_kg }
+  }
+
+  private async dryStock(htxProfileId: string, today: string): Promise<DryStock> {
+    const [grades, forecast_dry_kg_14d] = await Promise.all([
+      this.source.dryStock(htxProfileId),
+      this.forecast ? this.block('forecast', async () => (await this.forecast!.read(htxProfileId, today)).total_dry_kg) : null,
+    ])
+    return { grades, forecast_dry_kg_14d }
   }
 
   private async payable(htxProfileId: string): Promise<MemberPayable> {

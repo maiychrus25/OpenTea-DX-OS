@@ -10,6 +10,7 @@ from typing import Any, Callable, Mapping
 import pytest
 
 from dxos_agent.agents.bulletin import run_bulletin
+from dxos_agent.agents.cross_check import run_cross_check
 from dxos_agent.agents.disease_watch import run_disease_watch
 from dxos_agent.agents.field_watch import run_field_watch
 from dxos_agent.agents.harvest_ready import run_harvest_ready
@@ -97,6 +98,9 @@ RUNNERS: dict[str, Callable[[ScenarioGateway, dict[str, Any]], Any]] = {
         gateway, _parse(case["now"]), case.get("thresholds")
     ),
     "a4_harvest_ready.json": lambda gateway, case: run_harvest_ready(
+        gateway, _parse(case["now"]), case.get("thresholds")
+    ),
+    "a13_cross_check.json": lambda gateway, case: run_cross_check(
         gateway, _parse(case["now"]), case.get("thresholds")
     ),
 }

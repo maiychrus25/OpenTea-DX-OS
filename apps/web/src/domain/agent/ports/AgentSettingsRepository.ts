@@ -14,6 +14,8 @@ export interface AgentSettingRecord {
 export interface AgentSettingsSnapshot {
   agents: Partial<Record<ConfigurableAgent, AgentSettingRecord>>
   monthlyLimit: number | null
+  /** Thresholds of the cross-check agent's row (it has no provider choice), or null when the cooperative has none. */
+  crossCheckThresholds?: Record<string, unknown> | null
 }
 
 /** What a manager chooses per agent; turning the agent on or off stays with `./dxos agent enable`. */
@@ -37,6 +39,8 @@ export interface AgentSettingsValues {
 }
 
 export interface AgentSettingsRepository {
+  /** Merges the given thresholds into the agent's row, creating it (switched off) when missing; audited under `actor`. */
+  upsertThresholds(htxCode: string, agent: string, thresholds: Record<string, number>, actor: string): Promise<void>
   load(htxCode: string): Promise<AgentSettingsSnapshot>
   /** `ollama` plus each external provider whose key the agent container reported in its heartbeat. */
   availableProviders(htxCode: string): Promise<AgentProvider[]>

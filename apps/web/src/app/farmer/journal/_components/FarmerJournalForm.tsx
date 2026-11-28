@@ -3,6 +3,8 @@
 
 'use client'
 
+import { ListenButton } from '@/components/features/tts/ListenButton'
+import { activitySentence } from '@/lib/tts/sentences'
 import React, { useEffect, useRef, useState } from 'react'
 import styles from '../journal.module.css'
 import kit from '@/components/features/farmer-web/kit.module.css'
@@ -184,6 +186,8 @@ export function FarmerJournalForm({ onSuccess, onCancel, initial: chatPrefill, e
           ))}
         </div>
       </div>
+
+      <ListenButton text={activitySentence(ACTIVITY_TYPES.find(t => t.value === activityType)?.label ?? activityType, spraying)} label="Nghe hướng dẫn" />
 
       {hasProductFields(activityType) && (
         <label className={styles.check}>
