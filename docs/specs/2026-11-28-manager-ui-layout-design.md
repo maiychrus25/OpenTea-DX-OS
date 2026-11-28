@@ -3,42 +3,46 @@ SPDX-License-Identifier: MIT
 SPDX-FileCopyrightText: 2026 OpenTea Developers
 -->
 
-# Chỉnh bố cục giao diện Trưởng HTX (đợt 1)
+# Giao diện Trưởng HTX theo bộ thiết kế (đợt 1)
 
-**Ngày:** 2026-11-28. **Phạm vi:** `apps/web`, vai Trưởng HTX, bốn trang: Tổng quan, Lịch thu hái, Duyệt nhật ký, Vùng trồng.
+**Ngày:** 2026-11-28. **Phạm vi:** `apps/web`, vai Trưởng HTX: khung menu, thanh trên và chín trang Tổng quan, Lịch thu hái, Duyệt nhật ký, Vùng trồng, Giá thu mua, Phiếu cân, Vật tư, Quyết toán, Bán hàng.
 
 ## 1. Mục tiêu
 
-Trình bày lại bốn trang theo ảnh thiết kế, trên bản 1.23.0.
+Làm đúng theo ảnh thiết kế được cung cấp, thay cho bố cục cũ. Yêu cầu này thay cho bản đầu của đặc tả (giữ lại các khối cũ).
 
 ## 2. Nguyên tắc
 
-Ảnh thiết kế là chuẩn bố cục; mã là chuẩn nghiệp vụ. Không đổi màu, phông, quyền hay luồng. Số liệu lấy từ dữ liệu thật; không có dữ liệu thì bỏ ô đó, không bịa số.
+- Bố cục, thứ tự, nhãn và sắc xanh theo ảnh. Sắc xanh chỉ áp cho vai Trưởng HTX ở giao diện sáng.
+- Có dữ liệu thật thì dùng thật. Ảnh vẽ thứ hệ thống chưa có dữ liệu hay chức năng thì vẫn vẽ và gắn nhãn "Mẫu".
+- Chức năng thật mà ảnh không vẽ thì đặt trong hộp thoại hoặc nút phụ; quyền và luồng nghiệp vụ không đổi.
 
-Giữ lại những gì ảnh không vẽ: sáu khối điều hành, lịch tháng và các thao tác trên lịch, mục quá hạn và yêu cầu sửa, xuất CSV/GeoJSON.
+## 3. Phần đang là mẫu
 
-Tổng quan bỏ ba khối lặp: dải báo mưa và bảng thời tiết (đã có trên ảnh bìa và trang Bản tin), bảng duyệt nhanh nhật ký (đã có trong "Công việc cần xử lý" và trang Duyệt nhật ký).
-
-Không làm theo ảnh:
-
-- "Thêm vùng trồng": Trưởng HTX chỉ xem vùng trồng; vẽ thửa là việc của cán bộ kỹ thuật.
-- Bộ lọc "Khu vực", bản đồ chia Khu A–D: dữ liệu không có khu vực.
-- "Duyệt phiếu cân": phiếu cân không có bước xác nhận.
-- Mọi tên người, số liệu và ngày trong ảnh là minh họa.
-
-## 3. Thay đổi
-
-| Trang | Việc chính |
+| Trang | Phần mẫu |
 |---|---|
-| Tổng quan | Ảnh bìa kèm thời tiết; bốn số từ đầu năm (búp thu mua, chè khô, đã bán, doanh thu) so cùng kỳ khi năm trước có số; biểu đồ búp 8 tuần; việc cần xử lý; thao tác nhanh. |
-| Lịch thu hái | Bốn số của tháng, dải tuần, tiến độ lứa đã hái, bảng kế hoạch và lịch sử, tab lịch tháng. Thêm trường chỉ đọc `areaHa` vào `/api/schedule/harvest`. |
-| Duyệt nhật ký | Bốn số, tab trạng thái, tìm kiếm, Duyệt và Từ chối trên từng dòng (dùng `/api/journal/{id}/review` đã có), phân trang. |
-| Vùng trồng | Bốn số, tab bản đồ và danh sách, bộ lọc trạng thái và giống. |
+| Tổng quan | % so cùng kỳ khi năm trước chưa có số; việc "Duyệt phiếu cân"; cảnh báo và bản tin khi chưa có dữ liệu |
+| Lịch thu hái | % so kỳ trước khi tháng trước chưa có số |
+| Vùng trồng | Nút "Thêm vùng trồng" (việc của cán bộ kỹ thuật); bản đồ khu A–D khi chưa thửa nào có ranh giới |
+| Phiếu cân | "Chờ xác nhận" (phiếu không có bước này) |
+| Vật tư | Tồn kho, ngưỡng cảnh báo, sắp hết, nhóm chế phẩm sinh học |
+| Bán hàng | "Chờ giao hàng", "Đang giao" |
 
-## 4. Rủi ro và hoàn tác
+## 4. Khác ảnh có chủ ý
 
-`HarvestCalendar` dùng chung với nông hộ và cán bộ: chỉ thêm tuỳ chọn để đặt vào tab của trang Trưởng HTX, mặc định giữ nguyên. Mỗi trang một commit, `git revert` được riêng.
+- Phiếu cân không sửa được: nút "Chỉnh sửa" thành "Hủy phiếu".
+- Quyết toán còn nháp: nút "Đánh dấu đã chi trả" thành "Xem và chốt kỳ".
+- Lọc "Khu vực" thay bằng lọc nông hộ hoặc giống chè.
+- Menu giữ mục "Thông báo Zalo".
 
-## 5. Kiểm tra
+## 5. Chức năng không còn trên các trang này
 
-`npx tsc --noEmit`, `npm run lint`, `npx jest`, `npm run build`; xem 1440×900 và 390px, sáng và tối.
+Duyệt nhiều nhật ký một lúc, xuất CSV nhật ký, các tab "Quá hạn" và "Yêu cầu sửa" (nay nằm trong "Chờ duyệt" và "Từ chối"), sáu khối điều hành và liên kết phân tích ở Tổng quan.
+
+## 6. Dữ liệu và API
+
+Chỉ thêm đọc: `areaHa`, `harvestedKg` trong `/api/schedule/harvest`; trang Giá thu mua đọc lịch sử `daily_leaf_prices`. Thêm trang in phiếu cân `/manager/leaf-tickets/{id}/print`. Sửa lỗi đọc công nợ (`/api/sales/receivables` trả `{ data }`).
+
+## 7. Rủi ro, hoàn tác và kiểm tra
+
+Component dùng chung với vai khác chỉ thêm tuỳ chọn. Mỗi trang là commit riêng. Kiểm tra: `npx tsc --noEmit`, `npm run lint`, `npx jest`, `npm run build`, ảnh máy tính và 390px.
