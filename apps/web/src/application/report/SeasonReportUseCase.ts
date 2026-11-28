@@ -16,7 +16,7 @@ export class SeasonReportUseCase {
   async read(htxProfileId: string, from: string, to: string): Promise<SeasonReport> {
     const range: ReportRange = { from, to, start: vnDayStart(from), end: new Date(vnDayStart(to).getTime() + DAY_MS) }
     const s = this.source
-    const [name, members, purchases, member_money, processing, lots, safety] = await Promise.all([
+    const [name, members, purchases, member_money, processing, lots, sales, safety] = await Promise.all([
       this.section('htx_name', () => s.htxName(htxProfileId)),
       this.section('members', () => s.members(htxProfileId)),
       this.section('purchases', () => this.purchases(htxProfileId, range)),
@@ -29,10 +29,13 @@ export class SeasonReportUseCase {
         return { ...p, fresh_kg: round(p.fresh_kg, 1), dry_kg: round(p.dry_kg, 1), avg_ratio: p.dry_kg > 0 ? round(p.fresh_kg / p.dry_kg, 2) : null }
       }),
       this.section('lots', () => s.lots(htxProfileId, range)),
+      this.section('sales', async () => {
+        const x = await s.sales(htxProfileId, range)
+        return { wholesale_vnd: x.wholesale_vnd.toString(), retail_vnd: x.retail_vnd.toString(), kg_sold: round(x.kg_sold, 1), receivable_vnd: x.receivable_vnd.toString(), top_partners: x.top_partners.map((t) => ({ partner_name: t.partner_name, amount_vnd: t.amount_vnd.toString() })) }
+      }),
       this.section('safety', () => s.safety(htxProfileId, range)),
     ])
-    // TODO(R2): sales section after S8 merges
-    return { htx_name: name ?? '', from, to, generated_at: new Date().toISOString(), members, purchases, member_money, processing, lots, sales: null, safety }
+    return { htx_name: name ?? '', from, to, generated_at: new Date().toISOString(), members, purchases, member_money, processing, lots, sales, safety }
   }
 
   private async section<T>(name: string, load: () => Promise<T>): Promise<T | null> {

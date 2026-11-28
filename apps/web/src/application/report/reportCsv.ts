@@ -39,6 +39,9 @@ function tableOf(r: SeasonReport, section: ReportSection): Table | null {
     case 'safety':
       return r.safety && [['Lần phun đã duyệt', 'Thửa nghiệm thu'], [[s(r.safety.sprayings_approved), s(r.safety.harvests_approved)]]]
     case 'sales':
-      return null // TODO(R2): sales table after S8 merges
+      return r.sales && [
+        ['Chỉ tiêu', 'Giá trị'],
+        [['Doanh thu bán sỉ (đ)', r.sales.wholesale_vnd], ['Doanh thu bán lẻ (đ)', r.sales.retail_vnd], ['Kg đã bán', s(r.sales.kg_sold)], ['Phải thu cuối kỳ (đ)', r.sales.receivable_vnd], ...r.sales.top_partners.map((t, i) => [`Thương lái ${i + 1}: ${t.partner_name} (đ)`, t.amount_vnd])],
+      ]
   }
 }

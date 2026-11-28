@@ -138,4 +138,36 @@ maybe('season report on a real Postgres', () => {
     const report = await useCase.read(ids.htx, '2026-04-01', '2026-04-30')
     expect(report.safety).toEqual({ sprayings_approved: 1, harvests_approved: 1 })
   })
+
+  it('reports sales by Vietnam day, with the receivable at the end of the range', async () => {
+    const partner = (name: string, htx = ids.htx) => prisma.partner.create({ data: { name, partner_type: 'MIDDLEMAN', lat: 0, lng: 0, primary_commodities: [], htx_profile_id: htx } })
+    const ba = await partner('Anh Ba')
+    const nam = await partner('Chị Năm')
+    const lot = await prisma.lot.create({ data: { lot_code: `LS-${run}`, commodity: 'Chè', harvest_date: day('2026-04-01'), htx_profile_id: ids.htx } })
+    let n = 0
+    const order = (kind: 'WHOLESALE' | 'RETAIL', on: string, total: number, g: number, partnerId: string | null, status: 'CONFIRMED' | 'CANCELLED' = 'CONFIRMED', htx = ids.htx) =>
+      prisma.salesOrder.create({
+        data: { htx_profile_id: htx, order_no: `BH-${run}-${++n}`, kind, partner_id: partnerId, ordered_on: day(on), due_on: kind === 'RETAIL' ? null : day('2026-12-31'), status, total_vnd: BigInt(total), created_by_id: 'u1', lines: { create: [{ lot_id: lot.id, net_g: g, amount_vnd: BigInt(total) }] } },
+      })
+    const pay = (orderId: string, amount: number, on: string) => prisma.salesPayment.create({ data: { order_id: orderId, amount_vnd: BigInt(amount), paid_on: day(on), method: 'CASH', created_by_id: 'u1' } })
+    const w1 = await order('WHOLESALE', '2026-04-01', 1000000, 10500, ba.id) // first day
+    const w2 = await order('WHOLESALE', '2026-04-30', 500000, 2000, nam.id) // last day
+    await order('WHOLESALE', '2026-05-01', 9000000, 99000, ba.id) // after the range
+    await order('WHOLESALE', '2026-03-31', 8000000, 88000, ba.id) // before the range
+    await order('WHOLESALE', '2026-04-10', 7000000, 77000, ba.id, 'CANCELLED')
+    await order('RETAIL', '2026-04-15', 300000, 500, null)
+    await order('WHOLESALE', '2026-04-15', 6000000, 66000, (await partner('Khác', ids.other)).id, 'CONFIRMED', ids.other)
+    await pay(w1.id, 400000, '2026-04-30') // counts
+    await pay(w1.id, 100000, '2026-05-01') // after `to`, not counted
+    await pay(w2.id, 500000, '2026-04-20') // w2 fully paid
+    const report = await useCase.read(ids.htx, '2026-04-01', '2026-04-30')
+    // Receivable: w1 1,000,000 - 400,000 = 600,000; w2 0; the 03-31 order 8,000,000 is open too.
+    expect(report.sales).toEqual({
+      wholesale_vnd: '1500000',
+      retail_vnd: '300000',
+      kg_sold: 13,
+      receivable_vnd: '8600000',
+      top_partners: [{ partner_name: 'Anh Ba', amount_vnd: '1000000' }, { partner_name: 'Chị Năm', amount_vnd: '500000' }],
+    })
+  })
 })
