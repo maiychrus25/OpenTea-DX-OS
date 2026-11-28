@@ -35,3 +35,16 @@ def ensure_gateway_secret(path: Path) -> tuple[str, bool]:
     secret = secrets.token_urlsafe(32)
     update_env(path, {GATEWAY_SECRET_KEY: secret})
     return secret, True
+
+
+def remove_key(path: Path, key: str) -> None:
+    """Drop one key; the file goes away when nothing is left, so an app that was never installed leaves no env file."""
+    values = read_env(path)
+    if key not in values:
+        return
+    del values[key]
+    if values:
+        path.unlink()
+        update_env(path, values)
+    else:
+        path.unlink(missing_ok=True)

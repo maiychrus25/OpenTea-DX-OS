@@ -319,3 +319,32 @@ def test_install_without_a_database_still_gets_a_secret_env_file_and_matching_ro
     assert env.read_text(encoding="utf-8").strip() == f"{key}={secret}"
     assert main(["remove", "tea-tour", "--purge"]) == 0
     assert not env.exists()
+
+
+def _without_database(root):
+    manifest_file = root / "miniapps" / "tea-tour" / "app.yaml"
+    manifest = yaml.safe_load(manifest_file.read_text(encoding="utf-8"))
+    del manifest["database"]
+    manifest_file.write_text(yaml.safe_dump(manifest), encoding="utf-8")
+
+
+def test_a_failed_install_of_an_app_without_a_database_leaves_no_env_file(root, monkeypatch):
+    # The gateway step makes the app's secret; when a later step fails, the app was never installed, so the secret goes too.
+    _without_database(root)
+
+    def fail(self):
+        raise commands.InstallError("compose hỏng")
+
+    monkeypatch.setattr(commands.ComposeStep, "apply", fail)
+    assert main(["prepare", app_dir(root)]) == 1
+    assert not (root / "docker" / "runtime" / "apps" / "tea-tour.env").exists()
+    assert not any("tea-tour" in name for name in runtime_files(root))
+
+
+def test_a_failed_gateway_step_of_an_app_without_a_database_leaves_no_trace(root, capsys):
+    _without_database(root)
+    other = root / "docker" / "runtime" / "gateway" / "apps" / "other.yaml"
+    other.parent.mkdir(parents=True)
+    other.write_text("- {id: app-other-public-1, uri: /api/data/graphql}\n", encoding="utf-8")
+    assert main(["prepare", app_dir(root)]) == 1
+    assert set(runtime_files(root)) == {"gateway/apps/other.yaml"}
