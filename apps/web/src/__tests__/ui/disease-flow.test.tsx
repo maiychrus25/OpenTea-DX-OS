@@ -27,14 +27,30 @@ const report = (ai_disease_name: string) => ({
   detection_date: '2026-11-10T00:00:00Z',
 })
 
-describe('officer review form', () => {
-  function renderWith(aiName: string) {
-    const fetchMock = jest.fn().mockResolvedValueOnce(respond({ data: [report(aiName)] }))
-    global.fetch = fetchMock as unknown as typeof fetch
-    render(<OfficerDiseaseDetailPage params={{ id: 'd1' }} />)
-    return fetchMock
-  }
+const LABELS = [
+  { code: 'green_leafhopper', name_vi: 'Rầy xanh', scientific_name: 'Empoasca', group: 'PEST', is_target: true, sort_order: 1 },
+  { code: 'healthy', name_vi: 'Lá khoẻ', scientific_name: null, group: 'HEALTHY', is_target: false, sort_order: 50 },
+]
 
+// Answers each URL by its own mock, so the order of calls does not matter.
+function routedFetch(aiName: string, labelsResponse: unknown = respond({ data: LABELS })) {
+  return jest.fn(async (url: string) => {
+    if (url === '/api/officer/diseases') return respond({ data: [report(aiName)] })
+    if (url === '/api/disease-labels') return labelsResponse
+    return respond({ success: true })
+  })
+}
+
+const reviewCalls = (fetchMock: jest.Mock) => fetchMock.mock.calls.filter(c => c[0] === '/api/officer/diseases/d1/review')
+
+function renderWith(aiName: string, labelsResponse?: unknown) {
+  const fetchMock = routedFetch(aiName, labelsResponse)
+  global.fetch = fetchMock as unknown as typeof fetch
+  render(<OfficerDiseaseDetailPage params={{ id: 'd1' }} />)
+  return fetchMock
+}
+
+describe('officer review form', () => {
   test('labels the confirmed name as required to approve', async () => {
     renderWith('Thán thư')
     expect(await screen.findByLabelText('Tên bệnh đã xác nhận (Bắt buộc khi Duyệt)')).toBeInTheDocument()
@@ -59,26 +75,57 @@ describe('officer review form', () => {
 
     expect(await screen.findByText('Vui lòng nhập tên bệnh đã xác nhận trước khi duyệt.')).toBeInTheDocument()
     expect(input).toHaveAttribute('aria-invalid', 'true')
-    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(reviewCalls(fetchMock)).toHaveLength(0)
   })
 
-  test('sends the confirmed name with the approval', async () => {
+  test('the label select is grouped: the five targets first, the rest under Khác', async () => {
+    renderWith('Thán thư')
+    const select = await screen.findByLabelText('Nhãn bệnh/sâu (Bắt buộc khi Duyệt)')
+    const groups = Array.from(select.querySelectorAll('optgroup')).map(g => g.label)
+    expect(groups).toEqual(['5 dịch hại chủ lực', 'Khác'])
+    expect(select.querySelector('optgroup[label="5 dịch hại chủ lực"] option')).toHaveTextContent('Rầy xanh')
+    expect(select.querySelector('optgroup[label="Khác"] option')).toHaveTextContent('Lá khoẻ')
+  })
+
+  test('approve without a label shows the Vietnamese message and sends nothing', async () => {
     const fetchMock = renderWith('Thán thư')
-    const input = await screen.findByLabelText(/^Tên bệnh đã xác nhận/)
-    fireEvent.change(input, { target: { value: 'Đốm nâu' } })
+    await screen.findByLabelText(/^Tên bệnh đã xác nhận/)
     fireEvent.change(screen.getByLabelText(/Nhập hướng dẫn/), { target: { value: 'Cắt lá bệnh' } })
-    fetchMock.mockResolvedValueOnce(respond({ success: true }))
 
     fireEvent.click(screen.getByRole('button', { name: 'Phê duyệt' }))
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
-    const [url, init] = fetchMock.mock.calls[1]
-    expect(url).toBe('/api/officer/diseases/d1/review')
-    expect(JSON.parse(init.body)).toEqual({
+    expect(await screen.findByText('Chọn nhãn bệnh/sâu trước khi xác nhận.')).toBeInTheDocument()
+    expect(reviewCalls(fetchMock)).toHaveLength(0)
+  })
+
+  test('sends the confirmed name and the label code with the approval', async () => {
+    const fetchMock = renderWith('Thán thư')
+    fireEvent.change(await screen.findByLabelText(/^Tên bệnh đã xác nhận/), { target: { value: 'Đốm nâu' } })
+    fireEvent.change(screen.getByLabelText('Nhãn bệnh/sâu (Bắt buộc khi Duyệt)'), { target: { value: 'green_leafhopper' } })
+    fireEvent.change(screen.getByLabelText(/Nhập hướng dẫn/), { target: { value: 'Cắt lá bệnh' } })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Phê duyệt' }))
+
+    await waitFor(() => expect(reviewCalls(fetchMock)).toHaveLength(1))
+    expect(JSON.parse(reviewCalls(fetchMock)[0][1].body)).toEqual({
       status: 'CONFIRMED',
       treatment_recommendation: 'Cắt lá bệnh',
       confirmed_diagnosis: 'Đốm nâu',
+      confirmed_label_code: 'green_leafhopper',
     })
+  })
+
+  test('a failed label load shows its message and blocks approval, but rejection still works', async () => {
+    const fetchMock = renderWith('Thán thư', respond({ error: { message: 'x' } }, 500))
+    expect(await screen.findByText('Không tải được danh mục nhãn.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Phê duyệt' })).toBeDisabled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Từ chối' }))
+
+    await waitFor(() => expect(reviewCalls(fetchMock)).toHaveLength(1))
+    const body = JSON.parse(reviewCalls(fetchMock)[0][1].body)
+    expect(body.status).toBe('REJECTED')
+    expect(body).not.toHaveProperty('confirmed_label_code')
   })
 })
 

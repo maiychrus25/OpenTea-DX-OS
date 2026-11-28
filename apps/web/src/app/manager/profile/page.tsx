@@ -9,6 +9,7 @@ import { prisma } from '@/infrastructure/db/prisma.client'
 import { requireTenant } from '@/lib/api/tenant'
 import { auth } from '@/auth'
 import { ProfileForm } from './_components/ProfileForm'
+import { TrainingConsentSwitch } from './_components/TrainingConsentSwitch'
 import { AccountSection } from '@/components/ui'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Panel } from '@/components/ui/Panel'
@@ -88,6 +89,8 @@ export default async function HtxProfilePage() {
           </div>
 
           <PublicNamesSetting />
+
+          <TrainingConsentSwitch />
 
           <AccountSection name={session?.user?.name || 'Trưởng HTX'} role="manager" />
         </div>
