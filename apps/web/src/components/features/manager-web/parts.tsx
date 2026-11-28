@@ -5,6 +5,11 @@ import React from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import styles from './kit.module.css'
 
+/** Marks what the design shows but the system has no data or function for yet. */
+export function Sample() {
+  return <span className={styles.sample}>Mẫu</span>
+}
+
 export interface StatCard {
   label: string
   value: string
@@ -13,6 +18,8 @@ export interface StatCard {
   /** Percent against the earlier period; left out when there is nothing to compare with. */
   change?: number | null
   note?: string
+  /** The figure is an example, not data. */
+  sample?: boolean
 }
 
 const percent = (value: number) => `${value >= 0 ? '↑ +' : '↓ '}${value.toLocaleString('vi-VN', { maximumFractionDigits: 1 })}%`
@@ -24,7 +31,7 @@ export function StatCards({ items }: { items: StatCard[] }) {
         <div key={item.label} className={styles.stat}>
           <span className={`${styles.statIcon} ${item.tone ? styles[item.tone] : ''}`} aria-hidden="true">{item.icon}</span>
           <div className={styles.statText}>
-            <dt>{item.label}</dt>
+            <dt>{item.label}{item.sample && <> <Sample /></>}</dt>
             <dd className={styles.statValue}>{item.value}</dd>
             {(item.change != null || item.note) && (
               <dd className={styles.statNote}>

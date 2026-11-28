@@ -43,3 +43,5 @@
   .statIcon { width: 36px; height: 36px; }
   .statValue { font-size: 18px; }
 }
+
+.sample { display: inline-block; padding: 0 6px; border: 1px dashed var(--color-border-input); border-radius: var(--radius-pill); font-size: 10.5px; font-weight: 700; color: var(--color-ink-secondary); vertical-align: middle; }
