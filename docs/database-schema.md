@@ -22,6 +22,22 @@ erDiagram
     ParcelCropCycle ||--o{ JournalEntry : "records"
     JournalEntry ||--o{ JournalActivity : "contains"
     JournalEntry }o--|| User : "recorded_by"
+    JournalActivity }o--o| PesticideProduct : "uses"
+    HTXProfile ||--o{ HtxPesticideLabel : "labels"
+    PesticideProduct ||--o{ HtxPesticideLabel : "has"
+    HTXProfile ||--o{ HtxMembership : "members"
+    HTXProfile ||--o{ LeafGrade : "grades"
+    LeafGrade ||--o{ DailyLeafPrice : "priced"
+    Parcel ||--o{ FreshLeafTicket : "weighed"
+    LeafGrade ||--o{ FreshLeafTicket : "graded"
+    HTXProfile ||--o{ InputItem : "catalogue"
+    InputItem ||--o{ InputAdvance : "advanced"
+    Household ||--o{ InputAdvance : "owes"
+    HTXProfile ||--o{ SettlementPeriod : "settles"
+    SettlementPeriod ||--o{ MemberSettlement : "lines"
+    MemberSettlement ||--o{ FreshLeafTicket : "covers"
+    MemberSettlement ||--o{ InputAdvance : "covers"
+    Household ||--o{ MemberLedgerEntry : "ledger"
     Lot ||--o{ LotParcel : "includes"
     LotParcel }o--|| Parcel : "from"
     Lot ||--o{ DiseaseReport : "may_have"
@@ -90,6 +106,9 @@ Nông hộ thành viên HTX.
 | phone | VARCHAR(20) | UNIQUE, NOT NULL | Dùng làm household_code |
 | address | TEXT | nullable | |
 | keycloak_user_id | TEXT | nullable | Linked after farmer account created |
+| bank_bin | TEXT | nullable, `CHECK` `^[0-9]{6}$` | BIN ngân hàng nhận tiền (`20261128150000_member_ledger`, GĐ1 S4) |
+| bank_account | TEXT | nullable, `CHECK` `^[0-9]{6,19}$` | Số tài khoản; chỉ `manager` và `accountant` đọc đủ, không vào Hasura, Telegram hay agent |
+| bank_account_name | TEXT | nullable | Tên chủ tài khoản, tối đa 60 ký tự (API) |
 | created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
 | updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() |
 
@@ -136,6 +155,8 @@ Vụ mùa của thửa đất. Mỗi thửa có thể nhiều vụ.
 | is_active | BOOLEAN | NOT NULL, DEFAULT true | |
 | created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
 
+> **Thực tế trong Prisma (GĐ1 S1):** bảng dùng `season` (nullable, dạng `Lứa n/năm`), `sowed_at`, `harvested_at`, `estimated_harvest_date`, `created_at`; một dòng là một **lứa hái** của nương chè (hái 7 đến 9 lứa mỗi năm). `harvested_at` rỗng nghĩa là lứa đang mở. `journal_entries.cycle_id`, `lot_parcels.cycle_id` và `fresh_leaf_tickets.cycle_id` trỏ tới bảng này.
+
 ---
 
 ### `journal_entries`
@@ -158,11 +179,13 @@ Nhật ký canh tác. Officer ghi, Manager duyệt.
 | rejection_reason | TEXT | | |
 | review_note | TEXT | nullable | Lý do cán bộ nhập khi từ chối hoặc yêu cầu sửa (`20261124120000_journal_review_note`) |
 | reviewed_by_id | TEXT | nullable | Keycloak ID của người duyệt, từ chối hoặc yêu cầu sửa; ghi cùng lúc với cập nhật trạng thái có điều kiện `PENDING_APPROVAL` (`20261124140000_journal_reviewed_by`) |
+| cycle_id | TEXT | nullable FK → parcel_crop_cycles (ON DELETE SET NULL) | Lứa hái của nhật ký (`20261128120100_flush_and_pesticides`). Rỗng với nhật ký `DRAFT` và nương chưa có lứa; được điền lúc gửi hoặc khi ngày ghi đổi |
+| client_id | TEXT | nullable | UUID do máy khách sinh, chống trùng khi gửi lại từ hàng đợi offline |
 | photo_minio_keys | TEXT[] | | Mảng MinIO keys |
 | created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
 | updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
 
-**Indexes:** `parcel_crop_cycle_id`, `status`, `entry_date`, `recorded_by`
+**Indexes:** `parcel_crop_cycle_id`, `status`, `entry_date`, `recorded_by`; thêm ở GĐ1: `cycle_id` và khoá duy nhất `(submitted_by_id, client_id)` (nhiều dòng có `client_id` rỗng vẫn hợp lệ). Trạng thái thực tế (cột `status` kiểu TEXT trong Prisma) gồm `DRAFT`, `PENDING_APPROVAL`, `APPROVED`, `REJECTED`, `REQUEST_CHANGES`.
 
 ---
 
@@ -180,7 +203,11 @@ Chi tiết hoạt động trong một nhật ký (phun thuốc, bón phân...).
 | withdrawal_days | INT | | Ngày cách ly (thuốc BVTV) |
 | safe_harvest_date | DATE | | entry_date + withdrawal_days |
 | notes | TEXT | | |
+| pesticide_product_id | TEXT | nullable FK → pesticide_products (ON DELETE SET NULL) | Thuốc trong danh mục; rỗng là "Thuốc khác" (GĐ1 S1) |
+| fresh_leaf_kg | DOUBLE PRECISION | nullable | Kg búp tươi thu hoạch, chỉ trên hoạt động `HARVEST` (`20261128120200_journal_fresh_leaf_kg`) |
 | created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
+
+> **Thực tế trong Prisma:** kiểu hoạt động là enum `ActivityType` = `SOWING`, `FERTILIZING`, `SPRAYING`, `IRRIGATION`, `HARVEST`, `PRUNING`, `OTHER`. `PRUNING` (Đốn chè) thêm bằng migration riêng `20261128120000_activity_pruning`, vì giá trị enum mới không dùng được trong giao dịch đã thêm nó.
 
 ---
 
@@ -223,7 +250,7 @@ Junction: thửa nào thuộc lô nào (M-M).
 |--------|------|-------------|-------------|
 | lot_id | UUID | FK → lots, NOT NULL | |
 | parcel_id | UUID | FK → parcels, NOT NULL | |
-| cycle_id | UUID | FK → parcel_crop_cycles | Vụ mùa cụ thể |
+| cycle_id | TEXT | nullable FK → parcel_crop_cycles (ON DELETE SET NULL) | Lứa của dòng lô: lứa đóng gần nhất không sau ngày hái của lô, nếu không có thì lứa đang mở (`20261128120100_flush_and_pesticides` điền cho dòng cũ). Dòng cũ không có lứa vẫn rỗng |
 
 **PK:** (lot_id, parcel_id)
 
@@ -359,6 +386,215 @@ Tỷ giá USD/VND (Frankfurter API).
 | fetched_at | TIMESTAMPTZ | NOT NULL | |
 
 ---
+
+### Chuỗi giá trị chè (GĐ1 S1 đến S3)
+
+Các bảng dưới đây thêm bởi năm migration `apps/web/prisma/migrations/20261128120000_*`, `20261128120100_*`, `20261128120200_*`, `20261128130000_*` và `20261128140000_*`. Id là TEXT (cuid), thời gian là `TIMESTAMP(3)`.
+
+**Trigger kiểm toán.** Cả sáu bảng mới có trigger `dxos_audit_row` (`AFTER INSERT OR UPDATE OR DELETE`, hàm `audit.capture_row()`): `platform/postgres/init/03-audit-triggers.sql` cài cho cơ sở dữ liệu mới, còn mỗi migration tạo trigger cho cơ sở dữ liệu đang chạy (bỏ qua khi chưa có schema `audit`). Cột bảng cũ thêm ở GĐ1 nằm trong bảng đã có trigger.
+
+#### `pesticide_products`
+Danh mục thuốc BVTV dùng chung mọi HTX (`20261128120100`). Ghi bởi migration (20 dòng khởi đầu) và `platform_admin` (`PUT /api/platform/pesticides/[id]`). Trigger kiểm toán: có.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | TEXT | PK | |
+| trade_name | TEXT | UNIQUE, NOT NULL | Tên thương mại |
+| active_ingredient | TEXT | NOT NULL | Hoạt chất |
+| group | ENUM `PesticideGroup` | NOT NULL | `BOTANICAL`, `MICROBIAL`, `BIOLOGICAL`, `CHEMICAL`, `ANTIBIOTIC` |
+| targets | TEXT[] | NOT NULL | Đối tượng phòng trừ |
+| default_phi_days | INT | NOT NULL | Mức sàn cách ly mặc định: 7 (thảo mộc, vi sinh, sinh học) hoặc 14 (hoá học, kháng sinh) |
+| phi_needs_label_check | BOOLEAN | NOT NULL, DEFAULT true | Còn cần đối chiếu nhãn thực tế |
+| source | TEXT | NOT NULL | Văn bản nguồn |
+| active | BOOLEAN | NOT NULL, DEFAULT true | |
+| created_at, updated_at | TIMESTAMP(3) | NOT NULL | |
+
+#### `htx_pesticide_labels`
+Số ngày cách ly theo nhãn thật mà một HTX đã đối chiếu; thay mức sàn mặc định cho HTX đó (`20261128120100`). Ghi bởi `officer`, `manager`. Trigger kiểm toán: có.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | TEXT | PK | |
+| htx_profile_id | TEXT | FK → htx_profiles (RESTRICT), NOT NULL | |
+| pesticide_product_id | TEXT | FK → pesticide_products (RESTRICT), NOT NULL | |
+| label_phi_days | INT | NOT NULL, `CHECK` 1..365 | |
+| label_note | TEXT | | Số lô hoặc nội dung nhãn; API bắt buộc khi thấp hơn mức mặc định |
+| verified_by_id | TEXT | NOT NULL | Keycloak sub của người đối chiếu |
+| verified_at | TIMESTAMP(3) | NOT NULL, DEFAULT now() | |
+| created_at, updated_at | TIMESTAMP(3) | NOT NULL | |
+
+**Index:** khoá duy nhất `(htx_profile_id, pesticide_product_id)`.
+
+#### `htx_memberships`
+Các vai của một người trong một HTX (`20261128130000`). Keycloak là nguồn sự thật; `requireTenant()` đồng bộ dòng này từ token. Trigger kiểm toán: có.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | TEXT | PK | |
+| keycloak_user_id | TEXT | NOT NULL | |
+| htx_profile_id | TEXT | FK → htx_profiles (RESTRICT), NOT NULL | |
+| roles | TEXT[] | NOT NULL | Tập con của `farmer`, `officer`, `accountant`, `manager`; không có `platform_admin` |
+| created_at, updated_at | TIMESTAMP(3) | NOT NULL | |
+
+**Index:** khoá duy nhất `(keycloak_user_id, htx_profile_id)`; `htx_profile_id`.
+
+#### `leaf_grades`
+Phẩm cấp búp tươi của từng HTX (`20261128140000`). Ghi bởi `manager`. Trigger kiểm toán: có.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | TEXT | PK | |
+| htx_profile_id | TEXT | FK → htx_profiles (RESTRICT), NOT NULL | |
+| name | TEXT | NOT NULL | |
+| sort_order | INT | NOT NULL, DEFAULT 0 | |
+| active | BOOLEAN | NOT NULL, DEFAULT true | Phẩm cấp ẩn không cân được |
+| created_at, updated_at | TIMESTAMP(3) | NOT NULL | |
+
+**Index:** khoá duy nhất `(htx_profile_id, name)`.
+
+#### `daily_leaf_prices`
+Một giá mỗi phẩm cấp mỗi ngày giờ Việt Nam (`20261128140000`). Ghi bởi `manager` (`PUT /api/leaf-prices/today`). Trigger kiểm toán: có.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | TEXT | PK | |
+| htx_profile_id | TEXT | FK → htx_profiles (RESTRICT), NOT NULL | |
+| grade_id | TEXT | FK → leaf_grades (RESTRICT), NOT NULL | |
+| price_date | DATE | NOT NULL | Ngày giờ Việt Nam |
+| price_vnd_per_kg | INT | NOT NULL, `CHECK` 1..10000000 | |
+| published_by_id | TEXT | NOT NULL | Keycloak sub |
+| published_at | TIMESTAMP(3) | NOT NULL, DEFAULT now() | |
+| updated_at | TIMESTAMP(3) | NOT NULL | |
+
+**Index:** khoá duy nhất `(grade_id, price_date)`; `(htx_profile_id, price_date)`.
+
+#### `fresh_leaf_tickets`
+Phiếu cân búp tươi; ghi một lần, không sửa (sai thì huỷ và cân lại) (`20261128140000`). Ghi bởi `accountant`, `manager`. Trigger kiểm toán: có.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | TEXT | PK | |
+| htx_profile_id | TEXT | FK → htx_profiles (RESTRICT), NOT NULL | |
+| ticket_no | TEXT | UNIQUE, NOT NULL | `{HTX_CODE}-PC-{YYYYMMDD}-{NNN}` |
+| household_id | TEXT | FK → households (RESTRICT), NOT NULL | |
+| parcel_id | TEXT | FK → parcels (RESTRICT), NOT NULL | |
+| cycle_id | TEXT | nullable FK → parcel_crop_cycles (SET NULL) | Rỗng với nương chưa từng có lứa |
+| grade_id | TEXT | FK → leaf_grades (RESTRICT), NOT NULL | |
+| weighed_at | TIMESTAMP(3) | NOT NULL | Giờ máy chủ |
+| gross_kg | DECIMAL(7,1) | NOT NULL, `CHECK` > 0 và <= 5000 | |
+| deduction_pct | DECIMAL(4,1) | NOT NULL, `CHECK` 0..30 | |
+| net_kg | DECIMAL(7,1) | NOT NULL | |
+| price_vnd_per_kg | INT | NOT NULL, `CHECK` 1..10000000 | Giá chép lúc ghi |
+| amount_vnd | BIGINT | NOT NULL | Thành tiền, đồng |
+| status | ENUM `LeafTicketStatus` | NOT NULL, DEFAULT 'VALID' | `VALID`, `VOIDED` |
+| void_reason, voided_by_id, voided_at | TEXT, TEXT, TIMESTAMP(3) | nullable | Điền khi huỷ |
+| created_by_id | TEXT | NOT NULL | Keycloak sub người cân |
+| client_id | TEXT | nullable | Chống trùng khi gửi lại |
+| settlement_id | TEXT | nullable FK → member_settlements (RESTRICT) | Dòng quyết toán chứa phiếu; khoá ngoại thêm ở `20261128150000_member_ledger`. Phiếu có giá trị này không huỷ được |
+| created_at | TIMESTAMP(3) | NOT NULL, DEFAULT now() | |
+
+**Index:** khoá duy nhất `(created_by_id, client_id)`; `(htx_profile_id, weighed_at)`; `household_id`; `parcel_id`; `cycle_id`.
+
+### Vật tư ứng, sổ cái và quyết toán (GĐ1 S4)
+
+Thêm bởi migration `20261128150000_member_ledger`, cùng ba cột ngân hàng của `households` ở trên và khoá ngoại `fresh_leaf_tickets.settlement_id`. Enum mới: `InputKind` (`FERTILIZER`, `PESTICIDE`, `OTHER`), `SettlementStatus` (`DRAFT`, `CLOSED`), `LedgerEntryType` (`LEAF_CREDIT`, `INPUT_DEBIT`, `PAYOUT`, `ADJUSTMENT`), `PaymentMethod` (`TRANSFER`, `CASH`); `input_advances.status` dùng lại `LeafTicketStatus`. Số tiền là BIGINT đồng (trừ `unit_price_vnd` là INT).
+
+**Trigger.** Cả năm bảng có trigger kiểm toán `dxos_audit_row` (`audit.capture_row()`), cài bởi `03-audit-triggers.sql` cho cơ sở dữ liệu mới và bởi migration cho cơ sở dữ liệu đang chạy (bỏ qua khi chưa có schema `audit`). Riêng `member_ledger_entries` còn có trigger **chỉ thêm**: `member_ledger_entries_append_only` (`BEFORE UPDATE OR DELETE`, theo dòng) và `member_ledger_entries_no_truncate` (`BEFORE TRUNCATE`) cùng gọi `public.member_ledger_entries_refuse_change()`, hàm này ném lỗi `restrict_violation`; sửa sai bằng dòng `ADJUSTMENT` mới.
+
+#### `input_items`
+Danh mục vật tư của HTX. Ghi bởi `manager`, `accountant`. Trigger kiểm toán: có.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | TEXT | PK | |
+| htx_profile_id | TEXT | FK → htx_profiles (RESTRICT), NOT NULL | |
+| name | TEXT | NOT NULL | |
+| unit | TEXT | NOT NULL | |
+| unit_price_vnd | INT | NOT NULL, `CHECK` 0..100000000 | |
+| kind | ENUM `InputKind` | NOT NULL | |
+| pesticide_product_id | TEXT | nullable FK → pesticide_products (SET NULL) | Chỉ với loại `PESTICIDE` (API kiểm) |
+| active | BOOLEAN | NOT NULL, DEFAULT true | |
+| created_at, updated_at | TIMESTAMP(3) | NOT NULL | |
+
+**Index:** khoá duy nhất `(htx_profile_id, name)`.
+
+#### `input_advances`
+Phiếu ứng vật tư; ghi một lần, sai thì huỷ và ghi lại. Ghi bởi `accountant`, `manager`. Trigger kiểm toán: có.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | TEXT | PK | |
+| htx_profile_id | TEXT | FK → htx_profiles (RESTRICT), NOT NULL | |
+| advance_no | TEXT | UNIQUE, NOT NULL | `{HTX_CODE}-VT-{YYYYMMDD}-{NNN}` |
+| household_id | TEXT | FK → households (RESTRICT), NOT NULL | |
+| item_id | TEXT | FK → input_items (RESTRICT), NOT NULL | |
+| quantity | DECIMAL(9,2) | NOT NULL, `CHECK` > 0 | |
+| unit_price_vnd | INT | NOT NULL, `CHECK` >= 0 | Chép từ vật tư lúc ghi |
+| amount_vnd | BIGINT | NOT NULL, `CHECK` >= 0 | Số lượng × đơn giá, làm tròn đồng, nửa làm tròn lên |
+| advanced_on | DATE | NOT NULL | Ngày giờ Việt Nam |
+| status | ENUM `LeafTicketStatus` | NOT NULL, DEFAULT 'VALID' | `VALID`, `VOIDED` |
+| void_reason, voided_by_id, voided_at | TEXT, TEXT, TIMESTAMP(3) | nullable | Điền khi huỷ |
+| settlement_id | TEXT | nullable FK → member_settlements (RESTRICT) | Có giá trị thì không huỷ được |
+| client_id | TEXT | nullable | Chống trùng khi gửi lại |
+| created_by_id | TEXT | NOT NULL | Keycloak sub |
+| created_at | TIMESTAMP(3) | NOT NULL, DEFAULT now() | |
+
+**Index:** khoá duy nhất `(created_by_id, client_id)`; `(htx_profile_id, advanced_on)`; `household_id`.
+
+#### `settlement_periods`
+Kỳ quyết toán của HTX. Ghi bởi `accountant`, `manager` (tạo) và `manager` (chốt). Trigger kiểm toán: có.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | TEXT | PK | |
+| htx_profile_id | TEXT | FK → htx_profiles (RESTRICT), NOT NULL | |
+| code | TEXT | UNIQUE, NOT NULL | `{HTX_CODE}-QT-{YYYYMMDD}` theo `date_to` |
+| date_from, date_to | DATE | NOT NULL, `CHECK` `date_from <= date_to` | |
+| status | ENUM `SettlementStatus` | NOT NULL, DEFAULT 'DRAFT' | |
+| created_by_id | TEXT | NOT NULL | Keycloak sub |
+| created_by_name | TEXT | nullable | Tên hiển thị lúc tạo |
+| created_at | TIMESTAMP(3) | NOT NULL, DEFAULT now() | |
+| closed_by_id, closed_by_name, closed_at | TEXT, TEXT, TIMESTAMP(3) | nullable | Người và giờ chốt |
+
+**Index:** khoá duy nhất `code`; `(htx_profile_id, date_from)`. Tính liền nhau của các kỳ và một kỳ `DRAFT` mỗi HTX do ứng dụng giữ dưới khoá tư vấn, không có ràng buộc cơ sở dữ liệu.
+
+#### `member_settlements`
+Một dòng cho mỗi hộ trong mỗi kỳ đã chốt. Ghi lúc chốt (`manager`); `paid_*` ghi lúc chi trả. Trigger kiểm toán: có.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | TEXT | PK | |
+| period_id | TEXT | FK → settlement_periods (RESTRICT), NOT NULL | |
+| household_id | TEXT | FK → households (RESTRICT), NOT NULL | |
+| leaf_net_kg | DECIMAL(10,1) | NOT NULL | Tổng kg tịnh |
+| leaf_amount_vnd | BIGINT | NOT NULL | `L`, tiền búp |
+| advances_vnd | BIGINT | NOT NULL | `A`, tiền vật tư |
+| debt_in_vnd | BIGINT | NOT NULL, `CHECK` >= 0 | Nợ mang vào, chỉ để hiện |
+| payable_vnd | BIGINT | NOT NULL, `CHECK` >= 0 | `max(0, L − A + outstanding)` |
+| debt_out_vnd | BIGINT | NOT NULL, `CHECK` >= 0 | `max(0, −(L − A + outstanding))` |
+| paid_at, paid_by_id | TIMESTAMP(3), TEXT | nullable | Điền khi ghi trả (một lần) |
+| payment_method | ENUM `PaymentMethod` | nullable | |
+| payment_ref | TEXT | nullable | |
+
+**Index:** khoá duy nhất `(period_id, household_id)`; `household_id`.
+
+#### `member_ledger_entries`
+Sổ cái xã viên, **chỉ thêm** (xem trigger ở trên). Dương là HTX nợ hộ, âm là hộ nợ HTX. Ghi lúc chốt kỳ (`LEAF_CREDIT`, `INPUT_DEBIT`), chi trả (`PAYOUT`) và điều chỉnh (`ADJUSTMENT`). Trigger kiểm toán: có.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | TEXT | PK | |
+| htx_profile_id | TEXT | FK → htx_profiles (RESTRICT), NOT NULL | |
+| household_id | TEXT | FK → households (RESTRICT), NOT NULL | |
+| entry_type | ENUM `LedgerEntryType` | NOT NULL | |
+| amount_vnd | BIGINT | NOT NULL | Có dấu |
+| ticket_id, advance_id | TEXT | nullable | Cột có sẵn, mã hiện chưa điền |
+| settlement_id | TEXT | nullable FK → member_settlements (RESTRICT) | Dòng quyết toán của bút toán; rỗng với `ADJUSTMENT` |
+| note | TEXT | nullable | Mã tham chiếu chi trả hoặc lý do điều chỉnh |
+| created_by_id | TEXT | NOT NULL | Keycloak sub |
+| created_at | TIMESTAMP(3) | NOT NULL, DEFAULT now() | |
+
+**Index:** `(household_id, created_at)`.
 
 ### Agentic Layer (`platform` schema — `platform/postgres/init/08-agent.sql`, M1a)
 Tất cả ba bảng đều gắn trigger `dxos_audit_row` ghi vào `audit.events`.

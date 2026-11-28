@@ -26,6 +26,7 @@ const put = (body: unknown) =>
 
 beforeEach(() => {
   jest.clearAllMocks()
+  execute.mockResolvedValue({ draftJournalEntryId: undefined })
   ;(auth as jest.Mock).mockResolvedValue({ user: { id: 'off1', role: 'officer' } })
   jest.spyOn(console, 'error').mockImplementation(() => undefined)
 })
@@ -77,5 +78,21 @@ describe('PUT /api/officer/diseases/[id]/review', () => {
     const res = await put({ status: 'REJECTED' })
     expect(res.status).toBe(403)
     expect(execute).not.toHaveBeenCalled()
+  })
+})
+
+describe('prescription field', () => {
+  it('passes the prescription to the use case and returns the draft id', async () => {
+    execute.mockResolvedValue({ draftJournalEntryId: 'draft-1' })
+    const res = await put({ status: 'CONFIRMED', treatment_recommendation: 'Phun', confirmed_diagnosis: 'Nhện đỏ', prescription: { pesticide_product_id: 'catex', dosage: '20 ml' } })
+    expect(res.status).toBe(200)
+    await expect(res.json()).resolves.toMatchObject({ data: { draftJournalEntryId: 'draft-1' } })
+    expect(execute).toHaveBeenCalledWith(expect.objectContaining({ prescription: { pesticideProductId: 'catex', dosage: '20 ml' } }))
+  })
+
+  it('answers 400 when the use case refuses a prescription on a rejected report', async () => {
+    execute.mockRejectedValueOnce(new Error('PRESCRIPTION_REQUIRES_CONFIRMED'))
+    const res = await put({ status: 'REJECTED', prescription: { pesticide_product_id: 'catex' } })
+    expect(res.status).toBe(400)
   })
 })

@@ -8,14 +8,17 @@ import { CreateJournalEntryUseCase } from '@/application/journal/CreateJournalEn
 import { assertJournalPhotoKey, journalPhotoRoot } from '@/domain/document/document-namespace'
 import { localDay } from '@/domain/shared/local-day'
 import { PrismaParcelRepository } from '@/infrastructure/db/farm/PrismaParcelRepository'
+import { PrismaPesticideRepository } from '@/infrastructure/db/pesticide/PrismaPesticideRepository'
 import { PrismaJournalRepository } from '@/infrastructure/db/journal/PrismaJournalRepository'
 import { TenantGuard } from '@/lib/api/tenant-guard'
 import type { ChatAction, Choice } from '../types'
 import { parcelChoices, parcelCode } from './common'
 
-const ACTIVITY_TYPES = ['SPRAYING', 'FERTILIZING', 'IRRIGATION', 'HARVEST', 'SOWING', 'OTHER'] as const
+const ACTIVITY_TYPES = ['SPRAYING', 'FERTILIZING', 'IRRIGATION', 'HARVEST', 'SOWING', 'PRUNING', 'OTHER'] as const
 const CHEMICAL_ACTIVITIES = ['SPRAYING', 'FERTILIZING']
-const ACTIVITY_CHOICES: Choice[] = ACTIVITY_TYPES.map((value) => ({ value, label: ACTIVITY_LABEL[value] }))
+// PRUNING is labelled here until the shared label table gains it (UI track).
+const LABEL: Record<string, string> = { ...ACTIVITY_LABEL, PRUNING: 'Đốn chè' }
+const ACTIVITY_CHOICES: Choice[] = ACTIVITY_TYPES.map((value) => ({ value, label: LABEL[value] }))
 
 type JournalCreatePayload = {
   parcel_id: string
@@ -88,7 +91,7 @@ export const journalCreateAction: ChatAction<JournalCreatePayload> = {
     return [
       `Thửa: ${await parcelCode(user, payload.parcel_id)}`,
       `Ngày: ${formatVnDate(new Date()) ?? ''}`,
-      `Hoạt động: ${ACTIVITY_LABEL[payload.activity_type]}`,
+      `Hoạt động: ${LABEL[payload.activity_type]}`,
       ...(payload.product_name ? [`Thuốc/phân: ${payload.product_name}`] : []),
       ...(payload.dosage ? [`Liều: ${payload.dosage}`] : []),
       ...(payload.withdrawal_days !== undefined ? [`Cách ly: ${payload.withdrawal_days} ngày`] : []),
@@ -99,7 +102,7 @@ export const journalCreateAction: ChatAction<JournalCreatePayload> = {
     await new TenantGuard(user.tenant).parcel(payload.parcel_id)
     if (payload.photo_key) assertJournalPhotoKey(payload.photo_key, user.tenant.htxCode)
     const role = user.tenant.role.toUpperCase()
-    await new CreateJournalEntryUseCase(new PrismaJournalRepository(), new PrismaParcelRepository()).execute(
+    await new CreateJournalEntryUseCase(new PrismaJournalRepository(), new PrismaParcelRepository(), new PrismaPesticideRepository()).execute(
       {
         parcel_id: payload.parcel_id,
         entry_date: new Date(localDay(now)),
@@ -118,7 +121,8 @@ export const journalCreateAction: ChatAction<JournalCreatePayload> = {
         photo_minio_key: payload.photo_key,
       },
       role,
-      user.householdId ?? undefined
+      user.householdId ?? undefined,
+      user.tenant.htxProfileId
     )
     return 'Đã ghi nhật ký. Nhật ký đang chờ duyệt.'
   },

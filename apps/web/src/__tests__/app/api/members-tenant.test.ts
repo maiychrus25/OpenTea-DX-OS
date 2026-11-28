@@ -55,6 +55,7 @@ beforeEach(() => {
     if (roleUsers) return json(usersByRole[roleUsers[1]] ?? [])
     const role = url.match(/\/roles\/(\w+)$/)
     if (role) return json({ name: role[1] })
+    if (url.endsWith('/role-mappings/realm') && method === 'GET') return json([{ name: 'farmer' }])
     if (url.endsWith('/role-mappings/realm')) return new Response(null, { status: 204 })
     if (url.endsWith('/users') && method === 'POST') {
       return new Response(null, { status: 201, headers: { location: 'http://kc/users/new-user' } })
@@ -79,11 +80,11 @@ const inviteRequest = { fullName: 'Nguyễn Văn A', phone: '0901234567', pin: '
 
 describe('account creation', () => {
   test('registerUser writes the htx_code attribute and keeps htxId', async () => {
-    await new KeycloakAdminAdapter().registerUser(registerData, 'farmer', true)
+    await new KeycloakAdminAdapter().registerUser(registerData, ['farmer'], true)
     expect(createdUser().attributes).toMatchObject({ htx_code: ['TC'], htxId: ['htx-tc'] })
   })
 
-  describe('invite uses the inviter HTX and adds CONFIGURE_TOTP for manager and officer, not farmer', () => {
+  describe('invite uses the inviter HTX and never forces TOTP', () => {
     function useCase() {
       const householdPort = {
         isPhoneTaken: jest.fn().mockResolvedValue(false),
@@ -95,17 +96,17 @@ describe('account creation', () => {
       return { htxPort, householdPort, invite: new InviteMemberUseCase(new KeycloakAdminAdapter(), householdPort as never, htxPort) }
     }
 
-    test.each(['manager', 'officer'])('%s must configure TOTP', async (role) => {
+    test.each(['manager', 'officer'])('%s is not forced to configure TOTP', async (role) => {
       const { htxPort, invite } = useCase()
-      await invite.execute({ ...inviteRequest, role }, 'TC')
+      await invite.execute({ ...inviteRequest, roles: [role] }, 'TC')
       expect(htxPort.findByCode).toHaveBeenCalledWith('TC')
       expect(createdUser().attributes).toMatchObject({ htx_code: ['TC'], htxId: ['htx-tc'] })
-      expect(createdUser().requiredActions).toEqual(['CONFIGURE_TOTP'])
+      expect(createdUser().requiredActions ?? []).not.toContain('CONFIGURE_TOTP')
     })
 
-    test('farmer does not configure TOTP and lands in the inviter HTX', async () => {
+    test('farmer lands in the inviter HTX', async () => {
       const { invite, householdPort } = useCase()
-      await invite.execute({ ...inviteRequest, role: 'farmer' }, 'TC')
+      await invite.execute({ ...inviteRequest, roles: ['farmer'] }, 'TC')
       expect(createdUser().attributes).toMatchObject({ htx_code: ['TC'], htxId: ['htx-tc'] })
       expect(createdUser().requiredActions ?? []).not.toContain('CONFIGURE_TOTP')
       expect(householdPort.create).toHaveBeenCalledWith(expect.objectContaining({ htx_profile_id: 'htx-tc' }))
@@ -114,7 +115,7 @@ describe('account creation', () => {
     test('an unknown inviter HTX creates no account', async () => {
       const { invite, htxPort } = useCase()
       htxPort.findByCode.mockResolvedValue(null)
-      await expect(invite.execute({ ...inviteRequest, role: 'farmer' }, 'XX')).rejects.toThrow()
+      await expect(invite.execute({ ...inviteRequest, roles: ['farmer'] }, 'XX')).rejects.toThrow()
       expect(requestsTo('POST', /\/users$/)).toHaveLength(0)
     })
   })
@@ -243,12 +244,12 @@ describe('account creation', () => {
 })
 
 describe('members are scoped to the caller HTX', () => {
-  test('members list returns only users with the caller htx_code', async () => {
+  test('members list returns only users with the caller htx_code (managers included, S2)', async () => {
     signInAs('manager')
     const response = await listMembers(new Request('http://localhost/api/members'), {})
     const body = await response.json()
     expect(response.status).toBe(200)
-    expect(body.data.map((m: { id: string }) => m.id).sort()).toEqual(['farmer-tc', 'officer-tc'])
+    expect(body.data.map((m: { id: string }) => m.id).sort()).toEqual(['farmer-tc', 'manager-tc', 'officer-tc'])
   })
 
   test('members list asks Keycloak for more than its default page of 100', async () => {

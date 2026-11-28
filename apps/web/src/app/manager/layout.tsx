@@ -5,7 +5,7 @@ import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { AppShell } from '@/components/layout/AppShell'
 import { NoHtxNotice } from '@/components/layout/NoHtxNotice'
-import { Home, Newspaper, MessageCircle, Map as MapIcon, Sprout, Package, Landmark, CheckSquare, Bell, Users, Calendar, Store, Sparkles } from 'lucide-react'
+import { Home, Newspaper, MessageCircle, Map as MapIcon, Sprout, Package, Landmark, CheckSquare, Bell, Users, Calendar, Store, Sparkles, FlaskConical, Banknote, Receipt, Boxes, Wallet } from 'lucide-react'
 
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/repositories/PrismaHtxProfileRepository'
@@ -30,6 +30,11 @@ export default async function ManagerLayout({ children }: { children: React.Reac
     { label: 'Lịch thu hái', href: '/manager/schedule', icon: <Calendar size={20} />, group: 'Vận hành' },
     { label: 'Duyệt nhật ký', href: '/manager/journal-approve', icon: <CheckSquare size={20} />, group: 'Vận hành' },
     { label: 'Vùng trồng', href: '/manager/farm-zones', icon: <Sprout size={20} />, group: 'Vận hành' },
+    { label: 'Danh mục thuốc', href: '/manager/pesticides', icon: <FlaskConical size={20} />, group: 'Vận hành' },
+    { label: 'Giá thu mua', href: '/manager/leaf-prices', icon: <Banknote size={20} />, group: 'Vận hành' },
+    { label: 'Phiếu cân', href: '/manager/leaf-tickets', icon: <Receipt size={20} />, group: 'Vận hành' },
+    { label: 'Vật tư', href: '/manager/inputs', icon: <Boxes size={20} />, group: 'Vận hành' },
+    { label: 'Quyết toán', href: '/manager/settlements', icon: <Wallet size={20} />, group: 'Vận hành' },
     { label: 'Lô hàng', href: '/manager/lots', icon: <Package size={20} />, group: 'Vận hành' },
     { label: 'Quản lý thành viên', href: '/manager/members', icon: <Users size={20} />, group: 'Quản trị' },
     { label: 'Bản đồ đối tác', href: '/manager/partner-map', icon: <MapIcon size={20} />, group: 'Quản trị' },
@@ -45,6 +50,7 @@ export default async function ManagerLayout({ children }: { children: React.Reac
   return (
     <AppShell 
       role="manager" 
+      roles={session.user.roles}
       userName={session.user.name || 'Trưởng HTX'} 
       navItems={navItems}
       htxName={htxProfile?.name || 'Chưa cập nhật'}

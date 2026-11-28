@@ -82,8 +82,9 @@ describe('MemberList UI', () => {
       expect(screen.getByText('Lê Văn C')).toBeInTheDocument();
     });
 
-    const deleteButtons = screen.getAllByText('Xóa');
-    fireEvent.click(deleteButtons[0]); // Click delete on first member
+    // The only joined member is a manager, who has no delete button (S2); a waiting request is refused with the same dialog.
+    expect(screen.queryByText('Xóa')).toBeNull();
+    fireEvent.click(screen.getByText('Từ chối'));
     
     // Check if Custom Modal appears instead of window.confirm
     expect(screen.getByText('Xác nhận xóa')).toBeInTheDocument();

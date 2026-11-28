@@ -7,11 +7,13 @@ import type { z } from 'zod'
 import type { Risk } from '@/domain/agent/proposal'
 import type { Tenant } from '@/lib/api/tenant'
 
-export type ChatRole = Tenant['role']
+// Telegram keeps the three original roles (the multi-role work does not reach it).
+export type ChatRole = 'manager' | 'officer' | 'farmer'
+type ChatTenant = Tenant & { role: ChatRole }
 
 /** The linked person for one update: role, cooperative and enabled flag read live from Keycloak, never from the link. */
 export interface ChatUser {
-  tenant: Tenant
+  tenant: ChatTenant
   userName: string
   /** The farmer's household; null for officers and managers. */
   householdId: string | null

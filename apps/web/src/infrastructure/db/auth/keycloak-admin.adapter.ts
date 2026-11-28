@@ -1,7 +1,7 @@
 // Copyright (c) 2026 OpenTea Developers
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
-import { AuthManagementPort, RegisterData, MemberData } from '@/domain/auth/ports/auth-management.port'
+import { AuthManagementPort, RegisterData, MemberData, MemberDetail } from '@/domain/auth/ports/auth-management.port'
 import { logger } from '@/lib/logger'
 import { ValidationError } from '@/domain/errors'
 
@@ -78,10 +78,10 @@ export class KeycloakAdminAdapter implements AuthManagementPort {
   }
 
   async registerFarmer(data: RegisterData, enabled: boolean): Promise<string> {
-    return this.registerUser(data, 'farmer', enabled);
+    return this.registerUser(data, ['farmer'], enabled);
   }
 
-  async registerUser(data: RegisterData, role: string, enabled: boolean): Promise<string> {
+  async registerUser(data: RegisterData, roles: string[], enabled: boolean): Promise<string> {
     const token = await this.getAdminToken();
     const usersUrl = `${this.baseUrl}/admin/realms/${this.realm}/users`;
 
@@ -97,7 +97,6 @@ export class KeycloakAdminAdapter implements AuthManagementPort {
         htx_code: [data.htxCode],
         phone: [data.phone]
       },
-      ...(role === 'farmer' ? {} : { requiredActions: ['CONFIGURE_TOTP'] }),
       credentials: [
         {
           type: 'password',
@@ -132,10 +131,53 @@ export class KeycloakAdminAdapter implements AuthManagementPort {
     }
     const userId = location.substring(location.lastIndexOf('/') + 1);
 
-    // 3. Assign role
-    await this.assignRealmRole(userId, role, token);
+    // 3. Assign roles. TOTP is never forced: a user may turn it on in the Keycloak account page.
+    for (const role of roles) await this.assignRealmRole(userId, role, token);
 
     return userId;
+  }
+
+  /** Adds and removes realm roles of a user. The caller decides which names are allowed. */
+  async setRealmRoles(userId: string, add: string[], remove: string[]): Promise<void> {
+    const token = await this.getAdminToken();
+    const mappingUrl = `${this.baseUrl}/admin/realms/${this.realm}/users/${userId}/role-mappings/realm`;
+    const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+    const representations = async (names: string[]) =>
+      Promise.all(names.map(async (name) => {
+        const res = await fetch(`${this.baseUrl}/admin/realms/${this.realm}/roles/${name}`, { headers });
+        if (!res.ok) throw new Error(`Could not find role ${name} in realm`);
+        return res.json();
+      }));
+    for (const [method, names] of [['POST', add], ['DELETE', remove]] as const) {
+      if (names.length === 0) continue;
+      const res = await fetch(mappingUrl, { method, headers, body: JSON.stringify(await representations(names)) });
+      if (!res.ok) {
+        logger.error('Failed to change realm roles', { status: res.status, userId });
+        throw new Error('Could not change roles of user');
+      }
+    }
+  }
+
+  /** One user with the realm roles they hold, or null when missing. */
+  async getMember(userId: string): Promise<MemberDetail | null> {
+    const token = await this.getAdminToken();
+    const headers = { 'Authorization': `Bearer ${token}` };
+    const base = `${this.baseUrl}/admin/realms/${this.realm}/users/${userId}`;
+    const res = await fetch(base, { headers });
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error('Could not read user');
+    const user: KeycloakUserResponse = await res.json();
+    const rolesRes = await fetch(`${base}/role-mappings/realm`, { headers });
+    if (!rolesRes.ok) throw new Error('Could not read roles of user');
+    const roles: { name: string }[] = await rolesRes.json();
+    return {
+      id: user.id,
+      htxCode: user.attributes?.htx_code?.[0] ?? null,
+      fullName: user.attributes?.fullName?.[0] || `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+      phone: user.attributes?.phone?.[0] ?? user.username ?? '',
+      enabled: user.enabled !== false,
+      roles: roles.map((r) => r.name),
+    };
   }
 
   private async assignRealmRole(userId: string, roleName: string, token: string): Promise<void> {

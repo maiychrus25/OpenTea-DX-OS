@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Pill } from '@/components/ui/Pill';
 import { Sprout } from 'lucide-react';
+import { ApproveHarvestButton } from '@/components/features/schedule/ApproveHarvestButton';
 import { LOAD_FAILED_MESSAGE } from '@/lib/api/fetch-json'
 import { redirectToLogin } from '@/lib/api/redirect-to-login'
 
@@ -18,6 +19,7 @@ interface HouseholdProfileProps {
 
 interface HouseholdHistory {
   id: string;
+  code: string;
   crop: string;
   season: string;
   yield: string;
@@ -43,6 +45,23 @@ export function HouseholdProfile({ id }: HouseholdProfileProps) {
   const [error, setError] = useState<string | null>(null);
   const [startingId, setStartingId] = useState<string | null>(null);
   const [startError, setStartError] = useState<string | null>(null);
+  const [approvals, setApprovals] = useState<Record<string, { canApprove: boolean; safeHarvestDate: string | null }>>({});
+
+  // Extra, optional: without the schedule the button simply does not show.
+  const loadApprovals = React.useCallback(async () => {
+    try {
+      const from = new Date(); from.setDate(from.getDate() - 31)
+      const to = new Date(); to.setDate(to.getDate() + 120)
+      const res = await fetch(`/api/schedule/harvest?start_date=${from.toISOString()}&end_date=${to.toISOString()}`)
+      if (!res.ok) return
+      const events = (await res.json())?.data
+      if (!Array.isArray(events)) return
+      const next: Record<string, { canApprove: boolean; safeHarvestDate: string | null }> = {}
+      for (const e of events) if (e.parcelId && e.parcelStatus === 'TENDING' && !e.harvestedAt) next[e.parcelId] = { canApprove: !!e.canApprove, safeHarvestDate: e.safeHarvestDate ?? null }
+      setApprovals(next)
+    } catch { /* optional */ }
+  }, []);
+  useEffect(() => { void loadApprovals() }, [loadApprovals]);
 
   async function startRound(parcelId: string) {
     if (!confirm('Bắt đầu lứa hái mới cho thửa này? Thửa sẽ chuyển sang trạng thái đang chăm sóc.')) return
@@ -107,6 +126,7 @@ export function HouseholdProfile({ id }: HouseholdProfileProps) {
         
         const history = parcels.map((p: any) => ({
           id: p.id,
+          code: p.parcel_code || p.id,
           crop: p.crop_type || 'Chưa gán',
           season: p.season || 'Chưa gán vụ',
           yield: p.harvested_at 
@@ -307,6 +327,11 @@ export function HouseholdProfile({ id }: HouseholdProfileProps) {
                       >
                         {h.status}
                       </Pill>
+                      {approvals[h.id] && (
+                        <ApproveHarvestButton parcelId={h.id} parcelCode={h.code} cycleLabel={h.season}
+                          canApprove={approvals[h.id].canApprove} safeHarvestDate={approvals[h.id].safeHarvestDate}
+                          onDone={() => { void loadApprovals() }} />
+                      )}
                       {h.parcelStatus === 'HARVESTED' && (
                         <Button
                           variant="secondary"

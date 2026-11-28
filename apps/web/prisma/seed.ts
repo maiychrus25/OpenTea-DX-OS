@@ -172,10 +172,13 @@ interface EntrySeed {
   withdrawalDays?: number
 }
 
-async function addApprovedEntry(tx: Tx, parcelId: string, performedBy: string, e: EntrySeed) {
+async function addApprovedEntry(tx: Tx, parcelId: string, performedBy: string, e: EntrySeed, cycleId: string) {
+  // Link a catalogue product only when the seeded name is exactly a trade name.
+  const product = e.product ? await tx.pesticideProduct.findUnique({ where: { trade_name: e.product }, select: { id: true } }) : null
   return tx.journalEntry.create({
     data: {
       parcel_id: parcelId,
+      cycle_id: cycleId,
       entry_date: e.date,
       activity_type: e.type,
       performed_by: performedBy,
@@ -188,6 +191,7 @@ async function addApprovedEntry(tx: Tx, parcelId: string, performedBy: string, e
         create: [{
           activity_detail: e.detail,
           product_name: e.product ?? null,
+          pesticide_product_id: e.type === 'SPRAYING' ? product?.id ?? null : null,
           dosage: e.dosage ?? null,
           withdrawal_days: e.withdrawalDays ?? null,
           safe_harvest_date: e.withdrawalDays ? new Date(e.date.getTime() + e.withdrawalDays * DAY) : null,
@@ -199,17 +203,17 @@ async function addApprovedEntry(tx: Tx, parcelId: string, performedBy: string, e
 
 /** Parcel A3 of TC: a previous round harvested and exported as a lot, and a current round under a 7-day withdrawal. */
 async function seedA3(tx: Tx, htx: { id: string; name: string }, a3: { id: string; parcel_code: string; area_ha: number; crop_type: string }, household: { id: string; name: string }) {
-  await tx.parcelCropCycle.create({ data: { parcel_id: a3.id, season: A3_PREVIOUS_ROUND, sowed_at: ago(75), harvested_at: ago(30), created_at: ago(75) } })
-  await tx.parcelCropCycle.create({ data: { parcel_id: a3.id, season: A3_CURRENT_ROUND, sowed_at: ago(28), created_at: ago(28) } })
+  const previousCycle = await tx.parcelCropCycle.create({ data: { parcel_id: a3.id, season: A3_PREVIOUS_ROUND, sowed_at: ago(75), harvested_at: ago(30), created_at: ago(75) } })
+  const currentCycle = await tx.parcelCropCycle.create({ data: { parcel_id: a3.id, season: A3_CURRENT_ROUND, sowed_at: ago(28), created_at: ago(28) } })
 
   const previous: EntrySeed[] = [
     { date: ago(70), type: 'FERTILIZING', detail: 'Bón phân hữu cơ vi sinh quanh gốc', product: 'Phân hữu cơ vi sinh', dosage: '600 kg/ha' },
     { date: ago(45), type: 'SPRAYING', detail: 'Phun trừ rầy xanh', product: 'Chế phẩm sinh học trừ rầy', dosage: '1 lít/ha', withdrawalDays: 7 },
     { date: ago(30), type: 'HARVEST', detail: 'Hái một tôm hai lá, 120 kg búp tươi' },
   ]
-  for (const e of previous) await addApprovedEntry(tx, a3.id, household.name, e)
-  await addApprovedEntry(tx, a3.id, household.name, { date: ago(10), type: 'FERTILIZING', detail: 'Bón thúc sau đốn', product: 'Phân NPK 5-10-3', dosage: '300 kg/ha' })
-  await addApprovedEntry(tx, a3.id, household.name, { date: ago(3), type: 'SPRAYING', detail: 'Phun trừ bọ xít muỗi', product: 'Thuốc trừ sâu gốc Abamectin', dosage: '0,4 lít/ha', withdrawalDays: 7 })
+  for (const e of previous) await addApprovedEntry(tx, a3.id, household.name, e, previousCycle.id)
+  await addApprovedEntry(tx, a3.id, household.name, { date: ago(10), type: 'FERTILIZING', detail: 'Bón thúc sau đốn', product: 'Phân NPK 5-10-3', dosage: '300 kg/ha' }, currentCycle.id)
+  await addApprovedEntry(tx, a3.id, household.name, { date: ago(3), type: 'SPRAYING', detail: 'Phun trừ bọ xít muỗi', product: 'Thuốc trừ sâu gốc Abamectin', dosage: '0,4 lít/ha', withdrawalDays: 7 }, currentCycle.id)
 
   // The lot is seeded as already exported: exporting now would fail on A3's active withdrawal (ruling R5).
   const harvestDate = ago(30)
@@ -357,6 +361,18 @@ async function main() {
   })
 
   const tcProfile = await prisma.htxProfile.findUnique({ where: { htx_code: 'TC' } })
+  // Sample grades only: prices and tickets are operating data and are never invented.
+  if (tcProfile) {
+    const grades = ['Loại 1 (1 tôm 2 lá)', 'Loại 2', 'Loại 3']
+    for (let index = 0; index < grades.length; index++) {
+      const name = grades[index]
+      await prisma.leafGrade.upsert({
+        where: { htx_profile_id_name: { htx_profile_id: tcProfile.id, name } },
+        update: {},
+        create: { htx_profile_id: tcProfile.id, name, sort_order: index + 1 },
+      })
+    }
+  }
   if (!existingPartner) {
     await prisma.partner.createMany({
       data: [

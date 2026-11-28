@@ -14,4 +14,7 @@ export interface HarvestEvent {
   /** The activity whose withdrawal period ends last: what was applied, when, and for how long. */
   treatment?: { activity: string; product: string | null; date: string; withdrawalDays: number | null } | null
   harvestedAt?: string | null
+  parcelStatus?: string
+  /** True when the officer may approve the harvest of this flush now. */
+  canApprove?: boolean
 }

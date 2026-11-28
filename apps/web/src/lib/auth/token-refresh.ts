@@ -3,6 +3,7 @@
 
 import type { JWT } from 'next-auth/jwt'
 import { logger } from '@/lib/logger'
+import { rolesFromRealmRoles, validActiveRole } from '@/lib/auth/roles'
 
 // Internal Keycloak URL (container-to-container) dùng cho token/userinfo
 export const KEYCLOAK_INTERNAL = process.env.KEYCLOAK_INTERNAL_URL || process.env.KEYCLOAK_ISSUER || 'http://localhost:8080/realms/agrimarket'
@@ -38,6 +39,17 @@ export function roleFromRealmRoles(roles: unknown): 'manager' | 'officer' | 'far
   return (['manager', 'officer', 'farmer'] as const).find((role) => roles.includes(role))
 }
 
+/** The roles from the new access token; the active role stays when still held, otherwise the default applies. */
+function refreshedRoles(token: JWT, accessToken: string) {
+  const roles = readRoles(accessToken)
+  return { roles, role: validActiveRole(token.role, roles) }
+}
+
+/** Every human role in an access token's realm_access. */
+export function readRoles(accessToken: string): ReturnType<typeof rolesFromRealmRoles> {
+  return rolesFromRealmRoles(readClaims(accessToken)?.realm_access?.roles)
+}
+
 export async function refreshAccessToken(token: JWT, fetchImpl: typeof fetch = fetch): Promise<JWT> {
   // No refresh token: a dev-login or pre-upgrade cookie, or a refresh that already failed.
   if (!token.refreshToken) {
@@ -69,7 +81,7 @@ export async function refreshAccessToken(token: JWT, fetchImpl: typeof fetch = f
         refreshToken: data.refresh_token ?? token.refreshToken,
         accessTokenExpiresAt: now + data.expires_in,
         htxCode: readHtxCode(data.access_token),
-        role: roleFromRealmRoles(readClaims(data.access_token)?.realm_access?.roles),
+        ...refreshedRoles(token, data.access_token),
       }
     }
     logger.error('Keycloak token refresh failed', { status: response.status })

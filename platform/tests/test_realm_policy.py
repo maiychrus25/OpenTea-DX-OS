@@ -14,6 +14,8 @@ DEMO_USERS = {
     "manager_lb": ("manager", "LB"),
     "officer_lb": ("officer", "LB"),
     "farmer_lb": ("farmer", "LB"),
+    "accountant_tc": ("accountant", "TC"),
+    "platform_admin": ("platform_admin", None),
 }
 
 
@@ -85,15 +87,27 @@ class RealmPolicyTest(unittest.TestCase):
         for name, (role, code) in DEMO_USERS.items():
             user = by_key(REALM["users"], "username", name)
             self.assertEqual(user.get("realmRoles"), [role], name)
-            self.assertEqual(user.get("attributes", {}).get("htx_code"), [code], name)
-
-    def test_staff_require_totp(self):
-        for name, (role, _) in DEMO_USERS.items():
-            user = by_key(REALM["users"], "username", name)
-            if role == "farmer":
-                self.assertNotIn("CONFIGURE_TOTP", user.get("requiredActions", []), name)
+            if code is None:
+                # The platform admin belongs to no cooperative.
+                self.assertNotIn("htx_code", user.get("attributes", {}), name)
             else:
-                self.assertIn("CONFIGURE_TOTP", user.get("requiredActions", []), name)
+                self.assertEqual(user.get("attributes", {}).get("htx_code"), [code], name)
+
+    def test_totp_is_optional_for_every_demo_user(self):
+        # Nobody is forced to set up TOTP to sign in (S2 spec 4.6); users may still enable it in the account console.
+        for user in REALM["users"]:
+            self.assertNotIn("CONFIGURE_TOTP", user.get("requiredActions", []), user["username"])
+
+    def test_multi_role_realm_roles_exist_and_none_is_named_admin(self):
+        names = {role["name"] for role in REALM["roles"]["realm"]}
+        self.assertTrue({"manager", "officer", "accountant", "farmer", "platform_admin"} <= names, names)
+        self.assertNotIn("admin", {name.lower() for name in names})
+
+    def test_email_is_not_required_in_the_user_profile(self):
+        components = REALM["components"]["org.keycloak.userprofile.UserProfileProvider"]
+        profile = json.loads(components[0]["config"]["kc.user.profile.config"][0])
+        email = by_key(profile["attributes"], "name", "email")
+        self.assertNotIn("required", email)
 
     def test_rice_demo_users_removed(self):
         names = {user["username"] for user in REALM["users"]}

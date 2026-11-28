@@ -4,6 +4,7 @@
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { PrismaJournalRepository } from '@/infrastructure/db/journal/PrismaJournalRepository'
 import { PrismaParcelRepository } from '@/infrastructure/db/farm/PrismaParcelRepository'
+import { PrismaPesticideRepository } from '@/infrastructure/db/pesticide/PrismaPesticideRepository'
 import { CreateJournalEntryUseCase } from '@/application/journal/CreateJournalEntryUseCase'
 import { ForbiddenError } from '@/domain/errors/ForbiddenError'
 
@@ -73,7 +74,7 @@ describe('Story 3.3: Journal Entry Officer Self-Record', () => {
     
     const journalRepo = new PrismaJournalRepository()
     const parcelRepo = new PrismaParcelRepository()
-    const useCase = new CreateJournalEntryUseCase(journalRepo, parcelRepo)
+    const useCase = new CreateJournalEntryUseCase(journalRepo, parcelRepo, new PrismaPesticideRepository())
 
     // Farmer tries to write to HH2's parcel (should fail)
     await expect(useCase.execute({
@@ -84,7 +85,7 @@ describe('Story 3.3: Journal Entry Officer Self-Record', () => {
       submitted_by_id: 'farmer-123',
       submitted_role: 'FARMER',
       activities: [{ activity_type: 'SPRAYING' }]
-    }, 'FARMER', householdId1)).rejects.toThrow(ForbiddenError)
+    }, 'FARMER', householdId1, 'htx-test')).rejects.toThrow(ForbiddenError)
 
     // Farmer writes to their own parcel (should succeed as PENDING)
     const entry = await useCase.execute({
@@ -95,7 +96,7 @@ describe('Story 3.3: Journal Entry Officer Self-Record', () => {
       submitted_by_id: 'farmer-123',
       submitted_role: 'FARMER',
       activities: [{ activity_type: 'SOWING' }]
-    }, 'FARMER', householdId1)
+    }, 'FARMER', householdId1, 'htx-test')
 
     expect(entry.status).toBe('PENDING_APPROVAL')
     expect(entry.approved_by_id).toBeNull()
@@ -106,7 +107,7 @@ describe('Story 3.3: Journal Entry Officer Self-Record', () => {
 
     const journalRepo = new PrismaJournalRepository()
     const parcelRepo = new PrismaParcelRepository()
-    const useCase = new CreateJournalEntryUseCase(journalRepo, parcelRepo)
+    const useCase = new CreateJournalEntryUseCase(journalRepo, parcelRepo, new PrismaPesticideRepository())
 
     const entry = await useCase.execute({
       parcel_id: parcelId1,
@@ -116,7 +117,7 @@ describe('Story 3.3: Journal Entry Officer Self-Record', () => {
       submitted_by_id: 'officer-123',
       submitted_role: 'OFFICER',
       activities: [{ activity_type: 'FERTILIZING', product_name: 'Phân Ure', dosage: '10kg', withdrawal_days: 7 }]
-    }, 'OFFICER')
+    }, 'OFFICER', undefined, 'htx-test')
 
     // 1. Auto Approval Rule
     expect(entry.status).toBe('APPROVED')

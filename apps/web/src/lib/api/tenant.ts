@@ -3,13 +3,18 @@
 
 import { auth } from '@/auth'
 import { ForbiddenError, NoHtxError, UnauthorizedError } from '@/domain/errors'
+import { heldRoles, type HumanRole } from '@/lib/auth/roles'
+import { PrismaMembershipRepository } from '@/infrastructure/db/auth/PrismaMembershipRepository'
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/farm/PrismaHtxProfileRepository'
 
 export type Tenant = {
   userId: string
-  role: 'manager' | 'officer' | 'farmer'
+  /** The active role. `platform_admin` never reaches a Tenant: it has no HTX. */
+  role: Exclude<HumanRole, 'platform_admin'>
   htxCode: string
   htxProfileId: string
+  /** Display name from the session, copied onto records that show who acted (a settlement period). */
+  userName?: string
 }
 
 /** The signed-in user and their HTX. Throws rather than ever falling back to another HTX. */
@@ -17,11 +22,14 @@ export async function requireTenant(): Promise<Tenant> {
   const session = await auth()
   const user = session?.user
   if (!user?.id) throw new UnauthorizedError()
-  if (!user.role) throw new ForbiddenError('Forbidden')
+  if (!user.role || user.role === 'platform_admin') throw new ForbiddenError('Forbidden')
   if (!user.htxCode) throw new NoHtxError()
 
   const htx = await new PrismaHtxProfileRepository().findByCode(user.htxCode)
   if (!htx) throw new NoHtxError()
 
-  return { userId: user.id, role: user.role, htxCode: user.htxCode, htxProfileId: htx.id }
+  // Keeps htx_memberships in line with the token's roles; it never throws and never blocks the request.
+  await new PrismaMembershipRepository().sync(user.id, htx.id, heldRoles(user))
+
+  return { userId: user.id, role: user.role, htxCode: user.htxCode, htxProfileId: htx.id, userName: user.name ?? undefined }
 }

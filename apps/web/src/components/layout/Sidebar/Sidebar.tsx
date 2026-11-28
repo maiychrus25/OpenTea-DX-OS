@@ -11,6 +11,8 @@ import { Bell, ChevronsLeft, ChevronsRight, ChevronsUpDown, CircleHelp, LogOut, 
 import { applyTheme, readStoredTheme, type ThemeChoice } from '@/components/ui/ThemeToggle/theme'
 import styles from './Sidebar.module.css'
 import { signOutAction } from '@/app/actions/signout-action'
+import { RoleSwitcher } from '@/components/layout/RoleSwitcher'
+import { ROLE_LABELS, isHumanRole, type HumanRole } from '@/lib/auth/roles'
 
 export interface NavItem {
   label: string
@@ -32,6 +34,8 @@ export interface SidebarProps {
   onClose?: () => void
   userName?: string
   role?: string
+  /** Every role of the account; the role switcher shows with two or more. */
+  roles?: HumanRole[]
   phone?: string
   collapsed?: boolean
   onToggleCollapsed?: () => void
@@ -43,14 +47,7 @@ function isActive(pathname: string | null, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
-const getRoleLabel = (role?: string): string => {
-  switch (role) {
-    case 'farmer': return 'Nông dân'
-    case 'manager': return 'Trưởng HTX'
-    case 'officer': return 'Cán bộ KT'
-    default: return role || ''
-  }
-}
+const getRoleLabel = (role?: string): string => (isHumanRole(role) ? ROLE_LABELS[role] : role || '')
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
   navItems, 
@@ -60,6 +57,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onClose,
   userName = 'Unknown',
   role,
+  roles,
   phone,
   collapsed = false,
   onToggleCollapsed
@@ -119,7 +117,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* The cooperative. Farmers get no card: their name and role stand at the foot of the menu. */}
-      {role !== 'farmer' && (
+      {role !== 'farmer' && role !== 'platform_admin' && (
         <div className={styles.coop}>
           <span className={styles.coopBadge}>HTX</span>
           <div className={styles.coopText}>
@@ -167,7 +165,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <small>{phone || getRoleLabel(role)}</small>
                 </span>
               </div>
-              <Link href={`/${role || 'farmer'}/profile`} className={styles.popupItem} onClick={() => setProfileOpen(false)}>
+              {roles && roles.length >= 2 && isHumanRole(role) && <RoleSwitcher roles={roles} active={role} />}
+              <Link href={role === 'platform_admin' ? '/platform/account' : `/${role || 'farmer'}/profile`} className={styles.popupItem} onClick={() => setProfileOpen(false)}>
                 <User size={17} aria-hidden="true" />Tài khoản của tôi
               </Link>
               {role === 'farmer' && (
@@ -175,9 +174,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <Map size={17} aria-hidden="true" />Thửa chè của tôi
                 </Link>
               )}
-              <Link href={`/${role || 'farmer'}/notifications`} className={styles.popupItem} onClick={() => setProfileOpen(false)}>
-                <Bell size={17} aria-hidden="true" />Thông báo
-              </Link>
+              {role !== 'platform_admin' && (
+                <Link href={`/${role || 'farmer'}/notifications`} className={styles.popupItem} onClick={() => setProfileOpen(false)}>
+                  <Bell size={17} aria-hidden="true" />Thông báo
+                </Link>
+              )}
               <div className={styles.popupItem}>
                 {theme === 'dark' ? <Moon size={17} aria-hidden="true" /> : <Sun size={17} aria-hidden="true" />}
                 Giao diện

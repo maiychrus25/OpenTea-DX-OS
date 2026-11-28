@@ -62,6 +62,7 @@ describe('ApproveHarvestUseCase', () => {
     mockJournalPort.findAll.mockResolvedValue({
       entries: [
         {
+          entry_date: new Date('2020-01-01'),
           activities: [
             { safe_harvest_date: futureDate }
           ]
@@ -80,7 +81,7 @@ describe('ApproveHarvestUseCase', () => {
     futureDate.setDate(futureDate.getDate() + 5)
 
     mockJournalPort.findAll.mockResolvedValue({
-      entries: [{ status, activities: [{ safe_harvest_date: futureDate }] }],
+      entries: [{ status, entry_date: new Date('2020-01-01'), activities: [{ safe_harvest_date: futureDate }] }],
       total: 1,
     } as any)
 
@@ -95,7 +96,7 @@ describe('ApproveHarvestUseCase', () => {
     futureDate.setDate(futureDate.getDate() + 5)
 
     mockJournalPort.findAll.mockResolvedValue({
-      entries: [{ status, activities: [{ safe_harvest_date: futureDate }] }],
+      entries: [{ status, entry_date: new Date('2020-01-01'), activities: [{ safe_harvest_date: futureDate }] }],
       total: 1,
     } as any)
     mockParcelPort.approveHarvest.mockResolvedValue({ id: 'parcel-1', status: 'HARVEST_APPROVED' } as any)
@@ -112,6 +113,7 @@ describe('ApproveHarvestUseCase', () => {
     mockJournalPort.findAll.mockResolvedValue({
       entries: [
         {
+          entry_date: new Date('2020-01-01'),
           activities: [
             { safe_harvest_date: pastDate }
           ]

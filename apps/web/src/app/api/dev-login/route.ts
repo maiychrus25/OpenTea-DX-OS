@@ -4,11 +4,12 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { encode } from 'next-auth/jwt'
+import { homeFor, type HumanRole } from '@/lib/auth/roles'
 
 /**
  * DEV-ONLY: Quick login as any role without Keycloak.
  * Usage: GET /api/dev-login?role=manager
- * Roles: manager, officer, farmer
+ * Roles: manager, officer, accountant, farmer, platform_admin
  */
 export async function GET(request: Request) {
   // Only allow in development
@@ -18,7 +19,7 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url)
   const role = url.searchParams.get('role') || 'officer'
-  const validRoles = ['manager', 'officer', 'farmer']
+  const validRoles = ['manager', 'officer', 'accountant', 'farmer', 'platform_admin']
   if (!validRoles.includes(role)) {
     return NextResponse.json({ error: `Invalid role. Use: ${validRoles.join(', ')}` }, { status: 400 })
   }
@@ -26,7 +27,9 @@ export async function GET(request: Request) {
   const ROLE_NAMES: Record<string, string> = {
     manager: 'Trưởng HTX (Dev)',
     officer: 'Cán bộ KT (Dev)',
+    accountant: 'Kế toán (Dev)',
     farmer: 'Nông dân (Dev)',
+    platform_admin: 'Quản trị nền tảng (Dev)',
   }
 
   const now = Math.floor(Date.now() / 1000)
@@ -44,6 +47,7 @@ export async function GET(request: Request) {
       name: displayName,
       email: `${role}@dev.local`,
       role,
+      roles: [role],
       iat: now,
       exp: now + 60 * 60 * 8,
       jti: `dev-jti-${now}`,
@@ -60,11 +64,5 @@ export async function GET(request: Request) {
     maxAge: 60 * 60 * 8,
   })
 
-  const redirectMap: Record<string, string> = {
-    manager: '/manager/dashboard',
-    officer: '/officer/dashboard',
-    farmer: '/farmer/dashboard',
-  }
-
-  return NextResponse.redirect(new URL(redirectMap[role], request.url))
+  return NextResponse.redirect(new URL(homeFor(role as HumanRole), request.url))
 }

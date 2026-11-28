@@ -25,6 +25,17 @@ import * as forecast from '@/app/api/weather/forecast/route'
 import * as appStore from '@/app/api/app-store/route'
 import * as appStoreRequests from '@/app/api/app-store/requests/route'
 import * as partnerById from '@/app/api/partners/[id]/route'
+import * as leafGrades from '@/app/api/leaf-grades/route'
+import * as leafGradeById from '@/app/api/leaf-grades/[id]/route'
+import * as leafPrices from '@/app/api/leaf-prices/today/route'
+import * as withdrawalStatus from '@/app/api/parcels/[id]/withdrawal-status/route'
+import * as leafTickets from '@/app/api/leaf-tickets/route'
+import * as leafTicketById from '@/app/api/leaf-tickets/[id]/route'
+import * as leafTicketVoid from '@/app/api/leaf-tickets/[id]/void/route'
+import * as leafTicketExport from '@/app/api/leaf-tickets/export.csv/route'
+import * as leafTicketsMine from '@/app/api/leaf-tickets/mine/route'
+import * as weighingSummary from '@/app/api/cycles/[id]/weighing-summary/route'
+import * as householdSearch from '@/app/api/households/route'
 import SoilHealthPage from '@/app/officer/households/[id]/soil-health/page'
 
 // Every model method is a jest.fn created on first use, so any write the routes attempt is recorded.
@@ -123,18 +134,30 @@ const rows: Row[] = [
   { name: 'PUT partners/[id]', role: 'manager', call: () => partnerById.PUT(json('PUT', { name: 'X' }), ctx('r1')) },
   { name: 'DELETE partners/[id]', role: 'manager', call: () => partnerById.DELETE(json('DELETE'), ctx('r1')) },
   { name: 'POST diagnosis', role: 'farmer', call: () => diagnosis.POST(imageForm()) },
+  { name: 'PUT leaf-grades/[id]', role: 'manager', call: () => leafGradeById.PUT(json('PUT', { active: false }), ctx('r1')) },
+  { name: 'PUT leaf-prices/today', role: 'manager', call: () => leafPrices.PUT(json('PUT', { prices: [{ grade_id: 'r1', price_vnd_per_kg: 15000 }] }), {}) },
+  { name: 'GET parcels/[id]/withdrawal-status', role: 'accountant', call: () => withdrawalStatus.GET(json('GET'), ctx('r1')) },
+  {
+    name: 'POST leaf-tickets',
+    role: 'accountant',
+    call: () => leafTickets.POST(json('POST', { household_id: 'r1', parcel_id: 'r2', grade_id: 'r3', gross_kg: 10, deduction_pct: 0 }), {}),
+  },
+  { name: 'GET leaf-tickets/[id]', role: 'accountant', call: () => leafTicketById.GET(json('GET'), ctx('r1')) },
+  { name: 'POST leaf-tickets/[id]/void', role: 'accountant', call: () => leafTicketVoid.POST(json('POST', { reason: 'Cân nhầm' }), ctx('r1')) },
+  { name: 'GET cycles/[id]/weighing-summary', role: 'manager', call: () => weighingSummary.GET(json('GET'), ctx('r1')) },
 ]
 
 beforeEach(() => {
   fns().forEach((fn) => fn.mockReset())
   jest.spyOn(console, 'error').mockImplementation(() => undefined)
   // Every record looked up belongs to LB; the caller is in TC.
-  const reads = ['household', 'parcel', 'lot', 'journalEntry', 'diseaseReport', 'parcelCropCycle']
+  const reads = ['household', 'parcel', 'lot', 'journalEntry', 'diseaseReport', 'parcelCropCycle', 'leafGrade', 'freshLeafTicket']
   for (const model of reads) mock((prisma as any)[model].findUnique).mockResolvedValue(linked('htx-lb'))
   mock(prisma.htxProfile.findUnique).mockResolvedValue(tc)
 })
 
-const writes = () => Array.from(fns().entries()).filter(([key, fn]) => WRITE.test(key) && fn.mock.calls.length > 0).map(([key]) => key)
+// The membership sync of requireTenant() writes the caller's own roles; it is not a write of the record under test.
+const writes = () => Array.from(fns().entries()).filter(([key, fn]) => WRITE.test(key) && !key.startsWith('htxMembership.') && fn.mock.calls.length > 0).map(([key]) => key)
 
 describe.each(rows)('$name', ({ role, call }) => {
   test('answers 404 for a record of another HTX and writes nothing', async () => {
@@ -218,6 +241,55 @@ describe('read routes return only the HTX of the caller', () => {
     await SoilHealthPage({ params: Promise.resolve({ id: 'r1' }) })
     expect(mock(prisma.household.findFirst).mock.calls[0][0].where).toEqual({ id: 'r1', htx_profile_id: 'htx-tc' })
     expect(mock(prisma.household.findUnique)).not.toHaveBeenCalled()
+  })
+})
+
+describe('weighing read routes return only the HTX of the caller', () => {
+  const req = (path: string) => new Request(`http://localhost/api/${path}`)
+
+  test('GET leaf-grades and GET leaf-prices/today read the grades of the HTX', async () => {
+    signIn('farmer')
+    mock(prisma.leafGrade.findMany).mockResolvedValue([])
+    mock(prisma.dailyLeafPrice.findMany).mockResolvedValue([])
+    expect((await leafGrades.GET(req('leaf-grades'), {})).status).toBe(200)
+    expect(mock(prisma.leafGrade.findMany).mock.calls[0][0].where.htx_profile_id).toBe('htx-tc')
+    expect((await leafPrices.GET(req('leaf-prices/today'), {})).status).toBe(200)
+    expect(mock(prisma.dailyLeafPrice.findMany).mock.calls.every((call) => call[0].where.htx_profile_id === 'htx-tc')).toBe(true)
+  })
+
+  test('GET leaf-tickets filters the tickets and the totals by HTX', async () => {
+    signIn('accountant')
+    mock(prisma.freshLeafTicket.findMany).mockResolvedValue([])
+    mock(prisma.freshLeafTicket.aggregate).mockResolvedValue({ _sum: { net_kg: null, amount_vnd: null } })
+    const res = await leafTickets.GET(req('leaf-tickets?date=2026-11-28'), {})
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ data: [], next_cursor: null, totals: { net_kg: 0, amount_vnd: '0' } })
+    expect(mock(prisma.freshLeafTicket.findMany).mock.calls[0][0].where.htx_profile_id).toBe('htx-tc')
+    expect(mock(prisma.freshLeafTicket.aggregate).mock.calls[0][0].where.htx_profile_id).toBe('htx-tc')
+  })
+
+  test('GET leaf-tickets/mine gives a farmer the households linked to their own account', async () => {
+    signIn('farmer')
+    mock(prisma.freshLeafTicket.findMany).mockResolvedValue([])
+    expect((await leafTicketsMine.GET(req('leaf-tickets/mine'), {})).status).toBe(200)
+    expect(mock(prisma.freshLeafTicket.findMany).mock.calls[0][0].where).toEqual({
+      htx_profile_id: 'htx-tc',
+      household: { keycloak_user_id: 'u1', htx_profile_id: 'htx-tc' },
+    })
+  })
+
+  test('GET leaf-tickets/export.csv filters by HTX', async () => {
+    signIn('manager')
+    mock(prisma.freshLeafTicket.findMany).mockResolvedValue([])
+    expect((await leafTicketExport.GET(req('leaf-tickets/export.csv?from=2026-11-01&to=2026-11-28'), {})).status).toBe(200)
+    expect(mock(prisma.freshLeafTicket.findMany).mock.calls[0][0].where.htx_profile_id).toBe('htx-tc')
+  })
+
+  test('GET households searches the HTX of the caller only', async () => {
+    signIn('accountant')
+    mock(prisma.household.findMany).mockResolvedValue([])
+    expect((await householdSearch.GET(req('households?q=tam'), {})).status).toBe(200)
+    expect(mock(prisma.household.findMany).mock.calls[0][0].where.htx_profile_id).toBe('htx-tc')
   })
 })
 

@@ -384,6 +384,7 @@ button.groupHead { cursor: pointer; }
 .history li:not(:last-child)::after { content: ''; position: absolute; left: 6px; top: 10px; bottom: -4px; width: 2px; background: var(--color-primary); }
 .history li.waiting::before { border-color: var(--color-ink-tertiary); background: var(--color-surface-card); }
 .foot { padding: 0 16px 14px; }
+.foot a { width: 100%; }
 .foot .withdraw { width: 100%; min-height: 38px; justify-content: center; gap: 8px; font-size: 13px; color: var(--color-danger); }
 @media (max-width: 1100px) {
   .layout { grid-template-columns: minmax(0, 1fr); }
@@ -406,3 +407,11 @@ button.groupHead { cursor: pointer; }
 .drop:focus-within { border-color: var(--color-primary); }
 .fileInput { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 .entryActions { display: flex; justify-content: flex-end; gap: 10px; padding-top: 16px; border-top: 1px solid var(--color-border-row); }
+
+/* Entries kept on the device until the network is back, and the ones the server refused. */
+.queueNote { margin: 0; padding: 10px 14px; border-radius: 12px; background: var(--color-info-subtle); color: var(--color-info); font-size: 13.5px; }
+.queueFailed { padding: 12px 14px; border: 1px solid var(--color-danger); border-radius: 12px; background: var(--color-danger-subtle); color: var(--color-danger); }
+.queueFailed h2 { margin: 0 0 8px; font-size: 14px; font-weight: 700; }
+.queueFailed ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.queueFailed li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13.5px; }
+.queueFailed li span { flex: 1 1 200px; min-width: 0; overflow-wrap: anywhere; }

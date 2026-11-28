@@ -18,15 +18,39 @@ array_relationships:
 select_permissions:
   - role: farmer
     permission:
-      columns: '*'
+      columns:
+        - id
+        - name
+        - phone
+        - address
+        - keycloak_user_id
+        - htx_profile_id
+        - created_at
+        - updated_at
       filter: {keycloak_user_id: {_eq: X-Hasura-User-Id}}
   - role: manager
     permission:
-      columns: '*'
+      columns:
+        - id
+        - name
+        - phone
+        - address
+        - keycloak_user_id
+        - htx_profile_id
+        - created_at
+        - updated_at
       filter: {htx_profile: {_and: [{'htx_code': {'_eq': 'X-Hasura-Htx-Code'}}, {'htx_code': {'_neq': ''}}]}}
   - role: officer
     permission:
-      columns: '*'
+      columns:
+        - id
+        - name
+        - phone
+        - address
+        - keycloak_user_id
+        - htx_profile_id
+        - created_at
+        - updated_at
       filter: {htx_profile: {_and: [{'htx_code': {'_eq': 'X-Hasura-Htx-Code'}}, {'htx_code': {'_neq': ''}}]}}
   - role: agent
     permission:

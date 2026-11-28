@@ -5,7 +5,7 @@ import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { AppShell } from '@/components/layout/AppShell'
 import { NoHtxNotice } from '@/components/layout/NoHtxNotice'
-import { Home, Map, FileText, PackageCheck, Stethoscope, FolderOpen, MessageCircle, User, Users, Bell, Calendar, Sparkles } from 'lucide-react'
+import { Home, Map, FileText, PackageCheck, Stethoscope, FolderOpen, MessageCircle, User, Users, Bell, Calendar, Sparkles, FlaskConical } from 'lucide-react'
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/repositories/PrismaHtxProfileRepository'
 import { PrismaProposalRepository } from '@/infrastructure/db/agent/PrismaProposalRepository'
@@ -32,6 +32,7 @@ export default async function OfficerLayout({ children }: { children: React.Reac
     { label: 'Nhật ký', href: '/officer/journal', icon: <FileText size={20} />, group: 'Vận hành' },
     { label: 'Lô hàng', href: '/officer/lots', icon: <PackageCheck size={20} />, group: 'Vận hành' },
     { label: 'Nhật ký bệnh', href: '/officer/diseases', icon: <Stethoscope size={20} />, group: 'Vận hành' },
+    { label: 'Danh mục thuốc', href: '/officer/pesticides', icon: <FlaskConical size={20} />, group: 'Vận hành' },
     { label: 'Tài liệu', href: '/officer/documents', icon: <FolderOpen size={20} />, group: 'Tài nguyên' },
     { label: 'Chatbot', href: '/officer/chat', icon: <MessageCircle size={20} />, group: 'Tài nguyên' },
     { label: 'Đề xuất AI', href: '/officer/ai', icon: <Sparkles size={20} />, badge: openProposals || undefined, group: 'Tài nguyên' },
@@ -43,6 +44,7 @@ export default async function OfficerLayout({ children }: { children: React.Reac
   return (
     <AppShell 
       role="officer" 
+      roles={session.user.roles}
       userName={session.user.name || 'Cán bộ Kỹ thuật'} 
       navItems={navItems}
       htxName={htxProfile?.name || 'Chưa cập nhật'}

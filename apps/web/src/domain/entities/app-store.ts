@@ -82,6 +82,9 @@ export interface StoreAppDetail extends StoreApp {
   preview: string[]
   screenshots: StoreScreenshot[]
   history: StoreHistoryEntry[]
+  /** True for an app whose job the core now does and that is hidden while labs is off. */
+  mergedIntoCore?: boolean
+  mergedIntoCoreNote?: string | null
 }
 
 /** A catalogue row as stored: `store` is the manifest block, unchecked (see the use case, which degrades a bad shape). */
@@ -118,7 +121,7 @@ export interface AppStoreRepository {
   screenshot(appId: string, position: number): Promise<{ contentType: string; bytes: Uint8Array } | null>
 }
 
-export type AppStoreErrorCode = 'APP_NOT_FOUND' | 'REQUEST_OPEN' | 'ALREADY_ENABLED' | 'NOT_ENABLED' | 'ENABLED_FOR_ALL'
+export type AppStoreErrorCode = 'APP_NOT_FOUND' | 'REQUEST_OPEN' | 'ALREADY_ENABLED' | 'NOT_ENABLED' | 'ENABLED_FOR_ALL' | 'MERGED_INTO_CORE'
 
 const STATUS: Record<AppStoreErrorCode, number> = {
   APP_NOT_FOUND: 404,
@@ -126,6 +129,7 @@ const STATUS: Record<AppStoreErrorCode, number> = {
   ALREADY_ENABLED: 409,
   NOT_ENABLED: 409,
   ENABLED_FOR_ALL: 409,
+  MERGED_INTO_CORE: 409,
 }
 
 /** An expected refusal; the route answers it with `status` and `{ error: { code, message } }`. */

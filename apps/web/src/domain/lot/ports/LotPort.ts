@@ -46,5 +46,7 @@ export interface LotPort {
   findAll(filters: LotFilters): Promise<LotSummary[]>
   findById(id: string): Promise<LotSummary | null>
   create(data: CreateLotData): Promise<LotSummary>
+  /** The plucking flush a lot line of this parcel and harvest date belongs to; null for a parcel without flushes. */
+  cycleForLine(parcelId: string, harvestDate: Date): Promise<string | null>
   exportQr(id: string, snapshotData: LotTraceData, qrImageUrl?: string, certificateKeys?: string[]): Promise<ExportQrResult>
 }

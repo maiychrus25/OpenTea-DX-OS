@@ -17,8 +17,10 @@ jest.mock('@/infrastructure/db/prisma.client', () => ({
     parcel: { findUnique: jest.fn() },
     notification: { create: jest.fn(), findMany: jest.fn() },
     weatherCache: { findFirst: jest.fn() },
+    parcelCropCycle: { findMany: jest.fn().mockResolvedValue([]) },
     journalEntry: { create: jest.fn(), delete: jest.fn(), findUnique: jest.fn() },
     $transaction: jest.fn(),
+    $queryRaw: jest.fn().mockResolvedValue([]),
   },
 }))
 

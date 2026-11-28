@@ -105,6 +105,14 @@
         "description": "Nông dân"
       },
       {
+        "name": "accountant",
+        "description": "Kế toán (bàn cân, giá thu mua, quyết toán)"
+      },
+      {
+        "name": "platform_admin",
+        "description": "Quản trị nền tảng SaaS (tạo HTX, cấu hình AI, danh mục thuốc BVTV); không thuộc HTX nào"
+      },
+      {
         "name": "agent",
         "description": "Dịch vụ AI vận hành (client credentials, chỉ đọc qua Hasura và gửi đề xuất)"
       },
@@ -142,9 +150,6 @@
           "TC"
         ]
       },
-      "requiredActions": [
-        "CONFIGURE_TOTP"
-      ],
       "realmRoles": [
         "manager"
       ]
@@ -169,9 +174,6 @@
           "TC"
         ]
       },
-      "requiredActions": [
-        "CONFIGURE_TOTP"
-      ],
       "realmRoles": [
         "officer"
       ]
@@ -219,9 +221,6 @@
           "LB"
         ]
       },
-      "requiredActions": [
-        "CONFIGURE_TOTP"
-      ],
       "realmRoles": [
         "manager"
       ]
@@ -246,9 +245,6 @@
           "LB"
         ]
       },
-      "requiredActions": [
-        "CONFIGURE_TOTP"
-      ],
       "realmRoles": [
         "officer"
       ]
@@ -275,6 +271,47 @@
       },
       "realmRoles": [
         "farmer"
+      ]
+    },
+    {
+      "username": "accountant_tc",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Kế toán",
+      "lastName": "Tân Cương",
+      "email": "accountant_tc@agrimarket.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Test1234!",
+          "temporary": false
+        }
+      ],
+      "attributes": {
+        "htx_code": [
+          "TC"
+        ]
+      },
+      "realmRoles": [
+        "accountant"
+      ]
+    },
+    {
+      "username": "platform_admin",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Quản trị",
+      "lastName": "Nền tảng",
+      "email": "platform_admin@agrimarket.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Test1234!",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "platform_admin"
       ]
     }
   ],
@@ -922,7 +959,7 @@
         "subComponents": {},
         "config": {
           "kc.user.profile.config": [
-            "{\"attributes\": [{\"name\": \"username\", \"displayName\": \"${username}\", \"validations\": {\"length\": {\"min\": 3, \"max\": 255}, \"username-prohibited-characters\": {}, \"up-username-not-idn-homograph\": {}}, \"permissions\": {\"view\": [\"admin\", \"user\"], \"edit\": [\"admin\", \"user\"]}, \"multivalued\": false}, {\"name\": \"email\", \"displayName\": \"${email}\", \"validations\": {\"email\": {}, \"length\": {\"max\": 255}}, \"required\": {\"roles\": [\"user\"]}, \"permissions\": {\"view\": [\"admin\", \"user\"], \"edit\": [\"admin\", \"user\"]}, \"multivalued\": false}, {\"name\": \"firstName\", \"displayName\": \"${firstName}\", \"validations\": {\"length\": {\"max\": 255}, \"person-name-prohibited-characters\": {}}, \"required\": {\"roles\": [\"user\"]}, \"permissions\": {\"view\": [\"admin\", \"user\"], \"edit\": [\"admin\", \"user\"]}, \"multivalued\": false}, {\"name\": \"lastName\", \"displayName\": \"${lastName}\", \"validations\": {\"length\": {\"max\": 255}, \"person-name-prohibited-characters\": {}}, \"required\": {\"roles\": [\"user\"]}, \"permissions\": {\"view\": [\"admin\", \"user\"], \"edit\": [\"admin\", \"user\"]}, \"multivalued\": false}, {\"name\": \"htx_code\", \"displayName\": \"HTX code\", \"validations\": {\"length\": {\"max\": 64}}, \"permissions\": {\"view\": [\"admin\"], \"edit\": [\"admin\"]}, \"multivalued\": false}, {\"name\": \"fullName\", \"displayName\": \"Full name\", \"validations\": {\"length\": {\"max\": 255}}, \"permissions\": {\"view\": [\"admin\"], \"edit\": [\"admin\"]}, \"multivalued\": false}, {\"name\": \"htxId\", \"displayName\": \"HTX id\", \"validations\": {\"length\": {\"max\": 64}}, \"permissions\": {\"view\": [\"admin\"], \"edit\": [\"admin\"]}, \"multivalued\": false}, {\"name\": \"phone\", \"displayName\": \"Phone\", \"validations\": {\"length\": {\"max\": 32}}, \"permissions\": {\"view\": [\"admin\"], \"edit\": [\"admin\"]}, \"multivalued\": false}], \"groups\": [{\"name\": \"user-metadata\", \"displayHeader\": \"User metadata\", \"displayDescription\": \"Attributes, which refer to user metadata\"}]}"
+            "{\"attributes\": [{\"name\": \"username\", \"displayName\": \"${username}\", \"validations\": {\"length\": {\"min\": 3, \"max\": 255}, \"username-prohibited-characters\": {}, \"up-username-not-idn-homograph\": {}}, \"permissions\": {\"view\": [\"admin\", \"user\"], \"edit\": [\"admin\", \"user\"]}, \"multivalued\": false}, {\"name\": \"email\", \"displayName\": \"${email}\", \"validations\": {\"email\": {}, \"length\": {\"max\": 255}}, \"permissions\": {\"view\": [\"admin\", \"user\"], \"edit\": [\"admin\", \"user\"]}, \"multivalued\": false}, {\"name\": \"firstName\", \"displayName\": \"${firstName}\", \"validations\": {\"length\": {\"max\": 255}, \"person-name-prohibited-characters\": {}}, \"required\": {\"roles\": [\"user\"]}, \"permissions\": {\"view\": [\"admin\", \"user\"], \"edit\": [\"admin\", \"user\"]}, \"multivalued\": false}, {\"name\": \"lastName\", \"displayName\": \"${lastName}\", \"validations\": {\"length\": {\"max\": 255}, \"person-name-prohibited-characters\": {}}, \"required\": {\"roles\": [\"user\"]}, \"permissions\": {\"view\": [\"admin\", \"user\"], \"edit\": [\"admin\", \"user\"]}, \"multivalued\": false}, {\"name\": \"htx_code\", \"displayName\": \"HTX code\", \"validations\": {\"length\": {\"max\": 64}}, \"permissions\": {\"view\": [\"admin\"], \"edit\": [\"admin\"]}, \"multivalued\": false}, {\"name\": \"fullName\", \"displayName\": \"Full name\", \"validations\": {\"length\": {\"max\": 255}}, \"permissions\": {\"view\": [\"admin\"], \"edit\": [\"admin\"]}, \"multivalued\": false}, {\"name\": \"htxId\", \"displayName\": \"HTX id\", \"validations\": {\"length\": {\"max\": 64}}, \"permissions\": {\"view\": [\"admin\"], \"edit\": [\"admin\"]}, \"multivalued\": false}, {\"name\": \"phone\", \"displayName\": \"Phone\", \"validations\": {\"length\": {\"max\": 32}}, \"permissions\": {\"view\": [\"admin\"], \"edit\": [\"admin\"]}, \"multivalued\": false}], \"groups\": [{\"name\": \"user-metadata\", \"displayHeader\": \"User metadata\", \"displayDescription\": \"Attributes, which refer to user metadata\"}]}"
           ]
         }
       }

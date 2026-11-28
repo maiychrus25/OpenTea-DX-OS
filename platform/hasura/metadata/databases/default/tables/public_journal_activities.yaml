@@ -25,6 +25,7 @@ select_permissions:
       columns:
         - id
         - journal_entry_id
+        - pesticide_product_id
         - activity_detail
         - product_name
         - dosage

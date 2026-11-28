@@ -10,9 +10,10 @@ import {
   endKeycloakSession,
   readAuthTime,
   readHtxCode,
+  readRoles,
   refreshAccessToken,
-  roleFromRealmRoles,
 } from "@/lib/auth/token-refresh"
+import { defaultActiveRole, heldRoles, rolesFromRealmRoles, validActiveRole } from "@/lib/auth/roles"
 
 interface KeycloakProfile {
   realm_access?: {
@@ -23,7 +24,7 @@ interface KeycloakProfile {
 // External Keycloak URL (browser redirect) dùng cho authorization
 const KEYCLOAK_EXTERNAL = process.env.KEYCLOAK_ISSUER || "http://localhost:8080/realms/agrimarket"
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
+export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
   trustHost: true,
   providers: [
     {
@@ -55,7 +56,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }
   ],
   callbacks: {
-    async jwt({ token, profile, account }) {
+    async jwt({ token, profile, account, trigger, session }) {
       // The id token is not kept: with it the session needs two cookies, and concurrent responses can mix them (#75).
       // Sign-out ends the Keycloak session with the refresh token instead. Older sessions lose it on their next request.
       delete token.idToken
@@ -67,21 +68,31 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.sub = account.providerAccountId
       }
 
+      // Every human role of the token, and the active one. Keycloak stays the source of truth.
       if (profile) {
-        // Extract role from Keycloak realm_access (UserInfo endpoint)
-        const role = roleFromRealmRoles((profile as KeycloakProfile).realm_access?.roles);
-        if (role) token.role = role;
+        const roles = rolesFromRealmRoles((profile as KeycloakProfile).realm_access?.roles)
+        if (roles.length) {
+          token.roles = roles
+          token.role = defaultActiveRole(roles)
+        }
       }
-      
+
       // Fallback: Decode access_token (which usually contains realm_access)
-      if (!token.role && account?.access_token) {
+      if (!token.roles?.length && account?.access_token) {
         try {
-          const decoded = JSON.parse(Buffer.from(account.access_token.split('.')[1], 'base64').toString('utf8'));
-          const role = roleFromRealmRoles(decoded.realm_access?.roles);
-          if (role) token.role = role;
+          const roles = readRoles(account.access_token)
+          token.roles = roles
+          token.role = defaultActiveRole(roles)
         } catch (e) {
           logger.error("Failed to decode access token", { error: e });
         }
+      }
+
+      // A role switch (server update). Never trust the requested role: it must be one the token holds, and a client can call update() too.
+      if (trigger === "update") {
+        const held = heldRoles(token)
+        const requested = (session as { role?: unknown } | undefined)?.role
+        if (typeof requested === "string" && (held as string[]).includes(requested)) token.role = requested as typeof token.role
       }
 
       if (account?.access_token) {
@@ -97,9 +108,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
     async session({ session, token }) {
       if (session.user) {
-        if (token.role) {
-          session.user.role = token.role as 'manager' | 'officer' | 'farmer';
-        }
+        // Cookies from before multi-role support have only `role`: they hold exactly that role.
+        const roles = heldRoles(token)
+        session.user.roles = roles
+        const role = validActiveRole(token.role, roles)
+        if (role) session.user.role = role
         if (token.sub) {
           session.user.id = token.sub;
         }

@@ -7,8 +7,15 @@ import { isPublicResourcePath, isPublicApiPath, isMiniAppPath } from '@/lib/cont
 
 export { isPublicResourcePath, isPublicApiPath } from '@/lib/contracts/public-resource-path'
 
-const RECOGNIZED_ROLES = ['manager', 'officer', 'farmer'] as const
-type RecognizedRole = (typeof RECOGNIZED_ROLES)[number]
+import { heldRoles, homeFor, isHumanRole, type HumanRole } from '@/lib/auth/roles'
+
+const ROLE_AREAS: ReadonlyArray<readonly [string, HumanRole]> = [
+  ['/manager', 'manager'],
+  ['/officer', 'officer'],
+  ['/farmer', 'farmer'],
+  ['/accountant', 'accountant'],
+  ['/platform', 'platform_admin'],
+]
 
 /**
  * Pure function — extracts route-decision logic for testability.
@@ -19,6 +26,7 @@ export function resolveAuthRedirect(
   isLoggedIn: boolean,
   role: string | undefined,
   search = '',
+  roles?: string[],
 ): string | null {
   const lowerPath = pathname.toLowerCase()
 
@@ -63,27 +71,26 @@ export function resolveAuthRedirect(
     return '/login'
   }
 
-  const isRecognized = RECOGNIZED_ROLES.includes(role as RecognizedRole)
+  // A session from before multi-role support has no roles list: it holds only its role.
+  const held = heldRoles({ role, roles: roles ?? (role ? [role] : []) })
+  const active = isHumanRole(role) && held.includes(role) ? role : undefined
 
   // Fail-closed: authenticated but unknown/missing role → /unauthorized
   // Guard: don't redirect /unauthorized or /login themselves (prevent infinite loop)
-  if (!isRecognized && pathname !== '/unauthorized' && pathname !== '/login') {
+  if (!active && pathname !== '/unauthorized' && pathname !== '/login') {
     return '/unauthorized'
   }
 
-  // RBAC: protect role-specific routes
-  if (lowerPath.startsWith('/manager') && role !== 'manager') return '/unauthorized'
-  if (lowerPath.startsWith('/officer') && role !== 'officer') return '/unauthorized'
-  if (lowerPath.startsWith('/farmer')  && role !== 'farmer')  return '/unauthorized'
-
-  // Root redirect based on role
-  if (pathname === '/') {
-    if (role === 'manager') return '/manager/dashboard'
-    if (role === 'officer') return '/officer/dashboard'
-    if (role === 'farmer')  return '/farmer/dashboard'
-    // Fail-closed guard (belt-and-suspenders after isRecognized check)
-    return '/unauthorized'
+  // RBAC: protect role-specific routes. The user holds the role but it is not the active one: offer the switch.
+  for (const [prefix, areaRole] of ROLE_AREAS) {
+    if (lowerPath === prefix || lowerPath.startsWith(prefix + '/')) {
+      if (active === areaRole) break
+      return held.includes(areaRole) ? `/unauthorized?switch=${areaRole}` : '/unauthorized'
+    }
   }
+
+  // Root redirect based on the active role
+  if (pathname === '/') return active ? homeFor(active) : '/unauthorized'
 
   return null // allow
 }
@@ -92,8 +99,9 @@ export default auth((req) => {
   const isLoggedIn = !!req.auth && req.auth.error !== 'RefreshFailed'
   const { pathname } = req.nextUrl
   const role = req.auth?.user?.role
+  const roles = req.auth?.user?.roles
 
-  const redirect = resolveAuthRedirect(pathname, isLoggedIn, role, req.nextUrl.search)
+  const redirect = resolveAuthRedirect(pathname, isLoggedIn, role, req.nextUrl.search, roles)
   if (redirect === 'UNAUTHORIZED_API') {
     return NextResponse.json({ error: { code: 'UNAUTHORIZED', message: 'Unauthorized access' } }, { status: 401 })
   }
