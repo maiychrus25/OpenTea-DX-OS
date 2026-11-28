@@ -46,6 +46,23 @@ test('the page shows the balance and opens on the tickets tab', async () => {
   expect(screen.getByText('HTX-PC-20261128-001')).toBeInTheDocument()
 })
 
+test('tickets keep their full identifiers, local date-time, parcel, weight, amount and void status in five columns', async () => {
+  mine = { ...(mine as object), unsettled_tickets: [ticket, {
+    ...ticket, id: 't2', ticket_no: 'HTX-PC-20261128-002', status: 'VOIDED', void_reason: 'Cân nhầm thửa',
+  }] }
+  render(<FarmerLedger />)
+  const table = await screen.findByRole('table', { name: 'Phiếu cân' })
+  expect(within(table).getAllByRole('columnheader').map(cell => cell.textContent))
+    .toEqual(['Số phiếu', 'Ngày giờ', 'Thửa', 'Kg', 'Thành tiền'])
+  const rows = within(table).getAllByRole('row').slice(1)
+  expect(within(rows[0]).getAllByRole('cell').map(cell => cell.textContent))
+    .toEqual(['HTX-PC-20261128-001Hợp lệ', '28/11/2026 10:00', 'T-01', '95,0', '1.235.000 đ'])
+  expect(rows[1]).toHaveTextContent('HTX-PC-20261128-002')
+  expect(rows[1]).toHaveTextContent('Đã huỷ')
+  expect(rows[1]).toHaveTextContent('Cân nhầm thửa')
+  expect(screen.getByRole('button', { name: 'Nghe số dư' })).toBeInTheDocument()
+})
+
 test('the tabs switch between tickets, advances and settlements; the slip link points at the farmer slip', async () => {
   render(<FarmerLedger />)
   await screen.findByText('HTX-PC-20261128-001')

@@ -56,7 +56,7 @@ export function FarmerLedger() {
   if (!ledger) return <p className={kit.muted}>Đang tải sổ tiền...</p>
 
   return (
-    <div className={kit.page}>
+    <div className={`${kit.page} ${styles.farmerLedger}`}>
       <div className={kit.hd}>
         <span className={kit.hico}><Wallet size={28} aria-hidden="true" /></span>
         <div className={kit.hdText}>
@@ -94,17 +94,41 @@ export function FarmerLedger() {
             ledger.unsettled_tickets.length === 0
               ? <p className={`${kit.muted} ${styles.pad}`}>Chưa có phiếu cân nào chờ quyết toán.</p>
               : (
-                <ul className={kit.list}>
-                  {ledger.unsettled_tickets.map(t => (
-                    <li key={t.id} className={styles.row}>
-                      <div className={styles.grow}>
-                        <strong>{t.ticket_no}</strong>
-                        <span className={kit.muted}>{dayMonthYear(localDay(t.weighed_at))} {clockVn(t.weighed_at)} · {t.parcel_code}</span>
-                        <span>{Number(t.net_kg).toLocaleString('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} kg · {formatVnd(t.amount_vnd)} đ</span>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+                <table className={`${styles.table} ${styles.farmerTickets}`} aria-label="Phiếu cân">
+                  <colgroup>
+                    <col className={styles.ticketNumberColumn} />
+                    <col className={styles.ticketDateColumn} />
+                    <col className={styles.ticketParcelColumn} />
+                    <col className={styles.ticketWeightColumn} />
+                    <col className={styles.ticketAmountColumn} />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th scope="col">Số phiếu</th>
+                      <th scope="col">Ngày giờ</th>
+                      <th scope="col">Thửa</th>
+                      <th scope="col" className={styles.ticketNumeric}>Kg</th>
+                      <th scope="col" className={styles.ticketNumeric}>Thành tiền</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ledger.unsettled_tickets.map(t => (
+                      <tr key={t.id}>
+                        <td>
+                          <strong>{t.ticket_no}</strong>
+                          <span className={t.status === 'VOIDED' ? styles.error : kit.muted}>
+                            {t.status === 'VOIDED' ? 'Đã huỷ' : 'Hợp lệ'}
+                          </span>
+                          {t.status === 'VOIDED' && t.void_reason && <span className={kit.muted}>{t.void_reason}</span>}
+                        </td>
+                        <td><time dateTime={t.weighed_at}>{dayMonthYear(localDay(t.weighed_at))}{' '}<span className={kit.muted}>{clockVn(t.weighed_at)}</span></time></td>
+                        <td>{t.parcel_code}</td>
+                        <td className={styles.ticketNumeric}>{Number(t.net_kg).toLocaleString('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</td>
+                        <td className={styles.ticketNumeric}>{formatVnd(t.amount_vnd)} đ</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               )
           )}
 

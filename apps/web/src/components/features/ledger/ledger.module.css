@@ -79,3 +79,27 @@
 .tab { min-height: 44px; padding: 0 16px; border: 1px solid transparent; border-radius: 999px; background: transparent; color: var(--color-ink-secondary); font: inherit; font-weight: 600; cursor: pointer; }
 .tab:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; }
 .tabActive { background: var(--color-primary-subtle); border-color: var(--color-primary); color: var(--color-primary); }
+
+/* Farmer-only sizing; accountant tables, forms and printable slips stay unchanged. */
+.farmerLedger { gap: 14px; }
+.farmerLedger > div:first-child > div { flex-basis: 200px; }
+.farmerLedger .balanceLine { font-size: clamp(28px, 3vw, 36px); line-height: 1.3; margin-bottom: 10px; }
+.farmerLedger .link { display: inline-flex; align-items: center; min-height: 44px; }
+.farmerTickets { table-layout: fixed; font-variant-numeric: tabular-nums; }
+.ticketNumberColumn { width: 23%; }
+.ticketDateColumn { width: 24%; }
+.ticketParcelColumn { width: 16%; }
+.ticketWeightColumn { width: 12%; }
+.ticketAmountColumn { width: 25%; }
+.farmerTickets th { white-space: normal; overflow-wrap: anywhere; }
+.farmerTickets td > span, .farmerTickets time > span { display: block; margin-top: 4px; }
+.farmerTickets .ticketNumeric { text-align: right; }
+.farmerTickets td.ticketNumeric { font-weight: 600; }
+
+@media (max-width: 767px) {
+  .farmerLedger .balance { padding: 16px; }
+  .farmerLedger .tabs { flex-wrap: nowrap; gap: 4px; padding: 8px; }
+  .farmerLedger .tab { flex: 1; min-width: 0; padding: 0 6px; font-size: 13px; }
+  .farmerTickets { font-size: 12px; }
+  .farmerTickets th, .farmerTickets td { padding: 10px 5px; }
+}
