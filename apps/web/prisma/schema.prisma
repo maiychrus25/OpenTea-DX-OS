@@ -110,6 +110,7 @@ model HtxProfile {
   ledger_entries     MemberLedgerEntry[]
   processing_batches ProcessingBatch[]
   certificates       HtxCertificate[]
+  sales_orders       SalesOrder[]
   // Phase 2: names of people reach the public trace page only when the cooperative allows it.
   public_show_names  Boolean             @default(false)
 
@@ -316,6 +317,7 @@ model Lot {
   lot_parcels   LotParcel[]
   batch_sources LotBatchSource[]
   certificates  LotCertificate[]
+  sales_lines   SalesOrderLine[]
 
   htx_profile_id String?
   htx_profile    HtxProfile? @relation(fields: [htx_profile_id], references: [id])
@@ -463,7 +465,8 @@ model Partner {
   created_at          DateTime    @default(now())
   updated_at          DateTime    @updatedAt
 
-  htx_profile HtxProfile? @relation(fields: [htx_profile_id], references: [id])
+  htx_profile  HtxProfile?  @relation(fields: [htx_profile_id], references: [id])
+  sales_orders SalesOrder[]
 
   @@index([htx_profile_id])
   @@map("partners")
@@ -843,4 +846,86 @@ model LotCertificate {
 
   @@unique([lot_id, certificate_id])
   @@map("lot_certificates")
+}
+
+// ─── Phase 3 S8: sales drawn from lot stock ───
+
+enum SalesKind {
+  WHOLESALE
+  RETAIL
+}
+
+enum SalesSource {
+  CORE
+  TEA_SHOP
+}
+
+enum SalesStatus {
+  CONFIRMED
+  CANCELLED
+}
+
+model SalesOrder {
+  id              String      @id @default(cuid())
+  htx_profile_id  String
+  htx_profile     HtxProfile  @relation(fields: [htx_profile_id], references: [id])
+  order_no        String      @unique // {HTX_CODE}-DH-{YYYYMMDD}-{NNN}
+  kind            SalesKind
+  source          SalesSource @default(CORE)
+  external_ref    String? // the mini-app's own order id; a replay finds the first order
+  partner_id      String? // required for WHOLESALE
+  partner         Partner?    @relation(fields: [partner_id], references: [id])
+  customer_name   String?
+  ordered_on      DateTime    @db.Date
+  due_on          DateTime?   @db.Date // wholesale only
+  status          SalesStatus @default(CONFIRMED)
+  total_vnd       BigInt
+  note            String?
+  created_by_id   String // Keycloak sub
+  created_at      DateTime    @default(now())
+  cancelled_by_id String?
+  cancelled_at    DateTime?
+  cancel_reason   String?
+
+  lines    SalesOrderLine[]
+  payments SalesPayment[]
+
+  @@unique([htx_profile_id, source, external_ref])
+  @@index([htx_profile_id, ordered_on])
+  @@index([htx_profile_id, kind, status, due_on])
+  @@index([partner_id])
+  @@map("sales_orders")
+}
+
+model SalesOrderLine {
+  id               String     @id @default(cuid())
+  order_id         String
+  order            SalesOrder @relation(fields: [order_id], references: [id])
+  lot_id           String
+  lot              Lot        @relation(fields: [lot_id], references: [id])
+  net_g            Int // whole grams, so a 250 g pack is exact
+  pack_count       Int?
+  pack_net_g       Int?
+  price_vnd_per_kg Int? // wholesale
+  amount_vnd       BigInt
+
+  @@index([order_id])
+  @@index([lot_id])
+  @@map("sales_order_lines")
+}
+
+// Append-only: a wrong payment is not edited, the order is not cancellable once one exists.
+model SalesPayment {
+  id            String        @id @default(cuid())
+  order_id      String
+  order         SalesOrder    @relation(fields: [order_id], references: [id])
+  amount_vnd    BigInt
+  paid_on       DateTime      @db.Date
+  method        PaymentMethod
+  ref           String?
+  created_by_id String
+  created_at    DateTime      @default(now())
+
+  @@index([order_id])
+  @@map("sales_payments")
 }
