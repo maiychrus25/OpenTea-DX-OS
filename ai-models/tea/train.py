@@ -6,8 +6,9 @@ Usage (inside python:3.12.15-slim-bookworm with requirements.txt installed):
     python train.py download | prepare | train | evaluate
     python train.py fetch-field --manifest <url|file> --cookie-env DXOS_WEB_COOKIE
 
-`fetch-field` pulls consented, officer-confirmed field photos (EXIF removed) into .work/field/<label>/; `prepare`
-then merges them with the public datasets. `evaluate` writes .work/registry.json only when every gate passes.
+`fetch-field` pulls consented, officer-confirmed field photos (EXIF removed) into .work/field/<label>/, page by
+page; `prepare` then merges them with the public datasets. `evaluate` writes .work/registry.json only when every gate
+passes. When a class has too few groups to split, `prepare`, `train` and `evaluate` end with BLOCKED.
 
 Every step is idempotent and writes only to .work/ next to this file.
 """
@@ -20,6 +21,7 @@ import os
 import re
 import shutil
 import sys
+import urllib.parse
 import urllib.request
 import zipfile
 from collections import Counter, defaultdict
@@ -53,7 +55,9 @@ ACCURACY_GATE = 0.80  # spec §4.3: below this test accuracy the model must not 
 RECALL_GATE = 0.70  # every target class present in the model
 FIELD_ACCURACY_GATE = 0.75  # on field photos of cooperatives held out of training
 MIN_FIELD_IMAGES_PER_CLASS = 150  # spec §8.7
-FIELD_TEST_SHARE = 0.20  # about this share of field photos is held out, whole cooperatives at a time
+FIELD_TEST_SHARE = 0.20  # about this share of field photos is held out, whole cooperatives (or households) at a time
+MIN_GROUPS_PER_CLASS = 3  # one group each for train, val and test
+FIELD_SPLIT_LABELS = {"htx": "tách theo HTX", "household": "tách theo hộ, 1 HTX"}
 NOT_TEA_LEAF_COUNT = 300  # fixed, so the class never swamps or vanishes from the split
 NOT_TEA_LEAF = "not_tea_leaf"
 TARGET_CLASSES = ["green_leafhopper", "tea_thrips", "red_spider_mite", "blister_blight", "helopeltis"]
@@ -110,32 +114,61 @@ def strip_exif(data):
     return out.getvalue()
 
 
+def with_cursor(url, cursor):
+    parts = urllib.parse.urlsplit(url)
+    query = urllib.parse.parse_qsl(parts.query) + [("cursor", cursor)]
+    return urllib.parse.urlunsplit(parts._replace(query=urllib.parse.urlencode(query)))
+
+
 def load_manifest(location, cookie):
-    """The platform manifest `{ items: [...] }` from an https URL or a local file. The route takes a platform_admin
-    session, as `./dxos para seed` does: the cookie is the Auth.js session cookie, sent as is."""
+    """The manifest pages `{ items, next_cursor }` from an https URL or a local file, as an iterator: each page is
+    fetched only when the one before it has been used, so its 15 minute photo URLs are fresh. The route takes a
+    platform_admin session, as `./dxos para seed` does: the cookie is the Auth.js session cookie, sent as is.
+    A file may hold one page or a list of pages."""
     if location.startswith(("http://", "https://")):
         if not cookie:
             sys.exit("--cookie-env names an unset variable (DXOS_WEB_COOKIE?); the manifest needs a platform_admin session cookie")
-        request = urllib.request.Request(location, headers={"Cookie": cookie, "User-Agent": "opentea-tea-train/1.0"})
+        return fetch_pages(location, cookie)
+    saved = json.loads(Path(location).read_text(encoding="utf-8"))
+    return iter(saved if isinstance(saved, list) else [saved])
+
+
+def fetch_pages(url, cookie):
+    cursor = None
+    while True:
+        request = urllib.request.Request(with_cursor(url, cursor) if cursor else url,
+                                         headers={"Cookie": cookie, "User-Agent": "opentea-tea-train/1.0"})
         with urllib.request.urlopen(request) as response:
-            return json.loads(response.read())
-    return json.loads(Path(location).read_text(encoding="utf-8"))
+            page = json.loads(response.read())
+        yield page
+        cursor = page.get("next_cursor")
+        if not cursor:
+            return
 
 
-def fetch_field(manifest, root=FIELD):
-    """Download every manifest photo into <root>/<label>/<report_id>.jpg. Idempotent: a photo already saved with the same sha256 is skipped."""
+def fetch_field(pages, root=FIELD):
+    """Download every photo of every manifest page into <root>/<label>/<report_id>.jpg, a page's photos before the next
+    page is fetched. `pages` is one page or an iterable of pages. Idempotent: a photo already saved with the same sha256 is skipped."""
+    if isinstance(pages, dict):
+        pages = [pages]
     root.mkdir(parents=True, exist_ok=True)
     meta_path = root / "manifest.json"
     meta = json.loads(meta_path.read_text(encoding="utf-8")) if meta_path.exists() else {}
     summary = {"downloaded": 0, "skipped": 0}
     try:
-        for item in manifest["items"]:
+        for item in (item for page in pages for item in page["items"]):
             report_id, label = item["report_id"], item["label_code"]
             if not (SAFE_NAME.match(report_id) and SAFE_NAME.match(label)):
                 sys.exit(f"unsafe report_id or label_code in manifest: {report_id!r}, {label!r}")
+            household_key = item.get("household_key", "")
+            if not SAFE_NAME.match(household_key):
+                sys.exit(f"report {report_id} has no household_key in the manifest: the web release must be the one that adds it")
+            entry = {"label_code": label, "htx_code": item["htx_code"], "household_key": household_key,
+                     "confirmed_on": item["confirmed_on"], "sha256": item["sha256"]}
             target = root / label / f"{report_id}.jpg"
             known = meta.get(report_id)
             if known and known["sha256"] == item["sha256"] and known["label_code"] == label and target.exists():
+                meta[report_id] = entry  # a photo saved before household_key existed gets its key without a second download
                 summary["skipped"] += 1
                 continue
             # The URL is presigned: it takes no bearer token.
@@ -148,8 +181,7 @@ def fetch_field(manifest, root=FIELD):
                 (root / known["label_code"] / f"{report_id}.jpg").unlink(missing_ok=True)
             target.parent.mkdir(exist_ok=True)
             target.write_bytes(strip_exif(data))
-            meta[report_id] = {"label_code": label, "htx_code": item["htx_code"], "confirmed_on": item["confirmed_on"],
-                               "sha256": item["sha256"]}
+            meta[report_id] = entry
             summary["downloaded"] += 1
     finally:
         meta_path.write_text(json.dumps(meta, indent=1, sort_keys=True), encoding="utf-8")
@@ -218,27 +250,46 @@ class UnionFind:
         self.parent[self.find(a)] = self.find(b)
 
 
-def stratified_group_split(labels, groups, rng):
-    """Assign whole groups to train/val/test so each class gets about 70/15/15 of its images."""
-    members = defaultdict(list)
-    for i, g in enumerate(groups):
-        members[g].append(i)
-    by_class = defaultdict(list)
-    for g, idx in members.items():
-        by_class[Counter(labels[i] for i in idx).most_common(1)[0][0]].append(g)
-    split = [None] * len(labels)
-    for cls in sorted(by_class):
-        class_groups = sorted(by_class[cls])
-        rng.shuffle(class_groups)
-        total = sum(len(members[g]) for g in class_groups)
+def class_groups(labels, groups):
+    """{class: set of groups with at least one image of it}. A household has photos of several classes, so a group can be in several."""
+    found = defaultdict(set)
+    for label, group in zip(labels, groups):
+        found[label].add(group)
+    return found
+
+
+def stratified_group_split(labels, groups, rng, test_covered=()):
+    """Assign whole groups to train/val/test so each class gets about 70/15/15 of its images. Rarest classes go first, so a
+    class with few groups (a field-only one) is not starved by a common class that shares its households. A class in
+    `test_covered` already has held-out test photos, so it needs only train and val here. A class with too few groups
+    can still miss a split; the caller reports that, it is not an assertion."""
+    per_group = defaultdict(Counter)
+    for label, group in zip(labels, groups):
+        per_group[group][label] += 1
+    by_class = class_groups(labels, groups)
+    assigned = {}
+    for cls in sorted(by_class, key=lambda c: (len(by_class[c]), c)):
+        total = sum(per_group[g][cls] for g in by_class[cls])
+        used = {"test"} if cls in test_covered else set()
         filled = {"test": 0, "val": 0}
-        for g in class_groups:
-            name = next((s for s in ("test", "val") if filled[s] < SPLIT[s] * total), "train")
+        for g in by_class[cls]:
+            if g in assigned:
+                used.add(assigned[g])
+                if assigned[g] != "train":
+                    filled[assigned[g]] += per_group[g][cls]
+        todo = sorted((g for g in by_class[cls] if g not in assigned), key=str)
+        rng.shuffle(todo)
+        for pos, g in enumerate(todo):
+            missing = [s for s in ("test", "val", "train") if s not in used]
+            if len(todo) - pos <= len(missing):  # the groups left are just enough to give each split one
+                name = missing[0]
+            else:
+                name = next((s for s in ("test", "val") if filled[s] < SPLIT[s] * total), "train")
+            used.add(name)
             if name != "train":
-                filled[name] += len(members[g])
-            for i in members[g]:
-                split[i] = name
-    return split
+                filled[name] += per_group[g][cls]
+            assigned[g] = name
+    return [assigned[g] for g in groups]
 
 
 def insufficient_lines(insufficient, minimum):
@@ -253,15 +304,19 @@ def collect_field(classes, root=FIELD, minimum=MIN_FIELD_IMAGES_PER_CLASS):
     for report_id, entry in sorted(meta.items()):
         path = root / entry["label_code"] / f"{report_id}.jpg"
         if entry["label_code"] in classes and path.exists():
-            by_class[entry["label_code"]].append((report_id, entry["htx_code"], path))
+            if not entry.get("household_key"):
+                sys.exit(f"{root / 'manifest.json'} has no household_key for {report_id}: run fetch-field again")
+            by_class[entry["label_code"]].append((report_id, entry["htx_code"], entry["household_key"], path))
     insufficient = {c: len(by_class[c]) for c in classes if c != NOT_TEA_LEAF and len(by_class[c]) < minimum
                     and (c in TARGET_CLASSES or by_class[c])}
     records, pixels = [], []
     for cls in sorted(by_class):
         if cls in insufficient:
             continue
-        for report_id, htx, path in by_class[cls]:
-            records.append({"source": "field", "label": cls, "origin": report_id, "group": f"field:{report_id}", "htx": htx})
+        for report_id, htx, household_key, path in by_class[cls]:
+            # One group per household: its photos never cross train, val and test.
+            records.append({"source": "field", "label": cls, "origin": report_id, "group": f"field:{htx}:{household_key}",
+                            "htx": htx, "household_key": household_key})
             with Image.open(path) as photo:
                 pixels.append(to_model_input(photo))
     return records, pixels, insufficient
@@ -311,19 +366,52 @@ def collect_public(config):
     return records, pixels, raw_counts
 
 
-def pick_field_test_htx(records, rng):
-    """Whole cooperatives held out as the field test set, until about FIELD_TEST_SHARE of field photos. One cooperative: none."""
-    per_htx = Counter(r["htx"] for r in records if r["source"] == "field")
-    if len(per_htx) < 2:
-        return []
-    order = sorted(per_htx)
+def field_split_mode(records):
+    """Two or more cooperatives in the field data: hold out whole cooperatives. Exactly one: hold out whole households of it."""
+    htx_codes = {r["htx"] for r in records if r["source"] == "field"}
+    return None if not htx_codes else "htx" if len(htx_codes) > 1 else "household"
+
+
+def pick_field_test_units(records, groups, mode, rng):
+    """The field test set: whole units (cooperatives in "htx" mode, households in "household" mode), shuffled, until about
+    FIELD_TEST_SHARE of field photos is held. A unit is held out only if every class it touches still has at least two
+    groups outside the held units, one for train and one for val; otherwise it stays in training."""
+    unit = (lambda r: r["htx"]) if mode == "htx" else (lambda r: r["household_key"])
+    field = [i for i, r in enumerate(records) if r["source"] == "field"]
+    photos = Counter(unit(records[i]) for i in field)
+    order = sorted(photos)
     rng.shuffle(order)
-    held, total = [], sum(per_htx.values())
-    for htx in order[:-1]:  # at least one cooperative stays in training
-        if sum(per_htx[h] for h in held) >= FIELD_TEST_SHARE * total:
+    labels = [r["label"] for r in records]
+    held, held_photos = set(), 0
+    for candidate in order:
+        if held_photos >= FIELD_TEST_SHARE * len(field):
             break
-        held.append(htx)
-    return sorted(held)
+        left = [i for i, r in enumerate(records) if not (r["source"] == "field" and unit(r) in held | {candidate})]
+        remaining = class_groups([labels[i] for i in left], [groups[i] for i in left])
+        touched = {labels[i] for i in field if unit(records[i]) == candidate}
+        if all(len(remaining.get(c, ())) >= MIN_GROUPS_PER_CLASS - 1 for c in touched):
+            held.add(candidate)
+            held_photos += photos[candidate]
+    return held
+
+
+def thin_class_lines(records, groups, classes, splits=None):
+    """BLOCKED reasons: a class with fewer than MIN_GROUPS_PER_CLASS groups cannot be split into train, val and test, and
+    neither can one whose groups, after the split, miss a split (`splits` given). For a class that only has field photos
+    the groups are households."""
+    by_class = class_groups([r["label"] for r in records], groups)
+    lines = []
+    for cls in classes:
+        n = len(by_class.get(cls, ()))
+        if n >= MIN_GROUPS_PER_CLASS and (splits is None or all(any(r["label"] == cls and r["split"] == s for r in records) for s in SPLIT)):
+            continue
+        if all(r["source"] == "field" for r in records if r["label"] == cls):
+            lines.append(f"lớp {cls} chỉ có ảnh của {n} hộ, cần ít nhất {MIN_GROUPS_PER_CLASS} hộ để tách train/val/test "
+                         f"(class {cls} has photos from {n} household{'' if n == 1 else 's'}, needs at least {MIN_GROUPS_PER_CLASS})")
+        else:
+            lines.append(f"lớp {cls} chỉ có {n} nhóm ảnh, cần ít nhất {MIN_GROUPS_PER_CLASS} nhóm để tách train/val/test "
+                         f"(class {cls} has {n} photo group{'' if n == 1 else 's'}, needs at least {MIN_GROUPS_PER_CLASS})")
+    return lines
 
 
 def build_dataset(records, pixels, class_ids, minimum=MIN_IMAGES_PER_CLASS):
@@ -359,25 +447,36 @@ def build_dataset(records, pixels, class_ids, minimum=MIN_IMAGES_PER_CLASS):
             else:
                 first[key] = i
     groups = [uf.find(i) for i in range(len(records))]
+    blocked = thin_class_lines(records, groups, kept_classes)
+    if blocked:
+        return records, pixels, {"blocked": blocked}
     rng = np.random.default_rng(SEED)
-    held_out = pick_field_test_htx(records, rng)
-    held = [rec["source"] == "field" and rec["htx"] in held_out for rec in records]
+    mode = field_split_mode(records)
+    held_units = pick_field_test_units(records, groups, mode, rng) if mode else set()
+    unit = (lambda r: r["htx"]) if mode == "htx" else (lambda r: r.get("household_key"))
+    held = [rec["source"] == "field" and unit(rec) in held_units for rec in records]
     rest = [i for i in range(len(records)) if not held[i]]
-    rest_split = stratified_group_split([records[i]["label"] for i in rest], [groups[i] for i in rest], rng)
+    rest_labels, rest_groups = [records[i]["label"] for i in rest], [groups[i] for i in rest]
+    test_covered = {records[i]["label"] for i in range(len(records)) if held[i]}
     split = ["test"] * len(records)
-    for i, s in zip(rest, rest_split):
-        split[i] = s
+    for i, name in zip(rest, stratified_group_split(rest_labels, rest_groups, rng, test_covered)):
+        split[i] = name
     for i, rec in enumerate(records):
-        rec["group"] = f"htx:{rec['htx']}" if held[i] else groups[i]
+        if held[i]:
+            rec["field_test"] = True
+            rec["group"] = f"htx:{rec['htx']}" if mode == "htx" else rec["group"]
+        else:
+            rec["group"] = groups[i]
         rec["split"] = split[i]
 
-    # Self-check: no group crosses splits, and every class is in every split.
+    # Self-check, a bug guard: no group crosses splits. (A class that misses a split is a data problem, reported as BLOCKED.)
     group_splits = defaultdict(set)
     for rec in records:
         group_splits[rec["group"]].add(rec["split"])
     assert all(len(s) == 1 for s in group_splits.values()), "a group crosses splits"
-    for s in SPLIT:
-        assert {r["label"] for r in records if r["split"] == s} == set(kept_classes), f"class missing from {s}"
+    blocked = thin_class_lines(records, groups, kept_classes, splits=True)
+    if blocked:
+        return records, pixels, {"blocked": blocked}
 
     summary = {
         "exact_duplicates_removed": duplicates,
@@ -392,7 +491,11 @@ def build_dataset(records, pixels, class_ids, minimum=MIN_IMAGES_PER_CLASS):
             src: dict(sorted(Counter(r["label"] for r in records if r["source"] == src).items()))
             for src in sorted({r["source"] for r in records})
         },
-        "field_test_htx": held_out,
+        "blocked": [],
+        "field_split": mode,
+        "field_split_label": FIELD_SPLIT_LABELS.get(mode),
+        "field_test_htx": sorted(held_units) if mode == "htx" else [],
+        "field_test_households": len(held_units) if mode == "household" else 0,
         "groups": len(group_splits),
         "largest_group": max(Counter(groups).values()),
     }
@@ -415,6 +518,12 @@ def cmd_prepare(args):
     summary = {"raw_label_counts": raw_counts, **summary, "field_insufficient": insufficient,
                "field_insufficient_lines": insufficient_lines(insufficient, MIN_FIELD_IMAGES_PER_CLASS)}
     WORK.mkdir(parents=True, exist_ok=True)
+    if summary["blocked"]:
+        # The marker stops train and evaluate too; no stale images or registry may outlive a blocked prepare.
+        IMAGES.unlink(missing_ok=True)
+        REGISTRY.unlink(missing_ok=True)
+        MANIFEST.write_text(json.dumps({"blocked": summary["blocked"]}, indent=1, ensure_ascii=False), encoding="utf-8")
+        sys.exit("BLOCKED: " + "; ".join(summary["blocked"]) + "; no model can be trained from this data")
     np.save(IMAGES, np.stack(pixels))
     MANIFEST.write_text(json.dumps({**summary, "records": records}, indent=1, ensure_ascii=False), encoding="utf-8")
     print(json.dumps(summary, indent=1, ensure_ascii=False))
@@ -425,6 +534,9 @@ def cmd_prepare(args):
 
 def load_prepared():
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+    if manifest.get("blocked"):
+        REGISTRY.unlink(missing_ok=True)
+        sys.exit("BLOCKED: " + "; ".join(manifest["blocked"]) + "; run prepare --force after adding photos")
     classes = manifest["classes"]
     labels = np.array([classes.index(r["label"]) for r in manifest["records"]])
     return manifest, classes, np.load(IMAGES, mmap_mode="r"), labels
@@ -566,7 +678,7 @@ def gate_failures(accuracy, per_class, field_accuracy, has_field_data, classes):
             failures.append(f"recall of {cls} {stats['recall']} < {RECALL_GATE}")
     if has_field_data:
         if field_accuracy is None:
-            failures.append("field photos are in the model but no cooperative was held out to measure them")
+            failures.append("field photos are in the model but no cooperative or household was held out to measure them")
         elif field_accuracy < FIELD_ACCURACY_GATE:
             failures.append(f"field accuracy {field_accuracy} < {FIELD_ACCURACY_GATE}")
     return failures
@@ -602,9 +714,11 @@ def cmd_evaluate(args):
     test_at = accepted_precision(test_probs, labels[test_idx], threshold) if threshold else (None, None)
     print(f"test accuracy {test['accuracy']}; threshold {threshold}", flush=True)
 
-    # Field accuracy: photos of cooperatives that never appear in training or validation.
-    htx = np.array([r.get("htx", "") for r in records])
-    field_idx = np.where((source == "field") & np.isin(htx, manifest.get("field_test_htx", [])))[0]
+    # Field accuracy: photos of the cooperatives (or, with one cooperative, households) that never appear in training or validation.
+    field_idx = np.where([bool(r.get("field_test")) for r in records])[0]
+    field_label = manifest.get("field_split_label")
+    if field_label:
+        print(f"field split: {field_label}")
     has_field_data = bool((source == "field").any())
     field_accuracy = None
     if len(field_idx):
@@ -646,8 +760,9 @@ def cmd_evaluate(args):
                       "val_precision": val_precision, "val_coverage": val_coverage,
                       "test_precision": test_at[0], "test_coverage": test_at[1]},
         "leave_one_source_out": loso,
-        "field": {"accuracy": field_accuracy, "images": int(len(field_idx)), "test_htx": manifest.get("field_test_htx", []),
-                  "insufficient": insufficient_lines_vi},
+        "field": {"accuracy": field_accuracy, "images": int(len(field_idx)), "split": manifest.get("field_split"),
+                  "split_label": field_label, "test_htx": manifest.get("field_test_htx", []),
+                  "test_households": manifest.get("field_test_households", 0), "insufficient": insufficient_lines_vi},
         "model_bytes": MODEL.stat().st_size,
     }
     METRICS.write_text(json.dumps(metrics, indent=1), encoding="utf-8")
@@ -656,7 +771,8 @@ def cmd_evaluate(args):
     if threshold is None:
         failures.append(f"no threshold >= {THRESHOLD_FLOOR} reaches {THRESHOLD_PRECISION} precision on val")
     registry_metrics = {"test_accuracy": test["accuracy"], "test_images": int(len(test_idx)),
-                        "per_class": test["per_class"], "field_accuracy": field_accuracy}
+                        "per_class": test["per_class"], "field_accuracy": field_accuracy,
+                        "field_split": manifest.get("field_split"), "field_split_label": field_label}
     registry = build_registry(args.version or f"tea-{date.today():%Y.%m.%d}", MODEL, classes, threshold, registry_metrics,
                               f"{date.today():%Y-%m-%d}", sorted(set(source)))
     conclude(failures, registry, REGISTRY)
