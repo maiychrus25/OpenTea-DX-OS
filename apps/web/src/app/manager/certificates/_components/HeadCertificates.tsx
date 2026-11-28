@@ -35,6 +35,9 @@ const pill = (c: CertificateView) => {
   return state === 'SOON' ? <Pill tone="amber">Sắp hết hạn</Pill> : <Pill tone="green">Còn hiệu lực</Pill>
 }
 
+const fileSize = (bytes: number) =>
+  bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1024 / 1024).toLocaleString('vi-VN', { maximumFractionDigits: 1 })} MB`
+
 const range = (c: CertificateView) => `${dayMonthYear(c.issued_on)} – ${dayMonthYear(c.expires_on)}`
 
 /** The cooperative's certificates with the chosen one beside the list. */
@@ -125,7 +128,7 @@ export function HeadCertificates() {
               { icon: <Hash size={15} />, label: 'Số hiệu', value: chosen.number },
               { icon: <Sprout size={15} />, label: 'Phạm vi', value: chosen.scope_note || '—' },
               { icon: <NotebookPen size={15} />, label: 'Ghi chú', value: chosen.revoke_reason ? `Thu hồi: ${chosen.revoke_reason}` : '—' },
-              { icon: <FileText size={15} />, label: 'Tài liệu đính kèm', value: <a href={`/api/certificates/${chosen.id}/file`} target="_blank" rel="noopener noreferrer">{chosen.file_name} ({(chosen.file_size / 1024 / 1024).toLocaleString('vi-VN', { maximumFractionDigits: 1 })} MB)</a> },
+              { icon: <FileText size={15} />, label: 'Tài liệu đính kèm', value: <a href={`/api/certificates/${chosen.id}/file`} target="_blank" rel="noopener noreferrer">{chosen.file_name} ({fileSize(chosen.file_size)})</a> },
             ]}
             totalLabel="Ngày hết hạn"
             total={dayMonthYear(chosen.expires_on)}

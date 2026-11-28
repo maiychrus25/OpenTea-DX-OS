@@ -20,7 +20,7 @@
 .card h2::before { content: ''; width: 4px; height: 18px; border-radius: var(--radius-pill); background: var(--color-primary); }
 .rows { margin: 0; }
 .rows div { display: flex; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--color-border-row); font-size: 13.5px; }
-.rows dt { flex: 0 0 150px; color: var(--color-ink-secondary); }
+.rows dt { display: flex; flex: 0 0 150px; align-items: center; gap: 6px; color: var(--color-ink-secondary); }
 .rows dd { min-width: 0; margin: 0; font-weight: 600; overflow-wrap: anywhere; }
 .logoRow { display: flex; gap: 16px; align-items: center; }
 .logoRow > div { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; font-size: 13px; }

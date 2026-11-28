@@ -121,7 +121,7 @@ export function ProfileForm({ initialData, startEditing = false }: ProfileFormPr
       title="Hồ sơ Hợp tác xã"
       extra={!isEditing && <Button size="sm" onClick={() => setIsEditing(true)}>Sửa</Button>}
     >
-      <form onSubmit={handleSubmit(onSubmit)} className={styles.form}>
+      <form onSubmit={handleSubmit(onSubmit)} className={`${styles.form} ${isEditing ? '' : styles.view}`}>
         <div className={styles.fieldWide}>
           <label className={styles.label}>Tên HTX</label>
           <Controller

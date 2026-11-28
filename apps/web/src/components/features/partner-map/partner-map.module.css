@@ -154,7 +154,7 @@
 
 /* The list on the left, the map on the right. */
 @media (min-width: 900px) {
-  .designed { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); }
-  .designed > :first-child { grid-column: 1; grid-row: 1; height: 520px; }
-  .designed > :last-child { grid-column: 2; grid-row: 1; height: 520px; }
+  .designed.designed { grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); }
+  .designed.designed > :first-child { grid-column: 1; grid-row: 1; width: auto; height: 520px; }
+  .designed.designed > :last-child { grid-column: 2; grid-row: 1; width: auto; height: 520px; }
 }
