@@ -22,20 +22,20 @@ beforeEach(() => {
   })) as unknown as typeof fetch
 })
 
-it('filters by the figure pressed and approves only waiting journals that are chosen', async () => {
+it('filters by the status tab pressed and approves only waiting journals that are chosen', async () => {
   render(<ApproveList />)
   await screen.findByText('P-1')
   expect(screen.queryByText('P-3')).not.toBeInTheDocument()
   expect(screen.getAllByText('Lò Thị Mai').length).toBeGreaterThan(0)
 
-  fireEvent.click(screen.getByRole('button', { name: 'Xem Quá hạn' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Quá hạn (1)' }))
   expect(screen.getByText('P-2')).toBeInTheDocument()
   expect(screen.queryByText('P-1')).not.toBeInTheDocument()
   fireEvent.click(screen.getByRole('checkbox', { name: 'Chọn nhật ký 1' }))
   fireEvent.click(screen.getByRole('button', { name: 'Duyệt (1)' }))
   await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/journal/batch-approve', expect.objectContaining({ body: JSON.stringify({ entry_ids: ['b'] }) })))
 
-  fireEvent.click(await screen.findByRole('button', { name: 'Xem Đã duyệt tháng này' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Đã duyệt (1)' }))
   expect(screen.getByRole('checkbox', { name: 'Chọn nhật ký 1' })).toBeDisabled()
 })
 
@@ -50,9 +50,18 @@ it('approves more than fifty journals in batches of fifty', async () => {
   })) as unknown as typeof fetch
   render(<ApproveList />)
   await screen.findByText('P-0')
-  for (const box of screen.getAllByRole('checkbox', { name: /^Chọn nhật ký/ })) fireEvent.click(box)
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Chọn tất cả (60)' }))
   fireEvent.click(screen.getByRole('button', { name: 'Duyệt (60)' }))
   await screen.findByText('Đã duyệt 60 nhật ký thành công.')
   const sizes = (global.fetch as jest.Mock).mock.calls.filter(([, init]) => init?.method === 'POST').map(([, init]) => JSON.parse(init.body).entry_ids.length)
   expect(sizes).toEqual([50, 10])
+})
+
+it('sends the reason when a waiting journal is not approved', async () => {
+  render(<ApproveList />)
+  await screen.findByText('P-1')
+  fireEvent.click(screen.getAllByRole('button', { name: 'Từ chối' })[0])
+  fireEvent.change(screen.getByLabelText('Lý do'), { target: { value: 'Thiếu ảnh' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Gửi', hidden: true }))
+  await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/journal/a/review', expect.objectContaining({ body: JSON.stringify({ decision: 'REQUEST_CHANGES', reason: 'Thiếu ảnh' }) })))
 })
