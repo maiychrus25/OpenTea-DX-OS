@@ -32,16 +32,26 @@ const ACTIVITY: Record<string, string> = {
 
 const fullDay = (value: number | string) => new Date(value).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
-export function HarvestCalendar({ userRole }: { userRole: 'MANAGER' | 'OFFICER' | 'FARMER' }) {
-  const [month, setMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1))
-  const [selectedDay, setSelectedDay] = useState(() => dayStart(new Date()))
+interface Props {
+  userRole: 'MANAGER' | 'OFFICER' | 'FARMER'
+  /** Inside a page that has its own title: the heading and its button are left out. */
+  embedded?: boolean
+  /** The day to open on. */
+  initialDay?: number
+  /** Open the add dialog straight away. */
+  initialAdd?: boolean
+}
+
+export function HarvestCalendar({ userRole, embedded = false, initialDay, initialAdd = false }: Props) {
+  const [month, setMonth] = useState(() => { const at = new Date(initialDay ?? Date.now()); return new Date(at.getFullYear(), at.getMonth(), 1) })
+  const [selectedDay, setSelectedDay] = useState(() => initialDay ?? dayStart(new Date()))
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
   const [selectedEvent, setSelectedEvent] = useState<HarvestEvent | null>(null)
   const [newDateStr, setNewDateStr] = useState('')
 
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [isAddModalOpen, setIsAddModalOpen] = useState(initialAdd)
   const [selectedUnscheduledCycleId, setSelectedUnscheduledCycleId] = useState('')
-  const [newAddDateStr, setNewAddDateStr] = useState('')
+  const [newAddDateStr, setNewAddDateStr] = useState(() => (initialAdd && initialDay ? new Date(initialDay).toLocaleDateString('en-CA') : ''))
 
   const isManager = userRole === 'MANAGER'
   const weeks = weeksOf(month.getFullYear(), month.getMonth())
@@ -135,14 +145,14 @@ export function HarvestCalendar({ userRole }: { userRole: 'MANAGER' | 'OFFICER' 
 
   return (
     <div className={`${kit.page} ${styles.page} ${userRole === 'FARMER' ? styles.farmer : ''}`}>
-      <div className={styles.top}>
+      {!embedded && <div className={styles.top}>
         {userRole === 'FARMER' && <span className={kit.hico}><Calendar size={28} aria-hidden="true" /></span>}
         <div>
           <h1>Lịch thu hái</h1>
           <p>Theo dõi ngày hái của từng thửa, tránh thu hái trong thời gian cách ly.</p>
         </div>
         {isManager && <Button onClick={() => setIsAddModalOpen(true)}><Plus size={16} aria-hidden="true" />Thêm lứa hái</Button>}
-      </div>
+      </div>}
 
       <div className={styles.layout}>
         <div className={styles.main}>

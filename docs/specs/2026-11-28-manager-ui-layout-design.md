@@ -35,7 +35,7 @@ Không làm theo ảnh:
 
 ## 4. Rủi ro và hoàn tác
 
-`HarvestCalendar` dùng chung với nông hộ và cán bộ: không sửa, chỉ đặt vào tab của trang Trưởng HTX. Mỗi trang một commit, `git revert` được riêng.
+`HarvestCalendar` dùng chung với nông hộ và cán bộ: chỉ thêm tuỳ chọn để đặt vào tab của trang Trưởng HTX, mặc định giữ nguyên. Mỗi trang một commit, `git revert` được riêng.
 
 ## 5. Kiểm tra
 

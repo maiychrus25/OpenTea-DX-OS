@@ -8,6 +8,8 @@ export interface HarvestEvent {
   householdName: string
   cropType: string
   estimatedYieldKg: number | null
+  /** Area of the parcel. */
+  areaHa?: number | null
   estimatedHarvestDate: string | null
   safeHarvestDate: string | null
   status: 'SAFE' | 'WARNING' | 'DANGER'

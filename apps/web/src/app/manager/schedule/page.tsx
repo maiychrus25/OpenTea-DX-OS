@@ -2,12 +2,8 @@
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 import React from 'react'
-import { HarvestCalendar } from '@/components/features/schedule/HarvestCalendar'
+import { ManagerHarvestBoard } from './_components/ManagerHarvestBoard'
 
 export default function ManagerSchedulePage() {
-  return (
-    <div>
-      <HarvestCalendar userRole="MANAGER" />
-    </div>
-  )
+  return <ManagerHarvestBoard />
 }
