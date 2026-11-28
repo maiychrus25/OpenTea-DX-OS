@@ -18,8 +18,8 @@ CREATE TABLE "disease_labels" (
 
 -- The five targets first, then the classes of the current tea model, then the catch-alls.
 INSERT INTO "disease_labels" ("code", "name_vi", "scientific_name", "group", "is_target", "sort_order") VALUES
-  ('green_leafhopper', 'Rầy xanh', 'Empoasca onukii', 'PEST', true, 10),
-  ('tea_thrips', 'Bọ cánh tơ', 'Scirtothrips dorsalis', 'PEST', true, 20),
+  ('green_leafhopper', 'Rầy xanh', 'Empoasca flavescens', 'PEST', true, 10),
+  ('tea_thrips', 'Bọ cánh tơ', 'Physothrips setiventris', 'PEST', true, 20),
   ('red_spider_mite', 'Nhện đỏ', 'Oligonychus coffeae', 'PEST', true, 30),
   ('blister_blight', 'Phồng lá chè', 'Exobasidium vexans', 'DISEASE', true, 40),
   ('helopeltis', 'Bọ xít muỗi', 'Helopeltis theivora', 'PEST', true, 50),
