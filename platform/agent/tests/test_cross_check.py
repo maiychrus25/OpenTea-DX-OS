@@ -257,15 +257,22 @@ def test_every_field_the_cross_check_agent_reads_is_open_to_the_agent_role():
     import re
     from pathlib import Path
 
-    import yaml
-
     from dxos_agent.agents import cross_check
 
     tables = Path(__file__).resolve().parents[3] / "platform" / "hasura" / "metadata" / "databases" / "default" / "tables"
 
     def agent_columns(file):
-        doc = yaml.safe_load((tables / file).read_text(encoding="utf-8"))
-        return set(next(p for p in doc["select_permissions"] if p["role"] == "agent")["permission"]["columns"])
+        # The metadata files are plain block YAML; read the agent role's column list without a YAML dependency.
+        text = (tables / file).read_text(encoding="utf-8")
+        block = text.split("- role: agent", 1)[1].split("columns:", 1)[1]
+        columns = []
+        for line in block.splitlines()[1:]:
+            item = re.match(r"\s+- ([a-z_]+)\s*$", line)
+            if not item:
+                break
+            columns.append(item.group(1))
+        assert columns, file
+        return set(columns)
 
     queries = {
         "input_advances": (cross_check.ADVANCES_QUERY, "public_input_advances.yaml"),
