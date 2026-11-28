@@ -29,6 +29,8 @@ Không làm theo thiết kế ở các chỗ sau:
 
 Bổ sung dữ liệu đã có sẵn mà bộ thiết kế không vẽ (chỉ đọc, không đổi API): phiếu cân có phẩm cấp, đơn giá, kg gộp và phần trăm trừ; Sổ tiền có "Lịch sử ghi sổ"; Tổng quan có thẻ "Tiền búp của tôi" (số dư và ba phiếu gần nhất chưa quyết toán); chi tiết nhật ký có sản lượng búp tươi.
 
+Bù ba chỗ lệch với các đợt trước: nút "Nghe ngày hái" ở Tổng quan (spec GĐ4 §3.6), khối thời tiết ở trang Bản tin, tên lứa trên phiếu cân (phản hồi `/api/ledger/mine` và phiếu cân thêm trường `cycle_season`, không đổi trường cũ). Tên lứa trên nhật ký chưa làm vì danh sách đọc qua Hasura, cần đổi metadata nền tảng.
+
 ## 3. Thay đổi
 
 | Đợt | Màn hình | Việc chính |
