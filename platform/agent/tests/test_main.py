@@ -566,3 +566,23 @@ def test_cross_check_runs_once_a_day_with_its_thresholds_and_its_failure_stops_n
     monkeypatch.setattr(agent_main.cross_check, "run_cross_check", failing)
     agent_main.run_once(cfg, runtimes, now=t0 + timedelta(days=1))
     assert len(harvest_runs) == 2
+
+
+def test_once_cross_check_runs_a13_through_the_scheduled_call_without_the_schedule(monkeypatch, cooperative):
+    cfg, gateway = cooperative
+    calls = []
+    monkeypatch.setattr(agent_main.cross_check, "run_cross_check", lambda gw, now, thresholds: calls.append((gw, now, thresholds)))
+    monkeypatch.setattr(agent_main.Config, "from_env", classmethod(lambda cls: cfg))
+    agent_main.main(argv=["--once", "cross-check", "--htx", "TC01"])
+    agent_main.main(argv=["--once", "cross-check", "--htx", "TC01"])  # no daily schedule: it runs again
+    assert [c[0] for c in calls] == [gateway, gateway]
+    assert calls[0][2] == agent_main.fetch_settings(gateway).thresholds_for(agent_main.cross_check.AGENT_NAME)
+
+
+def test_once_cross_check_refuses_a_cooperative_without_credentials_and_an_unknown_agent(monkeypatch, cooperative, capsys):
+    cfg, _ = cooperative
+    monkeypatch.setattr(agent_main.Config, "from_env", classmethod(lambda cls: cfg))
+    with pytest.raises(SystemExit, match="agent enable XX"):
+        agent_main.main(argv=["--once", "cross-check", "--htx", "XX"])
+    with pytest.raises(SystemExit):
+        agent_main.main(argv=["--once", "harvest-ready", "--htx", "TC01"])
