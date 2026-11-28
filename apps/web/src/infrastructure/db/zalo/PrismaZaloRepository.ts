@@ -91,6 +91,14 @@ export class PrismaZaloRepository implements ZaloRepository {
       ORDER BY h.id`
   }
 
+  async household(htxCode: string, householdId: string): Promise<{ id: string; phone: string; keycloakUserId: string | null } | null> {
+    const rows = await prisma.$queryRaw<{ id: string; phone: string; keycloak_user_id: string | null }[]>`
+      SELECT h.id, h.phone, h.keycloak_user_id FROM public.households h
+      JOIN public.htx_profiles p ON p.id = h.htx_profile_id
+      WHERE p.htx_code = ${htxCode} AND h.id = ${householdId}`
+    return rows[0] ? { id: rows[0].id, phone: rows[0].phone, keycloakUserId: rows[0].keycloak_user_id } : null
+  }
+
   async latestConsents(householdIds: string[]): Promise<Map<string, ConsentState>> {
     if (householdIds.length === 0) return new Map()
     const rows = await prisma.$queryRaw<{ household_id: string; status: ConsentStatus; phone: string; source: ConsentSource; at: Date }[]>`

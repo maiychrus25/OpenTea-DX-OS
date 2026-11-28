@@ -827,6 +827,15 @@ Chỉ `telegram_links` và `system_alerts` gắn trigger `dxos_audit_row` (ai li
 - **`platform.system_alerts`**: cảnh báo hệ thống. `source` ∈ `n8n|agent|web`; `htx_code` và `notified_at` có thể rỗng; `id` và `created_at` có mặc định. n8n ghi vào bảng này khi workflow lỗi.
 - **`platform.agent_reports`**: báo cáo đã ghi nhận, khóa `(htx_code, kind, period_start)`, bảo đảm mỗi kỳ chỉ gửi một lần.
 
+### Zalo OA/ZNS (`platform` schema — `platform/postgres/init/10-zalo.sql`, GĐ4-C)
+Kênh tin nhắn Zalo cấp nền tảng: web giữ mọi logic, relay `dxos-zalo` chỉ vận chuyển. Không có khoá ngoại tới bảng `public` (tệp chạy trước các migration). Chỉ `zalo_consents` gắn trigger `dxos_audit_row`.
+
+- **`platform.zalo_outbox`**: hàng đợi tin. `event_kind` ∈ `PRICE_PUBLISHED|TICKET_RECEIPT|WITHDRAWAL_ENDED|SETTLEMENT_CLOSED`, `status` ∈ `pending|leased|sent|failed|skipped`. Duy nhất `(event_kind, event_id, phone)`: một sự kiện không gửi hai lần. Dòng `skipped` ghi lý do trong `last_error` (`ZALO_OFF`, `KIND_OFF`, `NO_CONSENT`, `CONSENT_REVOKED`, `NO_TEMPLATE`, `BAD_TEMPLATE`, `QUOTA_REACHED`, `INVALID_PHONE`). `phone` ở dạng quốc tế `84…`. `params` chỉ gồm các tham số mà mẫu khai báo.
+- **`platform.zalo_templates`**: `template_key` ∈ `price_today|ticket_receipt|withdrawal_ended|settlement_closed` → `zns_template_id`, `params text[]`. Do `platform_admin` khai báo; tên tham số bị giới hạn ở danh sách cho phép trong `domain/zalo/zalo-events.ts` (không có số tài khoản, tên thuốc, tên người khác).
+- **`platform.zalo_settings`**: mỗi HTX một dòng: `enabled`, `kinds`, `quiet_start_hour` (mặc định 21), `quiet_end_hour` (6), `monthly_quota` (2000). Chưa có dòng nghĩa là tắt.
+- **`platform.zalo_consents`**: chỉ thêm dòng (trigger chặn UPDATE và DELETE). `status` ∈ `OPTED_IN|OPTED_OUT`, `source` ∈ `REGISTRATION|OFFICER|MEMBER`, `recorded_by`. Trạng thái hiện hành của hộ là dòng mới nhất và phải khớp số điện thoại hiện tại của hộ.
+- **`platform.zalo_credentials`**: một dòng (`id = 1`), access và refresh token của OA đã mã hoá AES-256-GCM bằng khoá `DXOS_ZALO_TOKEN_KEY`; không audit.
+
 ---
 
 ## Indexing Strategy

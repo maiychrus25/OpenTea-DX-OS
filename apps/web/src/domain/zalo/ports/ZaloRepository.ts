@@ -86,6 +86,8 @@ export interface ZaloRepository {
   saveTemplates(templates: ZaloTemplate[], actor: string): Promise<void>
   /** Households of the cooperative with a phone; `householdId` null means all of them. Never another cooperative's. */
   recipients(htxCode: string, householdId: string | null): Promise<ZaloRecipient[]>
+  /** One household of the cooperative, or null when it is not there or belongs to another cooperative. */
+  household(htxCode: string, householdId: string): Promise<{ id: string; phone: string; keycloakUserId: string | null } | null>
   latestConsents(householdIds: string[]): Promise<Map<string, ConsentState>>
   recordConsent(input: { htxCode: string; householdId: string; phone: string; status: ConsentStatus; source: ConsentSource; recordedBy: string }): Promise<void>
   /** Rows of the cooperative since `since` that count against the quota: everything except skipped. */

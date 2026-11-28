@@ -28,6 +28,11 @@ export class FakeZaloRepository implements ZaloRepository {
   async recipients(htx: string, id: string | null) {
     return this.households.filter((h) => h.htxCode === htx && (id === null || h.id === id)).map(({ id: hid, name, phone }) => ({ id: hid, name, phone }))
   }
+  keycloakIds = new Map<string, string>()
+  async household(htx: string, id: string) {
+    const h = this.households.find((x) => x.htxCode === htx && x.id === id)
+    return h ? { id: h.id, phone: h.phone, keycloakUserId: this.keycloakIds.get(id) ?? null } : null
+  }
   async latestConsents(ids: string[]) {
     const out = new Map<string, ConsentState>()
     for (const c of this.consents) if (ids.includes(c.householdId)) out.set(c.householdId, c.state)

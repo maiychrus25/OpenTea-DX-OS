@@ -38,7 +38,7 @@ def test_user_routes_refuse_agent_telegram_and_staff_tokens():
     for route_id in ("workflow", "disease", "llm-chat"):
         schema = routes[route_id]["plugins"]["openid-connect"]["claim_schema"]
         assert schema["properties"]["realm_access"]["properties"]["roles"] == {
-            "not": {"contains": {"enum": ["agent", "telegram", "staff-sync", "web-service"]}}
+            "not": {"contains": {"enum": ["agent", "telegram", "zalo", "staff-sync", "web-service"]}}
         }, route_id
 
 
@@ -72,6 +72,29 @@ def test_telegram_route_needs_the_relay_client_and_role_on_the_internal_port():
     assert schema["properties"]["realm_access"]["properties"]["roles"]["contains"] == {"enum": ["telegram"]}
     assert route["plugins"]["limit-count"]["key"] == "$http_authorization"
     assert "X-Dxos-Gateway" in route["plugins"]["proxy-rewrite"]["headers"]["set"]
+
+
+def test_zalo_route_needs_the_relay_client_and_role_on_the_internal_port():
+    route = load_routes()["internal-zalo"]
+    assert route["uri"] == "/api/internal/zalo/*"
+    assert route["vars"] == [["server_port", "==", "9081"]]
+    assert route["upstream_id"] == "web"
+    schema = route["plugins"]["openid-connect"]["claim_schema"]
+    assert schema["required"] == ["aud", "azp", "realm_access"]
+    assert schema["properties"]["azp"] == {"enum": ["dxos-zalo"]}
+    assert schema["properties"]["aud"]["anyOf"][0] == {"enum": ["dx-os-core"]}
+    assert schema["properties"]["realm_access"]["properties"]["roles"]["contains"] == {"enum": ["zalo"]}
+    limit = route["plugins"]["limit-count"]
+    assert (limit["count"], limit["time_window"], limit["key"]) == (120, 60, "$http_authorization")
+    assert "X-Dxos-Gateway" in route["plugins"]["proxy-rewrite"]["headers"]["set"]
+
+
+def test_zalo_and_telegram_routes_do_not_accept_each_others_tokens():
+    routes = load_routes()
+    zalo = routes["internal-zalo"]["plugins"]["openid-connect"]["claim_schema"]["properties"]
+    telegram = routes["internal-telegram"]["plugins"]["openid-connect"]["claim_schema"]["properties"]
+    assert zalo["azp"] != telegram["azp"]
+    assert zalo["realm_access"]["properties"]["roles"]["contains"] != telegram["realm_access"]["properties"]["roles"]["contains"]
 
 
 def test_web_disease_route_takes_only_the_web_service_client_on_the_internal_port():
@@ -269,7 +292,7 @@ def test_mcp_route_takes_only_the_bridge_client_and_no_service_role():
     assert schema["properties"]["azp"] == {"enum": ["dxos-mcp"]}
     assert schema["properties"]["aud"]["anyOf"][0] == {"enum": ["dx-os-core"]}
     assert schema["properties"]["realm_access"]["properties"]["roles"] == {
-        "not": {"contains": {"enum": ["agent", "telegram", "staff-sync", "web-service"]}}
+        "not": {"contains": {"enum": ["agent", "telegram", "zalo", "staff-sync", "web-service"]}}
     }
 
 
@@ -347,6 +370,6 @@ def test_apps_route_takes_a_user_token_on_the_internal_port_and_refuses_service_
     assert route["vars"] == [["server_port", "==", "9081"]]
     schema = route["plugins"]["openid-connect"]["claim_schema"]
     assert schema == load_routes()["workflow"]["plugins"]["openid-connect"]["claim_schema"]
-    assert schema["properties"]["realm_access"]["properties"]["roles"]["not"]["contains"]["enum"] == ["agent", "telegram", "staff-sync", "web-service"]
+    assert schema["properties"]["realm_access"]["properties"]["roles"]["not"]["contains"]["enum"] == ["agent", "telegram", "zalo", "staff-sync", "web-service"]
     assert route["plugins"]["limit-count"]["count"] == 120 and route["plugins"]["limit-count"]["key"] == "$http_authorization"
     assert "X-Dxos-Gateway" in route["plugins"]["proxy-rewrite"]["headers"]["set"]

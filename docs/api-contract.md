@@ -1668,3 +1668,27 @@ Trưởng HTX nhờ AI làm app; A12 chọn cách rẻ nhất (app trong Kho, m�
 ### Kho ứng dụng
 
 Danh mục có `owner_htx` chỉ hiện cho HTX đó (danh sách, chi tiết `404` cho HTX khác). Thẻ và trang chi tiết có `generated: true` và `buildRequestId`, hiển thị `App do AI xây` kèm liên kết tới `/manager/ai/apps/<request id>`.
+
+## Zalo OA/ZNS (GĐ4-C)
+
+Kênh Zalo cấp nền tảng, mặc định tắt theo từng HTX. Web quyết định mọi thứ; relay `dxos-zalo` chỉ thuê hàng đợi và gọi ZNS API. Tin chỉ đi theo mẫu (`template_key` → `zns_template_id`), không có văn bản tự do.
+
+### Internal Zalo API (`dxos-zalo` client, realm role `zalo`, APISIX `:9081`)
+
+Bearer token của client `dxos-zalo` cùng header `X-Dxos-Gateway`. Trả `{ "data": ... }` hoặc `{ "error": { "code", "message" } }`.
+
+- **`GET /api/internal/zalo/outbox?limit=`** (tối đa 50, mặc định 20, thuê 60 giây): kiểm lại đồng ý, cài đặt và mẫu lúc thuê; dòng không còn đủ điều kiện được đánh `skipped`. Trả `{ data: [{ id, phone: "84…", zns_template_id, template_data, tracking_id }] }`.
+- **`POST /api/internal/zalo/outbox/[id]/result`**: `{ ok: true, zalo_msg_id }` hoặc `{ ok: false, error, permanent?, retry_after_seconds? }`. Trả `{ data: { status: "sent|pending|failed" } }`. Tối đa 10 lần, backoff `min(5 × 2^(n−1), 900)` giây, không thử lại trong giờ im lặng; lỗi `permanent` dừng ngay.
+- **`POST /api/internal/zalo/tick`**: quét các thửa hết cách ly hôm nay (ngày Việt Nam), khoá `<parcel_id>:<ngày>` nên gọi lặp không gửi lại. Trả `{ data: { queued } }`.
+- **`POST /api/internal/zalo/heartbeat`**: `{ version? }` → `{ data: { ok: true } }`.
+- **`GET|POST /api/internal/zalo/credentials`**: GET trả `{ data: { access_token, refresh_token, expires_at } | null }`; POST lưu token đã làm mới. Token được mã hoá AES-256-GCM; thiếu `DXOS_ZALO_TOKEN_KEY` thì từ chối lưu (500). Không bao giờ ghi log token.
+
+### Cooperative and platform APIs
+
+- **`GET|PUT /api/zalo/settings`** (manager): `{ enabled, kinds[], quiet_start_hour (12–23), quiet_end_hour (1–11), monthly_quota (0–10000) }`; GET thêm `sent_this_month` và `kinds_without_template`.
+- **`GET /api/zalo/deliveries?status=&kind=`** (manager, accountant): 100 tin mới nhất, số điện thoại che còn 3 số cuối, `reason_vi` là lý do tiếng Việt của tin lỗi hoặc bị bỏ qua.
+- **`GET|POST /api/households/[id]/zalo-consent`**: `{ status: OPTED_IN|OPTED_OUT, source: REGISTRATION|OFFICER|MEMBER }`. Cán bộ và trưởng HTX ghi OPTED_IN hoặc OPTED_OUT (nguồn `REGISTRATION` hoặc `OFFICER`) cho mọi hộ của HTX. Xã viên chỉ ghi `OPTED_OUT` nguồn `MEMBER` cho hộ gắn với tài khoản của mình; mọi trường hợp khác `403`. Mỗi lần ghi lưu `recorded_by`.
+- **`GET|PUT /api/platform/zalo/templates`** (`platform_admin`): bốn khoá mẫu; tên tham số ngoài danh sách cho phép bị từ chối `400`.
+- **`GET|PUT /api/platform/zalo/credentials`** (`platform_admin`): PUT nhận `{ access_token, refresh_token, expires_at }`; GET chỉ trả `configured`, 4 ký tự cuối của access token và hạn.
+
+Sự kiện và khoá chống lặp: giá ngày `<htx>:<ngày>:<sha256(grade:price đã sắp xếp)>`, phiếu cân `<ticket_id>`, hết cách ly `<parcel_id>:<ngày>`, chốt kỳ `<settlement_line_id>`. Tin được ghi sau khi việc gốc đã commit; lỗi ghi tin không làm hỏng việc gốc.
