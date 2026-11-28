@@ -514,6 +514,16 @@ Mọi dòng của hai nhóm "trong chat" ở bảng phủ (`apps/web/src/applica
 | `sửa nông hộ` | `household.edit` | nông dân (hộ mình), cán bộ, quản lý | `medium` |
 | `xoá thửa` | `parcel.delete` | cán bộ, quản lý | `high` |
 
+### 3.18b Mini-app chỉ tin gateway (v1.24.0)
+
+| Quy tắc | Giá trị |
+|---|---|
+| Bí mật gateway | mỗi app một bí mật 32 byte ngẫu nhiên (base64url), `DXOS_APP_GATEWAY_SECRET` trong `docker/runtime/<project>/apps/<id>.env`, mode 0600, có cho mọi app |
+| Header | mọi route của app trong APISIX đặt `X-Dxos-App-Gateway` bằng bí mật đó |
+| App từ chối | 403 khi header thiếu hoặc sai; chỉ `GET /healthz` mở; thiếu bí mật trong môi trường thì từ chối mọi thứ trừ `/healthz` |
+| Nâng cấp | `make platform-up` tạo bí mật cho app đã cài và tạo lại container của app đó |
+| Không ghi log | bí mật không bao giờ được ghi vào log |
+
 ### 3.19 Hành động của mini-app (M9)
 
 | Quy tắc | Giá trị |
