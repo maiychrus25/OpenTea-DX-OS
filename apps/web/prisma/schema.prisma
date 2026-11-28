@@ -113,6 +113,10 @@ model HtxProfile {
   sales_orders       SalesOrder[]
   // Phase 2: names of people reach the public trace page only when the cooperative allows it.
   public_show_names  Boolean             @default(false)
+  // GĐ4-B: off by default; only the head turns it on. Confirmed photos of a consenting cooperative may train the tea model.
+  disease_training_consent    Boolean   @default(false)
+  disease_training_consent_at DateTime?
+  disease_training_consent_by String?
 
   @@map("htx_profiles")
 }
