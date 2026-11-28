@@ -13,7 +13,7 @@ interface Props {
 }
 
 /** Accountant pages that exist; any other manager link falls back to the accountant's board. */
-const ACCOUNTANT_PAGES = ['/settlements', '/leaf-tickets', '/inputs', '/weighing']
+const ACCOUNTANT_PAGES = ['/settlements', '/leaf-tickets', '/inputs', '/weighing', '/sales']
 
 function accountantHref(href: string): string {
   for (const page of ACCOUNTANT_PAGES) {

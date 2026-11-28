@@ -1,0 +1,53 @@
+/* SPDX-License-Identifier: MIT */
+/* Copyright (c) 2026 OpenTea Developers */
+
+.pad { padding: 14px 18px; }
+.error { margin: 0; color: var(--color-danger); font-weight: 600; font-size: 13px; }
+.muted { color: var(--color-ink-secondary); font-size: 13.5px; }
+.link { color: var(--color-primary); font-weight: 600; text-decoration: none; font-size: 14px; }
+.link:focus-visible, .primaryLink:focus-visible, .printButton:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; border-radius: 6px; }
+.primaryLink { display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px; border-radius: 12px; background: var(--color-primary); color: var(--color-primary-foreground); font-weight: 700; font-size: 14px; text-decoration: none; }
+.printButton { min-height: 40px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--color-border-input); background: var(--color-surface-card); color: var(--color-ink-primary); font: inherit; font-weight: 600; cursor: pointer; }
+
+.pickerGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.form { display: flex; flex-direction: column; gap: 14px; padding: 18px; }
+.inp { box-sizing: border-box; min-height: 44px; min-width: 0; padding: 0 12px; border: 1px solid var(--color-border-input); border-radius: 10px; background: var(--color-surface-card); color: var(--color-ink-primary); font: inherit; }
+.label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: var(--color-ink-secondary); }
+
+.reportHead { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; }
+.sections { display: flex; flex-direction: column; gap: 16px; }
+.section { display: flex; flex-direction: column; gap: 10px; padding: 16px 18px; border-radius: 16px; background: var(--color-surface-card); border: 1px solid var(--color-border); min-width: 0; }
+.sectionHead { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px; }
+.sectionTitle { margin: 0; font-size: 15px; font-weight: 700; color: var(--color-ink-heading); }
+.tableScroll { overflow-x: auto; max-width: 100%; }
+.table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.table th { padding: 8px 10px; text-align: left; background: var(--color-table-head); color: var(--color-ink-secondary); border-bottom: 1px solid var(--color-border); white-space: nowrap; }
+.table td { padding: 8px 10px; border-bottom: 1px solid var(--color-border-row); overflow-wrap: anywhere; }
+.metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0; }
+.metrics dt { font-size: 12.5px; color: var(--color-ink-secondary); }
+.metrics dd { margin: 2px 0 0; font-size: 17px; font-weight: 700; color: var(--color-ink-heading); overflow-wrap: anywhere; }
+.failed { margin: 0; color: var(--color-danger); font-weight: 600; font-size: 13.5px; }
+
+/* The A4 report: one printed page per the @page rule; only .printArea prints. */
+.printArea { display: flex; flex-direction: column; gap: 14px; padding: 16px; background: var(--color-surface-card); color: var(--color-ink-primary); }
+.printHeader { display: flex; flex-direction: column; gap: 4px; text-align: center; }
+.printTitle { margin: 0; font-size: 18px; }
+.signRow { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin-top: 16mm; text-align: center; }
+.signRow span { border-top: 1px solid var(--color-ink-primary); padding-top: 4px; }
+
+.pickerGrid input:focus-visible, .form input:focus-visible, .reportHead input:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; }
+
+@media (max-width: 480px) {
+  .pickerGrid, .metrics { grid-template-columns: minmax(0, 1fr); }
+  .section { padding: 14px; }
+}
+
+@media print {
+  @page { size: A4 portrait; margin: 15mm; }
+  /* The local class sits inside :not() so each selector stays pure for CSS modules. */
+  :global(body) *:not(.printArea) { visibility: hidden; }
+  :global(body) .printArea,
+  :global(body) .printArea * { visibility: visible; }
+  :global(body) .printArea { position: absolute; left: 0; top: 0; width: 100%; padding: 0; }
+  :global(body) .printArea .section { border: 0; padding: 0; }
+}
