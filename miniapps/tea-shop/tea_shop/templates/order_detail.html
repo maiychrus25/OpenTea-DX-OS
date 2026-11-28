@@ -10,6 +10,9 @@
 {% endcall %}
 {{ kit.tabs(tab_items(theme), "orders") }}
 <p><a href="{{ href('/orders', theme) }}">← Tất cả đơn hàng</a></p>
+{% if errors %}
+<div class="error" role="alert"><ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>
+{% endif %}
 {% if notice %}<p class="notice" role="status">{{ notice }}</p>{% endif %}
 {% if order.status == "CANCELLED" %}
 <p>{{ pills.order(order.status) }}</p>
@@ -18,6 +21,7 @@
 {% endif %}
 <p>Khách: {{ order.customer_name }} · Điện thoại <a href="tel:{{ order.phone }}">{{ order.phone }}</a></p>
 <p>Địa chỉ: {{ order.address }}</p>
+{% if order.core_order_no %}<p>Số đơn trong sổ bán hàng của HTX: <strong>{{ order.core_order_no }}</strong></p>{% endif %}
 {% if order.note %}<p>Ghi chú: {{ order.note }}</p>{% endif %}
 
 <table role="table">

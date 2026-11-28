@@ -37,6 +37,8 @@ class Product:
     stock: int
     lot_code: str | None
     active: bool
+    lot_id: str | None  # the core lot packs are sold from, with pack_net_g (grams of tea in one pack)
+    pack_net_g: int | None
     discount_pct: int  # of the promotion that applies today, else 0
 
     @property
@@ -74,6 +76,7 @@ class Order:
     status: str
     total_vnd: int
     created_at: datetime
+    core_order_no: str | None = None  # the number of the order in the core's sales book, once confirmed
 
 
 @dataclass(frozen=True)
@@ -92,10 +95,11 @@ class Refusal:
 ORDER_STATUSES = ("NEW", "CONFIRMED", "SHIPPING", "DONE", "CANCELLED")
 # The percent of the promotion running today (at most one, see create_promotion), 0 when there is none.
 PRODUCT_COLUMNS = (
-    "id, name, pack, price_vnd, stock, lot_code, active, COALESCE((SELECT max(pr.discount_pct) FROM promotions pr "
+    "id, name, pack, price_vnd, stock, lot_code, active, lot_id, pack_net_g, COALESCE((SELECT max(pr.discount_pct) FROM promotions pr "
     "WHERE pr.product_id = products.id AND pr.htx_code = products.htx_code AND pr.ended_at IS NULL "
     f"AND {VN_TODAY} BETWEEN pr.starts_on AND pr.ends_on), 0) AS discount_pct")
-ORDER_COLUMNS = "id, code, customer_name, phone, address, note, status, total_vnd, created_at"
+ORDER_COLUMNS = ("id, code, customer_name, phone, address, note, status, total_vnd, created_at, "
+                 "core_order_no")
 
 
 def connect(url: str) -> psycopg.Connection:
@@ -138,16 +142,17 @@ def create_product(conn, htx_code: str, name: str, pack: str, price_vnd: int, st
 
 
 def edit_product(conn, htx_code: str, product_id: UUID, name: str, pack: str, price_vnd: int, lot_code: str | None,
-                 active: bool, stock_delta: int) -> bool | Refusal | None:
+                 active: bool, stock_delta: int, lot_id: str | None = None, pack_net_g: int | None = None) -> bool | Refusal | None:
     """True if saved, a Refusal if the delta would take stock below 0, None if the product is not in this HTX.
 
     Stock moves by a delta in the same UPDATE, so an order placed meanwhile is never overwritten.
     """
     params = {"name": name, "pack": pack, "price": price_vnd, "lot": lot_code, "active": active, "delta": stock_delta,
-              "id": product_id, "htx": htx_code}
+              "id": product_id, "htx": htx_code, "lot_id": lot_id, "pack_net_g": pack_net_g}
     with conn.transaction():
         if conn.execute("UPDATE products SET name = %(name)s, pack = %(pack)s, price_vnd = %(price)s, "
-                        "lot_code = %(lot)s, active = %(active)s, stock = stock + %(delta)s "
+                        "lot_code = %(lot)s, active = %(active)s, lot_id = %(lot_id)s, pack_net_g = %(pack_net_g)s, "
+                        "stock = stock + %(delta)s "
                         "WHERE id = %(id)s AND htx_code = %(htx)s AND stock + %(delta)s >= 0 RETURNING id",
                         params).fetchone():
             return True
@@ -234,6 +239,23 @@ def get_order(conn, htx_code: str, order_id: UUID) -> tuple[Order, list[Item]] |
     found = _all(conn, Order, f"SELECT {ORDER_COLUMNS} FROM orders WHERE htx_code = %s AND id = %s",
                  (htx_code, order_id))
     return (found[0], _items(conn, htx_code, order_id)) if found else None
+
+
+def lot_lines(conn, htx_code: str, order_id: UUID) -> tuple[list[dict], dict[str, str]]:
+    """The items of an order whose product is sold from a core lot, as the core's retail-order lines, and the
+    product's own lot code per lot id (for messages)."""
+    rows = conn.execute("SELECT p.lot_id, i.quantity, p.pack_net_g, i.price_vnd * i.quantity, p.lot_code "
+                        "FROM order_items i JOIN products p ON p.id = i.product_id AND p.htx_code = i.htx_code "
+                        "WHERE i.htx_code = %s AND i.order_id = %s AND p.lot_id IS NOT NULL ORDER BY i.id",
+                        (htx_code, order_id)).fetchall()
+    return ([{"lot_id": lot, "pack_count": count, "pack_net_g": net, "amount_vnd": int(amount)}
+             for lot, count, net, amount, _ in rows], {row[0]: row[4] for row in rows if row[4]})
+
+
+def confirm_with_core(conn, htx_code: str, order_id: UUID, core_order_no: str) -> bool:
+    """NEW -> CONFIRMED with the core's order number; False if the order is no longer NEW (a double click)."""
+    return conn.execute("UPDATE orders SET status = 'CONFIRMED', core_order_no = %s WHERE id = %s AND htx_code = %s "
+                        "AND status = 'NEW' RETURNING id", (core_order_no, order_id, htx_code)).fetchone() is not None
 
 
 def lookup(conn, htx_code: str, code: str, phone: str) -> tuple[Order, list[Item]] | None:

@@ -9,6 +9,14 @@
 <p><a href="{{ href('/products', theme) }}">← Tất cả sản phẩm</a></p>
 <form method="post" action="{{ href('/products/' ~ product.id ~ '/edit', theme) }}">
   {% include "product_fields.html" %}
+  <label>Lô bán từ kho của HTX (không bắt buộc)
+    <select name="lot_id">
+      <option value="">Không gắn lô</option>
+      {% for lot in lots %}<option value="{{ lot.lot_id }}"{% if lot.lot_id == form.lot_id %} selected{% endif %}>{{ lot.label }}</option>{% endfor %}
+    </select>
+  </label>
+  {% if not lots_ok %}<p class="hint">Chưa lấy được danh sách lô từ HTX. Mở lại trang sau ít phút để chọn lô.</p>{% endif %}
+  <label>Trọng lượng tịnh mỗi gói (g) <input type="number" name="pack_net_g" min="1" max="100000" step="1" value="{{ form.pack_net_g or '' }}"></label>
   <button type="submit">Lưu thay đổi</button>
 </form>
 {% endblock %}
