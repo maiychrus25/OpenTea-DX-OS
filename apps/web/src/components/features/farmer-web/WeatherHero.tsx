@@ -33,10 +33,14 @@ interface Props {
   /** Last stored reading, shown until the live one arrives or when it cannot be read. */
   cached: HeroWeather | null
   forecastHref?: string
+  /** Extra controls beside the actions. */
+  children?: React.ReactNode
+  /** Replaces the forecast link, for a page that shows the forecast itself. */
+  forecastControl?: React.ReactNode
 }
 
 /** The greeting banner with the weather over the parcels; it rains on the banner when it rains there. */
-export function WeatherHero({ eyebrow, title, subtitle, actions, place, cached, forecastHref = '/farmer/bulletin-notifications' }: Props) {
+export function WeatherHero({ eyebrow, title, subtitle, actions, place, cached, forecastHref = '/farmer/bulletin-notifications', children, forecastControl }: Props) {
   const [live, setLive] = useState<{ weather: HeroWeather; area: string } | null>(null)
 
   useEffect(() => {
@@ -92,6 +96,7 @@ export function WeatherHero({ eyebrow, title, subtitle, actions, place, cached, 
               {action.label}
             </Link>
           ))}
+          {children}
         </div>
       </div>
 
@@ -121,9 +126,11 @@ export function WeatherHero({ eyebrow, title, subtitle, actions, place, cached, 
               <span>Dự báo hôm nay có mưa.</span>
             </>
           )}
-          <Link href={forecastHref} className={styles.forecast}>
-            Xem dự báo <ArrowRight size={15} aria-hidden="true" />
-          </Link>
+          {forecastControl ?? (
+            <Link href={forecastHref} className={styles.forecast}>
+              Xem dự báo <ArrowRight size={15} aria-hidden="true" />
+            </Link>
+          )}
         </div>
       </section>
     </header>

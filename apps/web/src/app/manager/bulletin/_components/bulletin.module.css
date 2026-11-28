@@ -34,3 +34,5 @@
   .thumb { width: 96px; min-height: 72px; }
   .post { gap: 10px; }
 }
+
+.forecast { display: inline-flex; align-items: center; align-self: flex-end; gap: 6px; padding: 0; border: 0; background: none; color: var(--accent-lime); font: inherit; font-size: var(--font-size-meta); font-weight: 700; cursor: pointer; }

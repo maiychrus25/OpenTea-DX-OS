@@ -6,8 +6,8 @@ import ManagerBulletinPage from '@/app/manager/bulletin/page'
 
 jest.mock('@/auth', () => ({ auth: jest.fn().mockResolvedValue({ user: { htxCode: 'TC' } }) }))
 jest.mock('@/infrastructure/db/prisma.client', () => ({ prisma: { bulletin: { findMany: jest.fn().mockResolvedValue([]) } } }))
-jest.mock('@/components/features/bulletin/WeatherSection', () => ({ WeatherSection: () => null }))
-jest.mock('@/components/features/bulletin/ListenBulletinButton', () => ({ ListenBulletinButton: () => null }))
+jest.mock('@/app/manager/bulletin/_components/BulletinBanner', () => ({ BulletinBanner: () => null }))
+
 
 test('manager bulletin page shows the empty state, not sample bulletins, when there is none', async () => {
   render(await ManagerBulletinPage({}))

@@ -3,14 +3,12 @@
 
 import React from 'react'
 import Link from 'next/link'
-import { CalendarDays, ChevronLeft, ChevronRight, FileText, Leaf, Megaphone, Plus, Search, Sprout, TrendingUp, Users } from 'lucide-react'
+import { CalendarDays, ChevronLeft, ChevronRight, Leaf, Megaphone, Search, Sprout, TrendingUp, Users } from 'lucide-react'
 import { AiNote } from '@/components/ui/AiNote'
-import { PageHeader } from '@/components/ui/PageHeader'
-import { WeatherSection } from '@/components/features/bulletin/WeatherSection'
-import { ListenBulletinButton } from '@/components/features/bulletin/ListenBulletinButton'
 import { Sample } from '@/components/features/manager-web/parts'
 import ui from '@/components/features/manager-web/kit.module.css'
 import kit from '@/components/features/dashboard/page-kit.module.css'
+import { BulletinBanner } from './_components/BulletinBanner'
 import { auth } from '@/auth'
 import { prisma } from '@/infrastructure/db/prisma.client'
 import styles from './_components/bulletin.module.css'
@@ -105,17 +103,7 @@ export default async function ManagerBulletinPage({ searchParams }: ManagerBulle
 
   return (
     <div className={kit.page}>
-      <PageHeader
-        icon={<FileText size={28} />}
-        title="Bản tin"
-        description="Cập nhật tin tức, hoạt động, sự kiện và thông báo của HTX."
-        actions={
-          <>
-            <ListenBulletinButton bulletinTexts={listed.map((b) => `${b.headline}. ${b.summary}`)} />
-            <button type="button" className={kit.primary} disabled title="Chưa có chức năng viết bài"><Plus size={16} aria-hidden="true" />Viết bài mới <Sample /></button>
-          </>
-        }
-      />
+      <BulletinBanner bulletinTexts={listed.map((b) => `${b.headline}. ${b.summary}`)} />
 
       <div className={ui.bar}>
         <nav className={ui.tabs} aria-label="Danh mục">
@@ -196,9 +184,6 @@ export default async function ManagerBulletinPage({ searchParams }: ManagerBulle
           </section>
         </aside>
       </div>
-
-      {/* Weather — Real data from Open-Meteo */}
-      <WeatherSection />
 
       <AiNote message="Nội dung do AI tổng hợp từ nguồn được duyệt, không phải khuyến nghị sản xuất hoặc đầu tư." />
     </div>
