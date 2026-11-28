@@ -37,7 +37,6 @@ describe('ZaloNotifier.enqueue', () => {
   })
 
   it.each([
-    ['the cooperative has Zalo off', (r: FakeZaloRepository) => r.settingsByHtx.set('TC', { ...ON, enabled: false }), 'ZALO_OFF'],
     ['the kind is off', (r: FakeZaloRepository) => r.settingsByHtx.set('TC', { ...ON, kinds: ['PRICE_PUBLISHED'] }), 'KIND_OFF'],
     ['there is no template', (r: FakeZaloRepository) => { r.templateList = [] }, 'NO_TEMPLATE'],
     ['the template asks for a param the event cannot give', (r: FakeZaloRepository) => { r.templateList = [{ ...TEMPLATES[1], params: ['ticket_no', 'bank_account'] }] }, 'BAD_TEMPLATE'],
@@ -100,6 +99,13 @@ describe('ZaloNotifier.lease', () => {
     repo.consents.push({ householdId: 'hh-1', recordedBy: 'farmer-1', state: { status: 'OPTED_OUT', phone: '84912345678', source: 'MEMBER', at: new Date() } })
     expect(await notifier.lease(20)).toEqual([])
     expect(repo.rows[0]).toMatchObject({ status: 'skipped', lastError: 'CONSENT_REVOKED' })
+  })
+
+  it('writes no row at all while the cooperative has Zalo off', async () => {
+    const { repo, notifier } = setup()
+    repo.settingsByHtx.set('TC', { ...ON, enabled: false })
+    expect(await notifier.enqueue(receipt())).toEqual({ queued: 0, skipped: 0 })
+    expect(repo.rows).toHaveLength(0)
   })
 
   it('returns the template id from the table at lease time, and skips when Zalo was turned off meanwhile', async () => {

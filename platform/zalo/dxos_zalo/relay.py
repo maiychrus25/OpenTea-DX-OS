@@ -155,7 +155,9 @@ class Relay:
                 msg_id = self._send(token, item)
             except ZnsError as exc:
                 log.warning("send to %s failed: %s", mask_phone(item["phone"]), exc.description)
-                result: dict[str, Any] = {"ok": False, "error": exc.description, "permanent": exc.permanent}
+                # The Zalo code leads the text: the web maps it to the Vietnamese reason shown to the head.
+                error = f"{exc.code} {exc.description}" if exc.code else exc.description
+                result: dict[str, Any] = {"ok": False, "error": error, "permanent": exc.permanent}
                 if exc.retry_after is not None:
                     result["retry_after_seconds"] = exc.retry_after
                 self._report(item, result)

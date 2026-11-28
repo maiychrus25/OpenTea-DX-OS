@@ -121,6 +121,8 @@ def test_a_permanent_error_is_reported_permanent_and_sent_once(env, code):
     env.relay.run_outbox_once()
     result = env.web.results["id-1"]
     assert result["ok"] is False and result["permanent"] is True and result["error"]
+    # The web turns the Zalo code into a Vietnamese reason, so the code must be in the text.
+    assert result["error"].startswith(f"{code} ")
     assert len(calls(env)) == 1
 
 

@@ -86,7 +86,7 @@ describe('settlement hook', () => {
     delete process.env.DXOS_WEB_PUBLIC_URL
     expect(s.events).toHaveLength(2)
     const byHousehold = Object.fromEntries(s.events.map((e) => [e.householdId, e]))
-    expect(byHousehold['hh-1']).toMatchObject({ kind: 'SETTLEMENT_CLOSED', params: { result_label: 'Thực lĩnh', amount_vnd: '700.000đ', slip_url: `https://dx.example/farmer/settlements/${period.id}` } })
+    expect(byHousehold['hh-1']).toMatchObject({ kind: 'SETTLEMENT_CLOSED', params: { result_label: 'Thực lĩnh', amount_vnd: '700.000đ', slip_url: expect.stringMatching(new RegExp(`^https://dx\\.example/farmer/settlements/${period.id}/slip/[^/]+$`)) } })
     expect(byHousehold['hh-2'].params).toMatchObject({ result_label: 'Còn nợ', amount_vnd: '300.000đ' })
     expect(new Set(s.events.map((e) => e.eventId)).size).toBe(2)
     expect(JSON.stringify(s.events)).not.toMatch(/9999888877|970422/)
@@ -138,14 +138,13 @@ describe('WithdrawalEndedScan', () => {
 })
 
 describe('feature off for the cooperative', () => {
-  it('writes only skipped rows, so nothing can be leased', async () => {
+  it('writes nothing, so a cooperative that never turned Zalo on keeps an empty outbox', async () => {
     const repo = new FakeZaloRepository()
     repo.templateList = TEMPLATES // no settings row: Zalo is off
     seedHousehold(repo, 'hh-1')
     const notifier = new ZaloNotifier(repo, () => NOW)
     await new CreateFreshLeafTicketUseCase(new FakeTicketPort(), () => NOW, notifier).execute(actor, input)
-    expect(repo.rows).toHaveLength(1)
-    expect(repo.rows[0]).toMatchObject({ status: 'skipped', lastError: 'ZALO_OFF' })
+    expect(repo.rows).toHaveLength(0)
     expect(await notifier.lease(20)).toEqual([])
   })
 })

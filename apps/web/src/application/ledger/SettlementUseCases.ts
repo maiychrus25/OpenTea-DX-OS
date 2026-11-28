@@ -151,7 +151,7 @@ function settlementEvents(htxCode: string, detail: PeriodDetail): ZaloEvent[] {
         period_code: detail.period.code,
         result_label: owes ? 'Còn nợ' : 'Thực lĩnh',
         amount_vnd: dong(owes ? line.debt_out_vnd : line.payable_vnd),
-        ...(base ? { slip_url: `${base}/farmer/settlements/${detail.period.id}` } : {}),
+        ...(base ? { slip_url: `${base}/farmer/settlements/${detail.period.id}/slip/${line.id}` } : {}),
       },
     }]
   })

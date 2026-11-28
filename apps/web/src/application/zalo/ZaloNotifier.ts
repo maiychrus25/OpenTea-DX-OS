@@ -39,6 +39,8 @@ export class ZaloNotifier {
 
     for (const event of events) {
       const settings = await settingsOf(event.htxCode)
+      // A cooperative with Zalo off writes nothing: its outbox stays empty instead of filling with skipped rows.
+      if (!settings.enabled) continue
       const template = templates.get(templateKeyOf(event.kind))
       const recipients = await this.repo.recipients(event.htxCode, event.householdId)
       const consents = await this.repo.latestConsents(recipients.map((r) => r.id))
