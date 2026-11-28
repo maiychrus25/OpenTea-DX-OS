@@ -7,7 +7,7 @@ import styles from './kit.module.css'
 export interface DetailRow { icon: React.ReactNode; label: string; value: React.ReactNode }
 
 /** The panel beside a list: what the chosen row holds, its total and what can be done with it. */
-export function DetailPanel({ title, status, rows, totalLabel, total, children }: { title: string; status?: React.ReactNode; rows: DetailRow[]; totalLabel: string; total: string; children?: React.ReactNode }) {
+export function DetailPanel({ title, status, rows, totalLabel, total, extra, children }: { title: string; status?: React.ReactNode; rows: DetailRow[]; totalLabel?: string; total?: string; extra?: React.ReactNode; children?: React.ReactNode }) {
   return (
     <aside className={styles.detail} aria-label={title}>
       <div className={styles.detailHead}><h2>{title}</h2>{status}</div>
@@ -16,7 +16,8 @@ export function DetailPanel({ title, status, rows, totalLabel, total, children }
           <div key={row.label}><dt><span aria-hidden="true">{row.icon}</span>{row.label}</dt><dd>{row.value}</dd></div>
         ))}
       </dl>
-      <p className={styles.total}><span>{totalLabel}</span><strong>{total}</strong></p>
+      {total !== undefined && <p className={styles.total}><span>{totalLabel}</span><strong>{total}</strong></p>}
+      {extra}
       {children && <div className={styles.detailActions}>{children}</div>}
     </aside>
   )

@@ -69,3 +69,11 @@
 @media (max-width: 1200px) {
   .split { grid-template-columns: minmax(0, 1fr); }
 }
+
+.stepsBox h3 { margin: 4px 0 8px; font-size: 14px; font-weight: 800; color: var(--color-ink-heading); }
+.steps { margin: 0; padding: 0; list-style: none; }
+.steps li { position: relative; display: flex; justify-content: space-between; gap: 8px; padding: 0 0 14px 26px; font-size: 12.5px; }
+.steps li::before { content: ''; position: absolute; left: 0; top: 1px; width: 15px; height: 15px; border-radius: var(--radius-pill); background: var(--color-border-input); }
+.steps li:not(:last-child)::after { content: ''; position: absolute; left: 7px; top: 16px; bottom: 0; width: 1px; background: var(--color-border-input); }
+.steps li[data-done='true']::before { content: '✓'; display: flex; align-items: center; justify-content: center; background: var(--color-primary); color: var(--color-primary-foreground); font-size: 10px; font-weight: 800; }
+.steps small { color: var(--color-ink-secondary); text-align: right; }
