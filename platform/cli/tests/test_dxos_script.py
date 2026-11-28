@@ -366,6 +366,7 @@ def test_para_seed_uploads_only_missing_files_and_never_overwrites():
         run = run_seed("TC", env={"DXOS_WEB_COOKIE": "session=x", "DXOS_WEB_URL": f"http://127.0.0.1:{server.server_port}"})
     finally:
         server.shutdown()
+        server.server_close()
     assert run.returncode == 0, run.stderr
     assert not any(p["fileName"] == "officer-pesticide-reference.md" for p in posts)
     assert len(posts) == len(puts) > 60 and "bỏ qua 1 tệp đã có" in run.stdout
