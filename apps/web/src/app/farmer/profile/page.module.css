@@ -2,8 +2,6 @@
    Licensed under the MIT License. See LICENSE file in the project root for full license information. */
 
 .page { gap: 10px; }
-.head h1 { margin: 0; font-size: 22px; font-weight: 800; color: var(--color-ink-primary); }
-.head p { margin: 2px 0 0; font-size: 12.5px; color: var(--color-ink-secondary); }
 .identity { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 12px 18px; }
 .face { position: relative; width: 62px; height: 62px; flex: none; display: flex; align-items: center; justify-content: center; border-radius: var(--rounded-full); background: var(--color-primary); color: var(--color-primary-foreground); font-size: 21px; font-weight: 800; }
 .face i { position: absolute; right: -4px; bottom: -2px; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border: 1px solid var(--color-border-default); border-radius: var(--rounded-full); background: var(--color-surface-card); color: var(--color-ink-secondary); }
@@ -18,27 +16,30 @@
 .title h2 { margin: 0; font-size: 14.5px; font-weight: 800; color: var(--color-ink-heading); }
 .title h2 small { margin-left: 8px; font-size: 12px; font-weight: 400; color: var(--color-ink-secondary); }
 .title h2.barred { padding-left: 10px; border-left: 4px solid var(--color-primary); }
-.edit { display: inline-flex; align-items: center; gap: 5px; border: 0; background: none; color: var(--color-primary); font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; }
-.edit:disabled { opacity: 0.55; cursor: not-allowed; }
 .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 28px; padding: 4px 18px; }
 .field { display: flex; min-width: 0; flex-direction: column; gap: 3px; font-size: 12px; font-weight: 700; color: var(--color-ink-primary); }
 .field > span { display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 0 10px; border: 1px solid var(--color-border-default); border-radius: var(--rounded-md); background: var(--color-surface-sunken); color: var(--color-ink-secondary); }
 .field input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--color-ink-primary); font: inherit; font-size: 13px; font-weight: 400; }
 .field > span:focus-within { border-color: var(--color-primary); }
 .note { margin: 0; padding: 8px 18px 10px; font-size: 12px; color: var(--color-ink-secondary); }
-.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 18px 10px; }
-.actions .note { flex: 1 1 260px; padding: 0; }
 .scroll { overflow-x: auto; padding: 0 18px; }
-.table { width: 100%; min-width: 420px; border-collapse: collapse; font-size: 12.5px; text-align: left; }
-.table th { padding: 6px 12px; background: var(--color-table-head); font-size: 11.5px; font-weight: 700; }
-.table td { padding: 6px 12px; border-bottom: 1px solid var(--color-border-row); }
+.pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start; }
+.links { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.foot { align-items: flex-end; }
+.table { width: 100%; border-collapse: collapse; font-size: 12.5px; text-align: left; }
+.table th { padding: 6px 8px; background: var(--color-table-head); font-size: 11.5px; font-weight: 700; }
+.table td { padding: 6px 8px; border-bottom: 1px solid var(--color-border-row); }
 .options { list-style: none; margin: 0; padding: 0 18px 4px; }
 .options li { display: flex; align-items: center; gap: 12px; padding: 7px 0; font-size: 13px; font-weight: 700; }
 .options li + li { border-top: 1px solid var(--color-border-row); }
 .options small { display: block; font-size: 11.5px; font-weight: 400; color: var(--color-ink-secondary); }
 .icon { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: var(--rounded-md); background: var(--color-primary-subtle); color: var(--color-primary); }
-.foot { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 4px 0; }
+.foot { display: flex; flex-direction: column; gap: 6px; padding: 4px 0; }
 .foot p { margin: 0; font-size: 11.5px; color: var(--color-ink-secondary); }
+
+@media (max-width: 1100px) {
+  .pair { grid-template-columns: minmax(0, 1fr); }
+}
 
 @media (max-width: 767px) {
   .fields { grid-template-columns: 1fr; }
