@@ -87,7 +87,8 @@ psql_app "insert into platform.zalo_consents (household_id, htx_code, phone, sta
 zalo_web_status smoke_manager_tc manager TC PUT /api/leaf-prices/today "{\"prices\":[{\"grade_id\":\"$GRADE\",\"price_vnd_per_kg\":$((200000 + RANDOM))}]}" >/dev/null
 sleep 8
 assert_eq "$(zalo_sent_count)" "$BEFORE" "no message goes to a household that opted out"
-assert_eq "$(psql_app "select count(*) from platform.zalo_outbox where htx_code = 'TC' and status = 'skipped'")" "1" "the event after the opt-out is skipped"
+# Other TC households never consented, so each price also leaves NO_CONSENT rows for them; count only hh_tc_1's.
+assert_eq "$(psql_app "select count(*) from platform.zalo_outbox where household_id = 'hh_tc_1' and status = 'skipped' and last_error = 'CONSENT_REVOKED'")" "1" "the event after the opt-out is skipped"
 
 # 6. A permanent error is sent once and the row is failed.
 psql_app "insert into platform.zalo_consents (household_id, htx_code, phone, status, source, recorded_by)
