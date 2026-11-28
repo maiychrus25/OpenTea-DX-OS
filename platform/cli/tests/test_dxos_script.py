@@ -407,3 +407,50 @@ def test_para_seed_uploads_only_missing_files_and_never_overwrites():
     assert run.returncode == 0, run.stderr
     assert not any(p["fileName"] == "officer-pesticide-reference.md" for p in posts)
     assert len(posts) == len(puts) > 60 and "bỏ qua 1 tệp đã có" in run.stdout
+
+
+def run_demo_accounts(tmp_path, *args):
+    """Source the real demo_accounts() with a kc_exec stub that records its argv and stdin; no Keycloak is reached."""
+    body = subprocess.run(["sed", "-n", "/^DEMO_USERS=/p;/^demo_spec()/,/^}/p;/^demo_accounts()/,/^}/p", str(DXOS)], capture_output=True, text=True).stdout
+    snippet = (f"set -e\nusage() {{ echo usage >&2; exit 2; }}\n"
+               f"kc_exec() {{ shift; printf '%s|' \"$@\" >>{tmp_path}/calls; echo >>{tmp_path}/calls; cat >>{tmp_path}/stdin; }}\n"
+               f"{body}\ndemo_accounts {' '.join(args)}\necho finished\n")
+    return subprocess.run(["bash", "-c", snippet], capture_output=True, text=True)
+
+
+def test_demo_accounts_refuses_any_other_username_before_keycloak(tmp_path):
+    run = run_demo_accounts(tmp_path, "manager_tc", "anh_review")
+    assert run.returncode == 1 and "finished" not in run.stdout
+    assert "anh_review" in run.stderr
+    assert not (tmp_path / "calls").exists()  # even the valid name before it was not touched
+
+
+def test_demo_accounts_refuses_unknown_options(tmp_path):
+    run = run_demo_accounts(tmp_path, "--delete")
+    assert run.returncode == 2 and not (tmp_path / "calls").exists()
+
+
+def test_demo_accounts_defaults_to_the_five_demo_users_and_keeps_the_password_out_of_argv(tmp_path):
+    run = run_demo_accounts(tmp_path, "--reset-otp", "--password", "s3cret-pw")
+    assert run.returncode == 0, run.stderr
+    calls = (tmp_path / "calls").read_text().splitlines()
+    fields = [c.split("|") for c in calls]  # username, role, htx_code, fixed id, first name, last name, reset flag
+    assert [f[0] for f in fields] == ["platform_admin", "manager_tc", "accountant_tc", "officer_tc", "farmer_tc"]
+    assert [f[1] for f in fields] == ["platform_admin", "manager", "accountant", "officer", "farmer"]
+    assert [f[2] for f in fields] == ["", "TC", "TC", "TC", "TC"]
+    assert all(f[6] == "1" for f in fields)  # --reset-otp reaches the script
+    assert "s3cret-pw" not in "".join(calls)
+    assert (tmp_path / "stdin").read_text() == "s3cret-pw\n" * 5
+
+
+def test_demo_accounts_without_password_sends_an_empty_line_and_without_reset_leaves_otp(tmp_path):
+    run = run_demo_accounts(tmp_path, "farmer_tc")
+    assert run.returncode == 0, run.stderr
+    call = (tmp_path / "calls").read_text().strip().split("|")
+    assert call[6] == "0" and (tmp_path / "stdin").read_text() == "\n"
+    assert call[3] == "6f2c9a10-1b3d-4e5f-8a01-0000000000a1"
+
+
+def test_demo_accounts_is_wired_into_usage_and_the_dispatcher():
+    text = DXOS.read_text()
+    assert "demo accounts" in text and "demo_accounts \"$@\"" in text

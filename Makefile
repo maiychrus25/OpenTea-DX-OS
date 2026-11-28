@@ -12,7 +12,7 @@ export DXOS_GATEWAY_FILE := ../$(RUNTIME)/gateway/apisix.yaml
 # keycloak on every platform-up. Without the attestation the same inputs give the same ID, so nothing is recreated.
 export BUILDX_NO_DEFAULT_ATTESTATIONS := 1
 
-.PHONY: builder-image gateway-sync web-up gateway-up up-core up-docs up-sensors up-ai up-voice stt-measure up-workflow up-chat up-agent stop-extras platform-up apps-recreate platform-smoke apps-smoke platform-down up down build test lint appkit-sync mobile-client mcp-client
+.PHONY: demo-seed builder-image gateway-sync web-up gateway-up up-core up-docs up-sensors up-ai up-voice stt-measure up-workflow up-chat up-agent stop-extras platform-up apps-recreate platform-smoke apps-smoke platform-down up down build test lint appkit-sync mobile-client mcp-client
 
 # APISIX mounts $(RUNTIME)/gateway/apisix.yaml; create it before any container starts, or Docker makes it a directory.
 gateway-sync:
@@ -46,6 +46,15 @@ apps-recreate:
 		[ -e "$$flag" ] || continue; id="$$(basename "$$flag" .recreate)"; \
 		$(COMPOSE) -f $(RUNTIME)/apps/$$id.compose.yml up -d --force-recreate --no-deps --wait app-$$id && rm -f "$$flag" || exit 1; \
 	done
+
+# Closed stage-demo data for TC, on top of `seed` (docs/dev-setup.md, "Demo sân khấu 10 phút"). Runs in the migrate tools image, so no host
+# Node is needed. The web sources are copied from a read-only mount, so npm ci never touches the host's node_modules.
+# Needs network for npm ci, and postgres and seaweedfs up (`make platform-up`).
+DEMO_SEED_SCRIPT = set -e; export DATABASE_URL="$$(node /app/database-url.js)"; mkdir /tmp/web; \
+	tar -C /web --exclude=node_modules --exclude=.next -cf - . | tar -C /tmp/web -xf -; cd /tmp/web; \
+	npm ci --no-audit --no-fund --loglevel=error && npx prisma generate >/dev/null && npm run demo-seed
+demo-seed:
+	$(COMPOSE) --profile tools run --rm --build -v "$(CURDIR)/apps/web:/web:ro" --entrypoint sh migrate -c '$(DEMO_SEED_SCRIPT)'
 
 # Rebuild or start web (and the disease service) on the generated route file, so apisix is not recreated on the base one.
 web-up: gateway-sync

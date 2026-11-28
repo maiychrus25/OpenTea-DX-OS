@@ -63,6 +63,7 @@ along with their licenses, to ensure full transparency and license compliance.
 | [cross-env](https://github.com/kentcdodds/cross-env) | ^10.1.0 | MIT | Cross-platform env vars |
 | [dotenv](https://github.com/motdotla/dotenv) | ^17.4.2 | BSD-2-Clause | Environment variable loading |
 | [ts-node](https://github.com/TypeStrong/ts-node) | ^10.9.2 | MIT | TypeScript execution |
+| [tsconfig-paths](https://github.com/dividab/tsconfig-paths) | 3.15.0 | MIT | Resolves the `@/` path alias when `npm run demo-seed` runs the app code under ts-node |
 | [identity-obj-proxy](https://github.com/keyz/identity-obj-proxy) | ^3.0.0 | MIT | CSS module mocking for tests |
 | [tw-animate-css](https://github.com/tailwindlabs/tailwindcss) | ^1.4.0 | MIT | Tailwind animation utilities |
 

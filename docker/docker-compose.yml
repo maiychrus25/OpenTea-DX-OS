@@ -60,6 +60,10 @@ services:
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-agrimarket}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-your_password_here}
+      # Only `make demo-seed` reads these: it uploads the sample certificate file to the object store.
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-minio:9000}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-your_minio_access_key}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-your_minio_secret_key}
     depends_on:
       postgres:
         condition: service_healthy

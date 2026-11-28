@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2026 OpenTea Developers
 """Entrypoint for dxos-agent executing scheduled per-cooperative operational agents."""
+import argparse
 from dataclasses import dataclass, field
 from datetime import datetime, time, timedelta, timezone
 import faulthandler
@@ -8,6 +9,7 @@ import logging
 import os
 from pathlib import Path
 import signal
+import sys
 import threading
 import time as time_module
 
@@ -269,7 +271,7 @@ def _run_m4_agents(runtime: _CooperativeRuntime, now: datetime, settings: AgentS
 
     def cross_check_cycle() -> None:
         if runtime.cross_check.is_due(now):
-            cross_check.run_cross_check(gateway, now, settings.thresholds_for(cross_check.AGENT_NAME))
+            _run_cross_check(gateway, now, settings)
             runtime.cross_check.record(now)  # only after a run that did not fail, so a failed run is retried
 
     def staff_tasks_cycle() -> None:
@@ -356,6 +358,20 @@ def _run_m4_agents(runtime: _CooperativeRuntime, now: datetime, settings: AgentS
         _guarded("A11 strategy", htx, strategy_cycle)
 
 
+def _run_cross_check(gateway: CoreGatewayClient, now: datetime, settings: AgentSettings) -> None:
+    """The one call of A13: the daily schedule and `--once cross-check` both go through here."""
+    cross_check.run_cross_check(gateway, now, settings.thresholds_for(cross_check.AGENT_NAME))
+
+
+def run_cross_check_once(cfg: Config, htx_code: str, now: datetime | None = None) -> None:
+    """Run A13 now for one cooperative, for a demo: same call and thresholds as the daily schedule, no schedule check."""
+    creds = next((c for c in load_all_agent_credentials(cfg.env_dir) if c.htx_code == htx_code), None)
+    if creds is None:
+        raise SystemExit(f"Không có thông tin đăng nhập agent cho HTX {htx_code}: chạy ./dxos agent enable {htx_code} trước")
+    runtime = _runtime_for(cfg, {}, creds)
+    _run_cross_check(runtime.gateway, now or datetime.now(timezone.utc), fetch_settings(runtime.gateway))
+
+
 def run_once(
     cfg: Config,
     runtimes: dict[str, _CooperativeRuntime],
@@ -413,10 +429,20 @@ def _journal_review_cycle(runtime: _CooperativeRuntime, now: datetime, settings:
     )
 
 
-def main(stop: threading.Event | None = None) -> None:
-    """Run the scheduled agent loop and heartbeat until a termination signal arrives."""
+def main(stop: threading.Event | None = None, argv: list[str] | None = None) -> None:
+    """Run the scheduled agent loop and heartbeat until a termination signal arrives.
+
+    `--once cross-check --htx <CODE>` runs A13 once through the same call the daily schedule makes, then exits."""
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     cfg = Config.from_env()
+    args = argv or []
+    if args:
+        parser = argparse.ArgumentParser(prog="python -m dxos_agent", description=main.__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+        parser.add_argument("--once", choices=["cross-check"], required=True, help="run this agent once through its scheduled code path")
+        parser.add_argument("--htx", required=True, help="cooperative code, for example TC")
+        parsed = parser.parse_args(args)
+        run_cross_check_once(cfg, parsed.htx)
+        return
     stop = stop or threading.Event()
     for sig in (signal.SIGTERM, signal.SIGINT):
         signal.signal(sig, lambda *_: stop.set())
@@ -441,4 +467,4 @@ def main(stop: threading.Event | None = None) -> None:
 
 
 if __name__ == "__main__":
-    main()
+    main(argv=sys.argv[1:])
