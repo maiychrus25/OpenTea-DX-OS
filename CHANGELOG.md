@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **One label list for tea pests and diseases (`apps/web`)**: officers confirm a disease report with a label from `disease_labels`, 14 codes, with the five targets first: Rầy xanh, Bọ cánh tơ, Nhện đỏ, Phồng lá chè, Bọ xít muỗi.
+  - The free-text name stays.
+  - Telegram asks for the label too.
+  - Older reports are labelled only on an exact name match.
+- **Training consent (`apps/web`)**: the head can let the cooperative's confirmed photos be used to train the tea model. It is off by default, needs a confirm step to turn on, and is audited.
+- **Field photo manifest**: `GET /api/platform/disease-dataset` (`platform_admin` only) lists the confirmed, labelled photos of the cooperatives that agreed.
+  - It carries no names, phones or household ids; each photo has a one-way `household_key`, its sha256 and a download link that lives 15 minutes.
+  - It is paged (500 per page, `next_cursor`), and `fetch-field` follows the pages.
+- **`ai-models/tea`**: training can now use the cooperatives' confirmed field photos, with stricter checks before a model ships.
+  - `train.py fetch-field` downloads the photos, checks their sha256 and strips every EXIF and GPS tag.
+  - A class without public photos needs at least 150 field photos.
+  - A `not_tea_leaf` class is always included.
+  - Stricter quality gates: accuracy 0.80, recall 0.70 per target, field accuracy 0.75 on photos held out by cooperative, or by household while only one cooperative has agreed (recorded as `field_split` in the registry). A model that fails, or a class with too few households to split, prints `BLOCKED` with the reason and writes nothing.
+- **Model registry**: `ai-models/tea/registry.json` pins the tea model's version and sha256.
+  - `disease-api` refuses a model file that does not match it: `/health` shows why, and the general model keeps working.
+  - Every tea prediction reports `model_version`, and the web stores it on the report.
+  - CI checks that the sha256 matches.
+- **Care steps** (no medicine) for the four new targets, and a "chụp lại" step when the photo is not a tea leaf.
+
+### Changed
+
+- **Zalo errors:** the relay follows the real ZNS error codes.
+  - -124 and -216 refresh the OA token and resend.
+  - Template errors (-109, -111, -112, -117, -131), a wrong phone (-108), no Zalo account (-118) and no balance or quota (-115, -126, -211) stop at once, with a Vietnamese reason.
+- **Chatbot sources:** the technical chatbot names the files of the passages it used as sources when the model writes none.
+- **Scientific names:** Rầy xanh and Bọ cánh tơ use the names of Vietnamese tea references: *Empoasca flavescens* and *Physothrips setiventris*.
+
+### Fixed
+
+- `make up-voice` failed on Apple Silicon because the whisper.cpp image is amd64 only. The two whisper services now ask for `linux/amd64`, which Docker Desktop runs emulated.
+
+### Upgrade notes
+
+- `make platform-up`, then `make web-up`: the first applies two migrations (`20261128180000_disease_labels` and `20261128180100_disease_training_consent`), the second rebuilds `web` and `disease-api`. `disease-api` now loads the tea model only when its sha256 matches `ai-models/tea/registry.json`.
+- Field data is not collected until a cooperative's head turns on "Cho phép dùng ảnh đã xác nhận để huấn luyện mô hình nhận diện sâu bệnh".
+
+### Known limits
+
+- With photos from a single cooperative, the field test holds out whole households, not cooperatives, so its score may flatter the model on a new cooperative. The registry says which split was used.
+- `not_tea_leaf` is trained on synthetic noise only.
+- The officer disease list needs the core gateway. It cannot be checked on a stack without it.
+
 ## [1.22.0] - 2026-11-28
 
 ### Added
@@ -51,6 +95,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Known limits
 
+- The ZNS error codes in `platform/zalo/dxos_zalo/zns_api.py` have not been checked against Zalo's documentation; check them before going live.
 - The TTS limit is per web process.
 - Text is pulled from a PDF the first time the chatbot reads it, not when it is uploaded.
 - The forecast does not use the weather.
