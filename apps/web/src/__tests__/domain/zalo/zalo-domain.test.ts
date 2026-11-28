@@ -79,8 +79,12 @@ describe('templates and labels', () => {
 
   it('explains skip reasons and Zalo errors in Vietnamese', () => {
     expect(skipReasonLabelVi('NO_CONSENT')).toMatch(/đồng ý/)
-    expect(errorLabelVi('Zalo -108: user not found')).toMatch(/Zalo/)
-    expect(errorLabelVi('Zalo -124 quota')).toMatch(/hạn mức/)
+    expect(errorLabelVi('-108 Số điện thoại không hợp lệ')).toBe('Số điện thoại của hộ không hợp lệ.')
+    expect(errorLabelVi('-118 Tài khoản Zalo không tồn tại')).toBe('Số điện thoại này không có tài khoản Zalo.')
+    for (const code of [-109, -111, -112, -117, -131]) expect(errorLabelVi(`${code} x`)).toBe('Mẫu tin ZNS sai hoặc chưa được duyệt.')
+    for (const code of [-115, -126, -211]) expect(errorLabelVi(`${code} x`)).toBe('Hết số dư hoặc hạn mức gửi tin ZNS.')
+    for (const code of [-124, -216]) expect(errorLabelVi(`${code} Access token không hợp lệ hoặc đã hết hạn`)).toBe('Token Zalo hết hạn; hệ thống sẽ tự làm mới.')
+    expect(errorLabelVi('-1240 x')).toBe('Zalo chưa gửi được tin này.')
     expect(errorLabelVi('something odd')).toBeTruthy()
   })
 })

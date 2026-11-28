@@ -126,6 +126,14 @@ def test_a_permanent_error_is_reported_permanent_and_sent_once(env, code):
     assert len(calls(env)) == 1
 
 
+def test_an_exhausted_quota_is_sent_once_and_failed_with_its_code(env):
+    fail_next(env, -115)
+    env.web.outbox = [item(1)]
+    env.relay.run_outbox_once()
+    assert len(calls(env)) == 1
+    assert env.web.results["id-1"]["permanent"] is True and env.web.results["id-1"]["error"].startswith("-115 Hết số dư")
+
+
 def test_a_server_error_is_reported_retryable_and_the_batch_goes_on(env):
     fail_next(env, 503)
     env.web.outbox = [item(1), item(2)]
@@ -161,8 +169,8 @@ def test_a_token_close_to_expiry_is_refreshed_and_saved_before_sending(env):
     assert calls(env)[1]["access_token"] == saved["access_token"]
 
 
-def test_an_expired_token_error_refreshes_once_and_resends(env):
-    code = next(c for c, e in ERROR_CODES.items() if e.token_expired)
+@pytest.mark.parametrize("code", [-124, -216])
+def test_an_expired_token_error_refreshes_once_and_resends(env, code):
     fail_next(env, code)
     env.web.outbox = [item(1)]
     env.relay.run_outbox_once()
