@@ -154,7 +154,7 @@ Commit: `test(zalo): smoke the four messages through the stub`.
 
 ### Task F1 (Codex): Zalo screens
 
-**Files:** `apps/web/src/app/platform/zalo/*` (templates and token), `apps/web/src/app/manager/zalo/*` (settings and the deliveries list), the consent control on the household detail for officer and manager, the farmer profile showing "Nhận tin Zalo: Đang nhận" with "Tắt nhận tin", a menu entry, and tests.
+**Files:** `apps/web/src/app/platform/zalo/*` (templates and token), `apps/web/src/app/manager/zalo/*` (settings and the deliveries list), the consent control on the household detail for officer and manager, the farmer profile showing "Nhận tin Zalo: Đang nhận" with "Tắt nhận tin" (it posts `OPTED_OUT` for the farmer's own household through the C3 route), a menu entry, and tests.
 
 - Never show tokens back after saving: show the last 4 characters only.
 - Phones are masked to the last 3 digits in lists.
