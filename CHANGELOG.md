@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Director board (`apps/web`)**: `/manager/dashboard` answers the six morning questions on one screen:
+  - fresh leaf weighed today against yesterday;
+  - today's leaf prices, or a button to publish them;
+  - what the cooperative owes its members;
+  - dry tea in stock by grade;
+  - what traders still owe;
+  - red alerts: parcels in withdrawal, off-band batches, batches left open, old stock, a draft settlement, members unpaid for more than 7 days, no price after 7:00, and overdue wholesale orders.
+
+  Each block loads on its own. `/accountant/dashboard` shows the money blocks.
+- **Sales drawn from lot stock (`apps/web`)**: the head and the accountant record wholesale orders to a partner from QR-exported lots, in kilograms with one decimal at a price per kg.
+  - Stock is counted in grams, and an order larger than what is left is refused.
+  - Payments are recorded against the order and can never exceed it.
+  - The default due date is 30 days after the order and can be changed per order.
+  - Trader receivables and overdue orders show on the board and in "Công nợ thương lái". Nothing is sent to traders.
+  - Only the head cancels an order, and only before any payment.
+- **Core Action API for mini-apps**: `/api/internal/apps/*`, reachable only on the internal gateway port. A mini-app calls it with the manager's own token, which the core checks again.
+- **tea-shop 0.4.0**: a product can be linked to a QR-exported lot, with the net weight of one pack.
+  - Confirming an order records it in the core, so retail and wholesale draw from the same lot stock.
+  - If the lot is short or the core cannot be reached, the order is not confirmed.
+  - It needs core 1.21.0.
+- **Season and year report (`apps/web`)**: `/manager/reports` builds a report for the members' assembly over a year or chosen dates. It covers members and area, leaf bought by month and grade, member payments and advances, processing, lots and valid certificates, sales and receivables, and safety. It prints on A4, and each section downloads as CSV.
+
+### Changed
+
+- The cooperative head's home page is the director board. The world tea price and the area cards moved off it.
+- The accountant can read the partner list, to pick the buyer of a wholesale order.
+
 ## [1.19.0] - 2026-11-28
 
 ### Added
