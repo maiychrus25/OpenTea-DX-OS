@@ -636,6 +636,62 @@ Quy trình: phiếu cân búp tươi vào một mẻ sao, mẻ cho ra chè khô 
 - **Tên người ẩn mặc định.** Tên hộ (`household_name`), người ghi nhật ký (`performed_by`) và tên thợ sao (`master_name`) chỉ hiện khi HTX bật `htx_profiles.public_show_names` (mặc định `false`). Việc ẩn làm **lúc dựng trang**, nên áp cả với ảnh chụp lô xuất từ trước. `manager` bật hoặc tắt qua `PUT /api/htx/public-settings`.
 - **Tem in.** `officer` và `manager` mở `/officer/lots/[mã lô]/labels` hoặc `/manager/lots/[mã lô]/labels`: chọn khổ 50×30, 40×30 hoặc 60×40 mm và số tem từ 1 đến 500; mỗi tem có QR, mã lô, "Chè {hạng}", khối lượng lô và tên HTX. In bằng hộp thoại in của trình duyệt (lưu PDF bằng trình duyệt); không thêm thư viện PDF.
 
+### 3.27 Bảng điều hành Giám đốc (GĐ3 S7)
+
+`/manager/dashboard` là màn hình buổi sáng của Trưởng HTX; `/accountant/dashboard` dùng cùng bảng cho kế toán. Bảng do `DirectorBoardUseCase.read` dựng ở máy chủ (không có route API riêng). **Mỗi khối tải riêng:** khối hỏng chỉ thành `null` (ghi log, trang hiện "Chưa tải được ..." cho khối đó) và các khối còn lại vẫn có. Ngày "hôm nay" là ngày Việt Nam.
+
+- **Khối 1, búp hôm nay:** tổng kg tịnh, thành tiền và số phiếu của phiếu cân `VALID` cân trong ngày, kèm kg tịnh của hôm qua.
+- **Khối 2, giá hôm nay:** giá từng phẩm cấp đang dùng đã công bố trong ngày; `published` là `false` khi chưa phẩm cấp nào có giá.
+- **Khối 3, phải trả xã viên:** `unpaid_lines_vnd` (dòng quyết toán của kỳ đã chốt, chưa trả, `payable_vnd` > 0) + `unsettled_leaf_vnd` (tiền phiếu cân `VALID` chưa quyết toán) − `unsettled_advances_vnd` (tiền phiếu ứng `VALID` chưa quyết toán) = `total_vnd`, toàn HTX; tổng có thể âm.
+- **Khối 4, tồn chè khô theo hạng:** kg còn lại của mẻ `FINISHED` (mục 3.24), gộp theo cả năm hạng, hạng không có tồn là 0.
+- **Khối 5, công nợ thương lái:** tổng phải thu, số đơn và số tiền quá hạn, và ba thương lái nợ nhiều nhất (cách tính ở mục 3.28).
+- **Khối 6, cảnh báo.** Mỗi cảnh báo có `kind`, `count`, `message` (tiếng Việt, hiện nguyên văn) và đường dẫn. Thứ tự hiện như bảng dưới. Trưởng HTX thấy cả tám; **kế toán chỉ thấy bốn cảnh báo về tiền** (`ORDERS_OVERDUE`, `SETTLEMENT_DRAFT`, `UNPAID_LINES`, `PRICE_NOT_PUBLISHED`).
+
+| `kind` | Khi nào có | Thông điệp |
+|--------|------------|-----------|
+| `PARCELS_IN_WITHDRAWAL` | nương còn bị chặn theo quy tắc (a) mục 3.2 với D là hết ngày hôm nay (cùng quy tắc với bàn cân) | `{n} nương đang trong thời gian cách ly` |
+| `BATCH_OUT_OF_BAND` | mẻ `FINISHED` có `out_of_band` và `finished_at` trong 30 ngày Việt Nam gần nhất | `{n} mẻ lệch khoảng chuẩn trong 30 ngày` |
+| `BATCH_OPEN_TOO_LONG` | mẻ còn `OPEN` có ngày chế biến cách hôm nay từ 3 ngày trở lên | `{n} mẻ còn mở quá 2 ngày` |
+| `OLD_DRY_STOCK` | dòng tồn chè khô còn kg lớn hơn 0 của mẻ có ngày chế biến cách hôm nay từ 61 ngày trở lên | `{n} dòng tồn chè khô quá 60 ngày` |
+| `ORDERS_OVERDUE` | có đơn bán sỉ quá hạn (mục 3.28); không hiện khi khối 5 hỏng | `{n} đơn bán sỉ quá hạn thanh toán` |
+| `SETTLEMENT_DRAFT` | có kỳ quyết toán `DRAFT` (chỉ nêu kỳ mới nhất, `count` luôn 1) | `Kỳ quyết toán {mã kỳ} còn nháp` |
+| `UNPAID_LINES` | dòng quyết toán chưa trả (`payable_vnd` > 0) của kỳ chốt trước 00:00 giờ Việt Nam của ngày cách hôm nay 7 ngày, tức chốt hơn 7 ngày trước | `{n} hộ chưa nhận tiền quyết toán quá 7 ngày` |
+| `PRICE_NOT_PUBLISHED` | chưa công bố giá hôm nay và đã từ 07:00 giờ Việt Nam; không hiện khi khối 2 hỏng | `Chưa công bố giá thu mua hôm nay` |
+
+Trang không còn ô "Chỉ số giá" `market_data` và các ô diện tích, sản lượng dự kiến; `htx-dashboard` là tab phân tích riêng.
+
+### 3.28 Bán hàng gắn lô và công nợ thương lái (GĐ3 S8)
+
+- **Đơn bán (`sales_orders`)** có `kind` `WHOLESALE` (bán sỉ cho thương lái, bắt buộc `partner_id` cùng HTX) hoặc `RETAIL` (bán lẻ từ mini-app, không có `due_on`), `source` `CORE` hoặc `TEA_SHOP`, trạng thái `CONFIRMED` hoặc `CANCELLED`. Số đơn `{HTX}-DH-YYYYMMDD-NNN`, `YYYYMMDD` là ngày đặt, `NNN` đánh từ 001 dưới khoá tư vấn theo HTX và ngày. Đơn tạo ra là `CONFIRMED` ngay.
+- **Khối lượng bán tính bằng gam.** `sales_order_lines.net_g` là số nguyên gam lớn hơn 0. Dòng sỉ nhập kg một chữ số thập phân (lớn hơn 0, tối đa 1.000.000) và đổi sang gam theo phần mười kg (1,1 kg là đúng 1.100 g). Dòng lẻ có `pack_count` và `pack_net_g`, và `net_g = pack_count × pack_net_g` (4 gói 250 g là đúng 1.000 g); CSDL buộc cả hai cùng có hoặc cùng rỗng và khớp công thức.
+- **Tiền dòng.** Dòng sỉ: `amount_vnd = price_vnd_per_kg × net_g / 1000`, làm tròn đến đồng, **nửa làm tròn lên**, tính bằng số nguyên (giá nguyên từ 1 đến 10.000.000 đ/kg). Dòng lẻ: `amount_vnd` do mini-app gửi (giá gói × số gói, đã tính khuyến mãi). `total_vnd` là tổng các dòng.
+- **Tồn của lô, một chỗ duy nhất.** Lô bán được khi `status = QR_EXPORTED`, thuộc HTX và có khối lượng. **Sức chứa = (`total_weight_kg`, nếu rỗng thì `actual_weight_kg`, nếu rỗng thì `estimated_weight_kg`) × 1000, làm tròn đến gam. Còn lại = sức chứa − tổng `net_g` của các dòng thuộc đơn `CONFIRMED`.** Huỷ đơn thì phần đã bán tự quay về tồn. `GET /api/sales/sellable-lots` chỉ liệt kê lô còn lại lớn hơn 0.
+- **Tạo đơn trong một giao dịch, khoá theo thứ tự lô rồi số đơn.** (1) Khoá các dòng lô được chọn theo thứ tự id (`FOR UPDATE`); (2) lô không thuộc HTX trả 404; lô chưa xuất QR hoặc chưa có khối lượng trả 422 `LOT_NOT_SELLABLE`; (3) số gam cần (cộng các dòng cùng lô) lớn hơn số còn lại trả 409 `LOT_STOCK_SHORT` kèm số gam còn lại từng lô; (4) rồi mới lấy số đơn dưới khoá tư vấn và ghi. Nhờ khoá lô trước, hai đơn cùng lô không bán vượt tồn.
+- **Hạn thanh toán và quá hạn.** Đơn sỉ có `due_on` mặc định `ordered_on` cộng 30 ngày, sửa được và không trước ngày đặt (cả CSDL lẫn API). **Quá hạn** khi đơn sỉ `CONFIRMED`, còn phải thu lớn hơn 0 và `due_on` trước hôm nay (ngày Việt Nam).
+- **Công nợ thương lái** chỉ tính trên đơn `WHOLESALE` `CONFIRMED`: phải thu = `total_vnd` − tổng đã thu. **Đơn lẻ không vào công nợ** (thanh toán khi giao hàng). Bảng công nợ gộp theo thương lái, nợ nhiều nhất trước.
+- **Thu tiền (`sales_payments`)** do `manager` hoặc `accountant` ghi, chỉ trên đơn `CONFIRMED`, dưới khoá dòng đơn: số tiền nguyên từ 1 đến 1.000.000.000.000 đ, **không vượt số còn phải thu** (vượt thì 409 `OVERPAYMENT` kèm `outstanding_vnd`). Mã hiện không chặn thu tiền trên đơn lẻ (`RETAIL`), nhưng đơn lẻ không vào công nợ. Bảng chỉ thêm: trigger từ chối `UPDATE`, `DELETE` và `TRUNCATE`; không có sửa hay xoá khoản thu.
+- **Huỷ đơn** chỉ `manager`, kèm lý do 3 đến 200 ký tự. Đơn đã có khoản thu không huỷ được (409 `ORDER_HAS_PAYMENTS`); đơn đã huỷ trả 409 `ORDER_CANCELLED`. Đơn lẻ của mini-app huỷ theo `external_ref`; huỷ lần hai trả đúng đơn đã huỷ, không lỗi.
+- **Đổi hạn thanh toán** (`PATCH`) do `manager` hoặc `accountant`, chỉ với đơn sỉ còn `CONFIRMED` và còn nợ: đơn lẻ 422 `NOT_WHOLESALE`; đơn đã huỷ 409 `ORDER_CANCELLED`; đơn đã thu đủ 409 `ORDER_PAID`; hạn trước ngày đặt 400 `VALIDATION_ERROR`.
+- **Quyền.** `manager` và `accountant` tạo đơn sỉ, ghi thu, đổi hạn, xem đơn và công nợ; chỉ `manager` huỷ. Kế toán đọc được danh sách đối tác (`GET /api/partners`) để chọn thương lái; sửa đối tác vẫn chỉ `manager`.
+- **Không gửi tin ra ngoài.** Quá hạn chỉ hiện thành cảnh báo trên bảng điều hành (mục 3.27).
+
+### 3.29 Core Action API cho mini-app (GĐ3 S8)
+
+Cách một mini-app ghi vào lõi mà không giữ bảng cô lập (`/api/internal/apps/*`).
+
+- **Chỉ ở cổng nội bộ 9081.** Route APISIX `internal-apps` có điều kiện `server_port == 9081`, nên cổng 9080 mở ra ngoài không chạm tới. Route chạy plugin `openid-connect` (cấu hình chung `oidc_aud` của gateway), giới hạn 120 yêu cầu mỗi phút theo header `Authorization`, và gắn header `X-Dxos-Gateway` bằng bí mật `DXOS_INTERNAL_GATEWAY_SECRET`.
+- **Mini-app chuyển nguyên token của người đang dùng.** Không có token dịch vụ nào của app: `Authorization: Bearer <token của chính Trưởng HTX>` đi từ trình duyệt qua web proxy tới mini-app và tiếp tới lõi.
+- **Web kiểm lại token** (`requireAppUserCaller`), không đọc phiên: (1) header `X-Dxos-Gateway` phải đúng bí mật, nếu không 403 `INTERNAL_GATEWAY_REQUIRED`; thiếu bearer thì 401; (2) chữ ký RS256, thời hạn, `iss` và `aud` (`dx-os-core`) phải hợp lệ, nếu không 401; (3) **`azp` phải là client đăng nhập của web** (`KEYCLOAK_CLIENT_ID`, mặc định `nextjs-web`), nếu không 401; (4) token mang vai dịch vụ (`agent`, `telegram`, `staff-sync`, `web-service`) bị từ chối 403, kể cả khi có thêm vai người; (5) phải có claim `htx_code` hợp lệ, nếu không 403; (6) **vai `manager` là bắt buộc** (kế toán, cán bộ và nông dân nhận 403); (7) HTX lấy từ `htx_code` của token và phải có trong CSDL (nếu không 401), nên người gọi không bao giờ chạm HTX khác.
+- **Ba hành động** hiện có, đều dưới `/api/internal/apps/sales/`: đọc lô bán được, ghi đơn lẻ, huỷ đơn lẻ. Đơn lẻ nhận `external_ref` (mã đơn của mini-app, `[A-Za-z0-9_-]`, 1 đến 64 ký tự) làm khoá chống trùng cùng với nguồn `TEA_SHOP`: gửi lại cùng `external_ref` trả đơn đầu tiên (200) và không trừ tồn thêm, kể cả hai lần gửi đua nhau (khoá tư vấn theo `external_ref`). Ngày đặt của đơn lẻ luôn là hôm nay; trường `ordered_on` được chấp nhận nhưng bị bỏ qua.
+- **tea-shop 0.4.0** dùng API này để bán gói chè từ lô thật (xem [miniapps.md](./miniapps.md) và README của app): lỗi `LOT_STOCK_SHORT` thì đơn không được xác nhận; lõi không trả lời hoặc lỗi 5xx thì cũng không xác nhận và báo thử lại.
+
+### 3.30 Báo cáo vụ và năm cho Đại hội thành viên (GĐ3 S9)
+
+- **Kỳ báo cáo** là hai ngày Việt Nam `from` và `to`, gồm cả hai đầu: `from` không sau `to`, tối đa ba năm (1.098 ngày, tức 3 × 366); ngày phải có thật. Trang chọn kỳ có "năm nay", "năm trước" (cả năm dương lịch) và khoảng tự chọn. `manager` và `accountant` xem được; `/manager/reports/view` và `/accountant/reports/view` dựng khổ A4 (in hoặc lưu PDF bằng trình duyệt) kèm tên HTX, kỳ, giờ lập và hàng chữ ký.
+- **Bảy phần, mỗi phần tính riêng**; phần lỗi thành `null` (ghi log, trang hiện "Chưa tải được phần này") và các phần còn lại vẫn có.
+- **Cách tính theo kỳ.** (1) Thành viên: số hộ, số thửa, diện tích, tính **tại thời điểm xem**, không theo kỳ. (2) Thu mua: phiếu cân `VALID` theo ngày cân (giờ Việt Nam), gộp theo tháng và theo phẩm cấp. (3) Tiền xã viên: kỳ quyết toán theo `closed_at` (số kỳ đã chốt, tiền đã chi trả, còn phải trả của kỳ đó), cộng tiền phiếu ứng `VALID` theo `advanced_on`. (4) Chế biến: mẻ `FINISHED` theo `finished_at` (số mẻ, kg tươi, kg khô, tỷ lệ bình quân = tổng tươi / tổng khô làm tròn 2 chữ số, số mẻ lệch, kg khô theo năm hạng). (5) Lô: lô theo `created_at` (số lô, số lô đã xuất QR, kg; lô từ mẻ tính theo kg nguồn mẻ, lô cũ theo khối lượng khai trên lô); chứng nhận còn hiệu lực **vào ngày `to`** (chưa thu hồi, đã cấp đến hết `to`, hết hạn từ `to` trở đi). (6) Bán hàng, theo kế hoạch: doanh thu sỉ và lẻ của đơn `CONFIRMED` theo `ordered_on`; kg bán; phải thu cuối kỳ của đơn sỉ, chỉ tính các khoản thu có `paid_on` đến hết `to`; 10 thương lái có doanh số lớn nhất. (7) An toàn: số lần phun `SPRAYING` đã `APPROVED` theo `entry_date`, và số lứa được thu hoạch (`parcel_crop_cycles.harvested_at`) trong kỳ.
+- **CSV theo phần.** `GET /api/reports/season.csv?from=&to=&section=`, mỗi phần một bảng cột tiếng Việt (UTF-8 có BOM). Phần chưa có dữ liệu để xuất (phần đã hỏng, hoặc `null`) trả **503 `SECTION_UNAVAILABLE`**, không phải tệp rỗng.
+
 ## 4. Security Rules
 
 ### 4.1 Authentication
@@ -667,7 +723,7 @@ Quy trình: phiếu cân búp tươi vào một mẻ sao, mẻ cho ra chè khô 
 |--------|---------|---------|--------|
 | View bulletin + chatbot | ✅ | ✅ | ❌ |
 | View partner map | ✅ | ✅ | ❌ |
-| Read partners (`GET /api/partners`, only the caller's HTX) | ✅ | ✅ | ❌ |
+| Read partners (`GET /api/partners`, only the caller's HTX; the accountant also reads, see the table below) | ✅ | ✅ | ❌ |
 | CRUD partners (only the caller's HTX) | ✅ | ❌ | ❌ |
 | List members (`GET /api/members`, only the caller's HTX) | ✅ | ✅ | ❌ |
 | Global search (`GET /api/search`) | ✅ | ✅ | ❌ |
@@ -731,6 +787,13 @@ Bảng trên chỉ có ba cột. Quyền của `accountant` và `platform_admin`
 | Đọc cài đặt tên công khai (`GET /api/htx/public-settings`) | manager, officer |
 | Bật hoặc tắt tên công khai (`PUT /api/htx/public-settings`) | manager |
 | Xem trang QR công khai (`/q/[mã lô]`) | không cần đăng nhập |
+| Đọc danh sách đối tác (`GET /api/partners`; thêm ở GĐ3) | manager, officer, accountant |
+| Bảng điều hành (`/manager/dashboard`, `/accountant/dashboard`; không có route API) | manager (đủ 8 cảnh báo); accountant (4 cảnh báo về tiền) |
+| Lô bán được, danh sách và chi tiết đơn, công nợ (`GET /api/sales/sellable-lots`, `GET /api/sales/orders`, `GET /api/sales/orders/[id]`, `GET /api/sales/receivables`) | manager, accountant |
+| Tạo đơn sỉ, ghi thu tiền, đổi hạn thanh toán (`POST /api/sales/orders`, `POST /api/sales/orders/[id]/payments`, `PATCH /api/sales/orders/[id]`) | manager, accountant |
+| Huỷ đơn (`POST /api/sales/orders/[id]/cancel`) | manager |
+| Core Action API cho mini-app (`GET /api/internal/apps/sales/sellable-lots`, `POST /api/internal/apps/sales/retail-orders`, `POST /api/internal/apps/sales/retail-orders/[external_ref]/cancel`) | token của chính manager, chỉ ở cổng nội bộ 9081 |
+| Báo cáo vụ/năm (`/manager/reports`, `/accountant/reports`, `GET /api/reports/season.csv`) | manager, accountant |
 | Đèn cách ly của nương (`GET /api/parcels/[id]/withdrawal-status`) | accountant, manager, officer |
 | Đối chiếu cân và nhật ký của lứa (`GET /api/cycles/[id]/weighing-summary`) | manager, officer |
 
