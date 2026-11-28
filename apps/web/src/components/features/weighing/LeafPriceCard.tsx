@@ -9,6 +9,8 @@ import { fetchJson, LOAD_FAILED_MESSAGE } from '@/lib/api/fetch-json'
 import { money } from '@/lib/weighing/format'
 import type { TodayLeafPrices } from './LeafPriceBoard'
 import styles from './weighing.module.css'
+import { ListenButton } from '@/components/features/tts/ListenButton'
+import { priceSentence } from '@/lib/tts/sentences'
 
 /** Today's leaf price per grade for the farmer's dashboard; read-only. */
 export function LeafPriceCard() {
@@ -30,6 +32,10 @@ export function LeafPriceCard() {
       {!error && !today && <p className={`${kit.muted} ${styles.pad}`}>Đang tải...</p>}
       {today && published.length === 0 && <p className={`${kit.muted} ${styles.pad}`}>HTX chưa công bố giá hôm nay.</p>}
       {published.length > 0 && (
+        <>
+          <div className={styles.pad}>
+            <ListenButton text={priceSentence(published.map(p => ({ grade_name: p.grade_name, price_vnd_per_kg: p.price_vnd_per_kg ?? 0 })))} label="Nghe giá" />
+          </div>
         <ul className={kit.list}>
           {published.map(p => (
             <li key={p.grade_id} className={styles.priceRow}>
@@ -38,6 +44,7 @@ export function LeafPriceCard() {
             </li>
           ))}
         </ul>
+        </>
       )}
     </section>
   )
