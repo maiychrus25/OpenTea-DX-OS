@@ -753,6 +753,48 @@ Một Zalo OA chung của nền tảng; web giữ hàng đợi, người nhận,
 - **Đồng ý nhận tin** (`zalo_consents`, chỉ thêm dòng, dòng mới nhất là trạng thái hiện hành, có trigger kiểm toán): cán bộ và Trưởng HTX ghi `OPTED_IN` hoặc `OPTED_OUT` cho mọi hộ của HTX; nông dân chỉ được ghi `OPTED_OUT` (nguồn `MEMBER`) cho hộ gắn với chính tài khoản của mình; mọi trường hợp khác 403. Mỗi dòng ghi người ghi và thời điểm.
 - **Token OA** chỉ `platform_admin` nhập ở `/platform/zalo`; web lưu mã hoá AES-256-GCM bằng khoá `DXOS_ZALO_TOKEN_KEY` và chỉ hiện lại 4 ký tự cuối. Relay đọc token qua route nội bộ và tự làm mới bằng `ZALO_APP_ID`/`ZALO_APP_SECRET`. Không ghi log token; số điện thoại chỉ hiện 3 số cuối. Chưa có token thì relay chỉ cập nhật nhịp tim và vẫn khoẻ.
 
+### 3.36 Nhãn sâu bệnh, ảnh huấn luyện và sổ mô hình chè (GĐ4-B)
+
+- **Một danh mục nhãn** `disease_labels`, 14 mã:
+  - 5 mục tiêu: `green_leafhopper` (Rầy xanh), `tea_thrips` (Bọ cánh tơ), `red_spider_mite` (Nhện đỏ), `blister_blight` (Phồng lá chè), `helopeltis` (Bọ xít muỗi);
+  - các lớp chè đã có;
+  - `healthy`, `not_tea_leaf`, `other`.
+
+  `GET /api/disease-labels` trả mục tiêu trước.
+- **Duyệt báo cáo bệnh:**
+  - Khi cán bộ xác nhận (`CONFIRMED`), báo cáo **bắt buộc** có một mã nhãn trong danh mục. Thiếu mã thì 400 "Vui lòng chọn nhãn bệnh/sâu trước khi duyệt.", mã lạ cũng 400. Từ chối (`REJECTED`) thì không cần nhãn.
+  - Tên tự gõ vẫn giữ.
+  - Telegram cũng hỏi nhãn khi xác nhận.
+  - Báo cáo cũ chỉ được gán nhãn khi tên trùng đúng `name_vi`.
+- **AI không kê thuốc.** Kế hoạch chăm sóc sau chẩn đoán chỉ gồm việc không dùng thuốc:
+  - mỗi mục tiêu có bước riêng, lấy theo bộ cẩm nang chè;
+  - ảnh "Không phải lá chè" chỉ nhận một bước: chụp lại;
+  - thuốc, liều và thời điểm phun do cán bộ kê theo luồng S1 (khoá cách ly áp như mọi lần phun).
+- **Đồng ý dùng ảnh để huấn luyện:**
+  - mặc định **tắt** theo từng HTX;
+  - chỉ Trưởng HTX bật hoặc tắt (`PUT /api/htx/disease-training-consent`); khi bật có bước xác nhận;
+  - mỗi lần đổi ghi thời điểm và người đổi, và được kiểm toán.
+- **Manifest ảnh thực địa** (`GET /api/platform/disease-dataset`), chỉ `platform_admin`:
+  - chỉ gồm báo cáo `CONFIRMED` có nhãn và ảnh, của HTX đã bật đồng ý;
+  - không có tên hay số điện thoại;
+  - mỗi lần tối đa 500 mục, lấy tiếp bằng `since`;
+  - mỗi mục có `sha256` của ảnh gốc và một URL tải chỉ sống **15 phút**.
+- **`train.py fetch-field`** đọc manifest:
+  - nguồn là URL, kèm cookie phiên `platform_admin` trong biến `DXOS_WEB_COOKIE`, giống `./dxos para seed`; hoặc là tệp JSON đã tải;
+  - kiểm `sha256` trên đúng byte tải về, rồi **lưu lại chỉ phần điểm ảnh**, nên mọi EXIF và GPS bị xoá;
+  - chạy lại không tải trùng.
+- **Huấn luyện:**
+  - Một lớp chỉ có ảnh thực địa phải có ít nhất **150 ảnh** mới vào mô hình; thiếu thì báo cáo đánh giá ghi "chưa đủ dữ liệu".
+  - Lớp đã có ảnh công khai (Bọ xít muỗi) vẫn dùng ảnh công khai.
+  - Lớp `not_tea_leaf` luôn có 300 ảnh nhiễu tổng hợp.
+  - Cổng của `evaluate`: độ chính xác ≥ 0,80; recall ≥ 0,70 cho mỗi lớp mục tiêu có mặt; độ chính xác ≥ 0,75 trên ảnh thực địa của các HTX giữ riêng (tách theo HTX). Không đạt thì in `BLOCKED`, thoát mã 1 và không ghi sổ.
+  - Khi mới có một HTX góp ảnh, không có HTX nào để giữ riêng, nên mô hình có ảnh thực địa luôn bị `BLOCKED`.
+- **Sổ mô hình** `ai-models/tea/registry.json`:
+  - ghi `version`, tệp, `sha256`, các lớp, ngưỡng, số liệu, ngày huấn luyện và nguồn dữ liệu;
+  - `disease-api` không nạp tệp `.keras` có băm khác sổ: `/health` báo `models.tea: false` kèm `reasons.tea`, còn mô hình `general` vẫn chạy;
+  - mỗi kết quả chè trả `model_version`, và web lưu nó vào báo cáo;
+  - CI kiểm băm khớp sổ.
+
 ## 4. Security Rules
 
 ### 4.1 Authentication
