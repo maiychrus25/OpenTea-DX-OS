@@ -4,7 +4,7 @@
 
 Usage (inside python:3.12.15-slim-bookworm with requirements.txt installed):
     python train.py download | prepare | train | evaluate
-    python train.py fetch-field --manifest <url|file> --token-env DXOS_PLATFORM_TOKEN
+    python train.py fetch-field --manifest <url|file> --cookie-env DXOS_WEB_COOKIE
 
 `fetch-field` pulls consented, officer-confirmed field photos (EXIF removed) into .work/field/<label>/; `prepare`
 then merges them with the public datasets. `evaluate` writes .work/registry.json only when every gate passes.
@@ -110,12 +110,13 @@ def strip_exif(data):
     return out.getvalue()
 
 
-def load_manifest(location, token):
-    """The platform manifest `{ items: [...] }` from an https URL (bearer token required) or a local file."""
+def load_manifest(location, cookie):
+    """The platform manifest `{ items: [...] }` from an https URL or a local file. The route takes a platform_admin
+    session, as `./dxos para seed` does: the cookie is the Auth.js session cookie, sent as is."""
     if location.startswith(("http://", "https://")):
-        if not token:
-            sys.exit("--token-env names an unset variable (DXOS_PLATFORM_TOKEN?); the manifest needs a platform_admin token")
-        request = urllib.request.Request(location, headers={"Authorization": f"Bearer {token}", "User-Agent": "opentea-tea-train/1.0"})
+        if not cookie:
+            sys.exit("--cookie-env names an unset variable (DXOS_WEB_COOKIE?); the manifest needs a platform_admin session cookie")
+        request = urllib.request.Request(location, headers={"Cookie": cookie, "User-Agent": "opentea-tea-train/1.0"})
         with urllib.request.urlopen(request) as response:
             return json.loads(response.read())
     return json.loads(Path(location).read_text(encoding="utf-8"))
@@ -156,8 +157,7 @@ def fetch_field(manifest, root=FIELD):
 
 
 def cmd_fetch_field(args):
-    token = os.environ.get(args.token_env)
-    print(fetch_field(load_manifest(args.manifest, token)))
+    print(fetch_field(load_manifest(args.manifest, os.environ.get(args.cookie_env))))
 
 
 # ── prepare ─────────────────────────────────────────────────────────────────
@@ -672,8 +672,8 @@ def main():
             p.add_argument("--version", help="registry version, default tea-<today as YYYY.MM.DD>")
         p.set_defaults(fn=fn)
     p = sub.add_parser("fetch-field", help="download consented field photos into .work/field/")
-    p.add_argument("--manifest", required=True, help="platform manifest URL (needs the token) or a local JSON file")
-    p.add_argument("--token-env", default="DXOS_PLATFORM_TOKEN", help="environment variable that holds the platform_admin token")
+    p.add_argument("--manifest", required=True, help="platform manifest URL (needs the session cookie) or a local JSON file")
+    p.add_argument("--cookie-env", default="DXOS_WEB_COOKIE", help="environment variable that holds the platform_admin session cookie")
     p.set_defaults(fn=cmd_fetch_field)
     args = parser.parse_args()
     args.fn(args)

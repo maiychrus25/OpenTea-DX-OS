@@ -80,8 +80,8 @@ def test_fetch_field_rejects_unsafe_labels(tmp_path, label):
         train.fetch_field(train.load_manifest(str(manifest), None), root=tmp_path / "field")
 
 
-def test_http_manifest_needs_a_token():
-    with pytest.raises(SystemExit, match="DXOS_PLATFORM_TOKEN"):
+def test_http_manifest_needs_a_session_cookie():
+    with pytest.raises(SystemExit, match="DXOS_WEB_COOKIE"):
         train.load_manifest("https://example.invalid/manifest", None)
 
 

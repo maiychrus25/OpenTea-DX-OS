@@ -107,7 +107,7 @@ Commit: `feat(disease): version the tea model and refuse a file that does not ma
 
 **Files:** `ai-models/tea/{train.py,datasets.json,README.md,MODEL_CARD.md,requirements.txt}`, tests under `ai-models/tea/tests/` (new, pytest with tiny synthetic images).
 
-- `fetch-field --manifest <url|file> --token-env DXOS_PLATFORM_TOKEN` downloads into `.work/field/<label>/`. It strips EXIF by re-saving pixels only, verifies the sha256, and is idempotent.
+- `fetch-field --manifest <url|file> --cookie-env DXOS_WEB_COOKIE` (the route takes a session, as `./dxos para seed` does; ruling during integration) downloads into `.work/field/<label>/`. It strips EXIF by re-saving pixels only, verifies the sha256, and is idempotent.
 - `prepare` merges the `field` source, maps labels through `disease_labels` codes, and drops classes under 150 field photos with a report line. It splits the field test set by `htx_code` (group).
 - `evaluate` adds the per-class recall and field-accuracy gates, and writes `registry.json` only on pass.
 - A `not_tea_leaf` class is built from noise and non-leaf images at a fixed count.

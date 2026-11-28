@@ -50,8 +50,8 @@ Public datasets have no photos for four of the five targets. Cooperatives that o
 through the platform's `GET /api/platform/disease-dataset` manifest (`platform_admin` only).
 
 ```sh
-export DXOS_PLATFORM_TOKEN=...   # a platform_admin token; never commit it
-python -I train.py fetch-field --manifest https://<host>/api/platform/disease-dataset --token-env DXOS_PLATFORM_TOKEN
+export DXOS_WEB_COOKIE='authjs.session-token=...'   # the platform_admin's browser session cookie; never commit it
+python -I train.py fetch-field --manifest https://<host>/api/platform/disease-dataset --cookie-env DXOS_WEB_COOKIE
 ```
 
 `--manifest` also takes a local JSON file. The manifest is `{ items: [{ report_id, label_code, htx_code, confirmed_on,
