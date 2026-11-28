@@ -199,7 +199,9 @@ export function FarmerJournalForm({ onSuccess, onCancel, initial: chatPrefill, e
           </div>
         </div>
 
-        <ListenButton text={activitySentence(ACTIVITY_TYPES.find(t => t.value === activityType)?.label ?? activityType, spraying)} label="Nghe hướng dẫn" />
+        <div className={styles.listenRow}>
+          <ListenButton text={activitySentence(ACTIVITY_TYPES.find(t => t.value === activityType)?.label ?? activityType, spraying)} label="Nghe hướng dẫn" />
+        </div>
       </section>
 
       <div className={styles.formDetails}>
@@ -249,6 +251,7 @@ export function FarmerJournalForm({ onSuccess, onCancel, initial: chatPrefill, e
       </div>
 
       <div className={styles.entryActions}>
+        <p className={styles.sendNote}>Nhật ký sẽ được gửi cán bộ kỹ thuật duyệt.</p>
         <button type="button" className={`${kit.btn2} ${styles.tall}`} onClick={onCancel}>Hủy</button>
         <button type="submit" className={`${kit.btn} ${styles.tall}`} disabled={submitting || uploadingPhoto || !parcelId || belowFloor}>
           <Send size={16} aria-hidden="true" />
