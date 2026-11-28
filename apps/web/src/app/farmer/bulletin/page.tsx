@@ -6,6 +6,7 @@ import { auth } from '@/auth';
 import { prisma } from '@/infrastructure/db/prisma.client';
 import { PrismaBulletinRepository } from '@/infrastructure/db/repositories/PrismaBulletinRepository';
 import { GetAllLatestBulletinsUseCase } from '@/application/useCases/GetAllLatestBulletinsUseCase';
+import { WeatherSection } from '@/components/features/bulletin/WeatherSection';
 import { BulletinView } from '@/components/features/bulletin/BulletinView';
 import { EmptyState } from '@/components/ui';
 import kit from '@/components/features/farmer-web/kit.module.css';
@@ -34,6 +35,8 @@ export default async function FarmerBulletinPage() {
           <p className={kit.sub}>Thị trường, thời tiết và kỹ thuật canh tác chè, từ HTX và nguồn chính thống</p>
         </div>
       </div>
+
+      <WeatherSection />
 
       {bulletins.length === 0
         ? <section className={kit.pn} aria-label="Bản tin"><EmptyState icon={<Newspaper />} title="Chưa có bản tin nào" /></section>
