@@ -13,3 +13,14 @@
 .rejectForm { display: flex; flex-direction: column; gap: 12px; }
 .rejectForm label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 700; }
 .rejectForm select, .rejectForm textarea { padding: 8px 10px; border: 1px solid var(--color-border-input); border-radius: var(--radius-button); background: var(--color-surface-card); color: var(--color-ink-primary); font: inherit; font-weight: 400; }
+
+/* On a phone each journal is a block, so its buttons stay on screen. */
+@media (max-width: 767px) {
+  .list.list, .list thead, .list tbody { display: block; }
+  .list.list thead tr { display: block; }
+  .list.list thead th { display: none; }
+  .list.list thead th:first-child { display: block; width: auto; text-align: left; }
+  .list.list tbody tr { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 12px; border-top: 1px solid var(--color-border-row); }
+  .list.list td { width: auto; padding: 0; border: 0; white-space: normal; }
+  .list.list td.content { flex-basis: 100%; max-width: none; }
+}
