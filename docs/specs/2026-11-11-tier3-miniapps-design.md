@@ -263,7 +263,7 @@ Phần này ghi chỗ code khác đặc tả và các số đo được khi hoà
 - **R21:** thứ tự trong CI là cài `tea-tour`, câu chuyện, ảnh chụp, gỡ, kiểm tra sau khi gỡ, rồi `apps-smoke`, để `apps-smoke` kết thúc bằng `platform-smoke` trên stack không có app.
 - **R22:** `screens.spec` vẫn đăng nhập bằng tài khoản demo `farmer_tc` như từ Tầng 2b; spec chỉ đăng nhập, không đổi mật khẩu hay TOTP.
 - **R23:** route app chỉ khớp ở cổng nội bộ `9081` (`vars: [["server_port", "==", "9081"]]`), và `gateway-sync` từ chối route app thiếu điều kiện này. Cổng `9080` mở ra máy chủ trả 404 cho `/apps/...`, nên CSP, bộ lọc header, kiểm Origin và giới hạn công khai của web proxy không bị đi vòng.
-- **R24:** tin cậy giữa các app chỉ được sửa bằng tài liệu trong v1.8.0: mọi app dùng chung `dxos-apps-net` và chỉ giải mã token, nên chỉ cài app tin cậy. Cách ly thật cho từng app (kiểm JWT với JWKS của Keycloak, hoặc mỗi app một mạng) để sang v1.9, vì mạng app là internal và Keycloak không nằm trên đó.
+- **R24:** tin cậy giữa các app chỉ được sửa bằng tài liệu trong v1.8.0: mọi app dùng chung `dxos-apps-net` và chỉ giải mã token, nên chỉ cài app tin cậy. Cách ly thật cho từng app (kiểm JWT với JWKS của Keycloak, hoặc mỗi app một mạng) để sang v1.9, vì mạng app là internal và Keycloak không nằm trên đó. *Ghi chú sau phát hành (v1.24.0): đã đóng bằng bí mật gateway riêng cho từng app, xem `docs/miniapps.md` §3.*
 
 **Khác với đặc tả.**
 - **§9, không dùng Hasura cho `installed_apps` (R1).** Không có quyền Hasura nào trên bảng này. Menu và proxy đọc bằng Prisma mỗi lần tải trang hoặc mỗi request.

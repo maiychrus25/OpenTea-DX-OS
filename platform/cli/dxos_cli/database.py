@@ -5,7 +5,6 @@
 Every identifier goes through sql.Identifier and every value through sql.Literal or a parameter; no SQL is built by
 formatting. admin_conn is an autocommit superuser connection; migrations never run on it (ruling R16).
 """
-import os
 import secrets
 from pathlib import Path
 from urllib.parse import quote, unquote, urlsplit
@@ -14,6 +13,7 @@ import psycopg
 from psycopg import sql
 from psycopg.conninfo import make_conninfo
 
+from dxos_cli.appenv import read_env, update_env
 from dxos_cli.manifest import schema_name
 from dxos_cli.steps import InstallError
 
@@ -141,22 +141,9 @@ def drop_app_database(admin_conn: psycopg.Connection, app_id: str, *, schema: bo
 
 
 def write_env_file(path: Path, app_id: str, password: str) -> None:
-    url = f"postgresql://{schema_name(app_id)}:{quote(password, safe='')}@postgres:5432/agrimarket"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(path.name + ".tmp")
-    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    with os.fdopen(fd, "w", encoding="utf-8") as handle:
-        os.fchmod(handle.fileno(), 0o600)  # an older tmp file keeps its mode through O_TRUNC
-        handle.write(f"{ENV_KEY}={url}\n")
-    tmp.replace(path)
+    update_env(path, {ENV_KEY: f"postgresql://{schema_name(app_id)}:{quote(password, safe='')}@postgres:5432/agrimarket"})
 
 
 def read_env_password(path: Path) -> str | None:
-    if not path.exists():
-        return None
-    for line in path.read_text(encoding="utf-8").splitlines():
-        key, _, value = line.partition("=")
-        if key == ENV_KEY:
-            password = urlsplit(value).password
-            return unquote(password) if password else None
-    return None
+    password = urlsplit(read_env(path).get(ENV_KEY, "")).password
+    return unquote(password) if password else None

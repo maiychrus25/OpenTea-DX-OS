@@ -155,10 +155,20 @@ case "$LOC" in /apps/hello/\?said=*) pass "echo redirects under the prefix ($LOC
 SAID=$(app_curl -s -H "Authorization: Bearer $TM" "$APP_GW$LOC")
 grep -q '&lt;b&gt;chè&lt;/b&gt;' <<<"$SAID" && ! grep -q '<b>chè' <<<"$SAID" && pass "echoed message is HTML-escaped" \
   || fail "echoed message not escaped"
-got=$($HELLO exec -T app-hello python -c "import urllib.request as u, urllib.error as e
-try: u.urlopen(u.Request('http://127.0.0.1:8080/echo', data=b'message=x'))
-except e.HTTPError as x: print(x.code)")
-assert_eq "$got" 401 "direct POST /echo without a token -> 401"
+# A call on dxos-apps-net that skipped the gateway has no X-Dxos-App-Gateway header: the app refuses it (the secret never
+# leaves the env file and the route, so the test reads it from inside the container).
+direct() {  # <method> <path> <header value or "-" for none>: prints the status
+  $HELLO exec -T app-hello python -c "import os, sys, urllib.request as u, urllib.error as e
+r = u.Request('http://127.0.0.1:8080' + sys.argv[2], data=b'message=x' if sys.argv[1] == 'POST' else None)
+if sys.argv[3] == 'secret': r.add_header('X-Dxos-App-Gateway', os.environ['DXOS_APP_GATEWAY_SECRET'])
+elif sys.argv[3] != '-': r.add_header('X-Dxos-App-Gateway', sys.argv[3])
+try: print(u.urlopen(r).status)
+except e.HTTPError as x: print(x.code)" "$@" | tr -d '\r'
+}
+assert_eq "$(direct POST /echo -)" 403 "direct POST /echo without the gateway header -> 403"
+assert_eq "$(direct GET / wrong)" 403 "direct GET / with a wrong gateway header -> 403"
+assert_eq "$(direct GET /healthz -)" 200 "direct GET /healthz stays open for the Docker check"
+assert_eq "$(direct POST /echo secret)" 401 "direct POST /echo with the gateway secret but no token -> 401"
 
 echo "[registry]"
 assert_eq "$(psql_app "select count(*) from platform.installed_apps where id='hello'")" 1 "platform.installed_apps has the hello row"

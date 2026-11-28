@@ -60,6 +60,12 @@ and installed with the `dxos` CLI (`./dxos install|remove|list|validate`).
     boundary is therefore the set of installed apps, so only trusted apps may
     be installed (ruling R24). Per-app isolation (JWT verification or a
     network per app) is deferred to v1.9.
+  - *Ghi chú (v1.24.0):* the limitation above is closed another way. Every
+    app has its own gateway secret (env file, mode 0600), APISIX sets
+    `X-Dxos-App-Gateway` on every route of that app, and the app refuses (403)
+    any request without it, except `GET /healthz`. A forged token sent
+    straight to another app no longer works. Only people with access to the
+    host files can read the secrets. See `docs/miniapps.md` §3.
 - **Data:**
   - Each app gets a schema and a login role, both `app_<id>`, with rights on
     that schema only and a connection cap.

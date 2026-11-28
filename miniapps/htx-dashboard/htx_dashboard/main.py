@@ -37,6 +37,7 @@ JOURNAL_LABEL = {"PENDING_APPROVAL": "Chờ duyệt", "REQUEST_CHANGES": "Cần 
 
 log = logging.getLogger("htx_dashboard")
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
+appkit.require_gateway(app)  # only requests that came through APISIX; /healthz stays open
 templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
 core = core_client.Core()
 

@@ -60,13 +60,13 @@ def test_env_file_lives_in_the_compose_project_runtime_dir(manifest, monkeypatch
     assert service(manifest)["env_file"] == ["runtime/dxos-clean/apps/tea-tour.env"]
 
 
-def test_compose_uses_image_and_skips_env_file_without_database(manifest):
+def test_compose_uses_image_and_still_passes_the_env_file_without_database(manifest):
     del manifest["runtime"]["build"], manifest["database"]
     manifest["runtime"]["image"] = IMAGE
     svc = service(manifest)
     assert svc["image"] == IMAGE
     assert "build" not in svc
-    assert "env_file" not in svc
+    assert svc["env_file"] == ["runtime/docker/apps/tea-tour.env"]  # the gateway secret lives there
 
 
 def generated(manifest, app_dir="docker/runtime/generated/gen-tea-log/0.1.0"):

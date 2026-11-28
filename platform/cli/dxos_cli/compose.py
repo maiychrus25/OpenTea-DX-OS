@@ -9,6 +9,11 @@ from pathlib import Path
 APP_USER = "10001:10001"
 
 
+def env_file_ref(app_id: str) -> str:
+    """The app's env file as compose names it, relative to docker/ (see render_app_compose)."""
+    return f"runtime/{os.environ.get('DXOS_RUNTIME_SUBDIR', 'docker')}/apps/{app_id}.env"
+
+
 def render_app_compose(manifest: dict, app_dir: Path) -> dict:
     """Compose override for service app-<id>, used as `-f docker/docker-compose.yml -f <this file>`.
 
@@ -29,8 +34,7 @@ def render_app_compose(manifest: dict, app_dir: Path) -> dict:
         service["image"] = runtime["image"]
     else:
         service["build"] = {"context": posixpath.normpath(posixpath.join("..", app_dir.as_posix(), runtime["build"]))}
-    if "database" in manifest:
-        service["env_file"] = [f"runtime/{project}/apps/{app_id}.env"]
+    service["env_file"] = [env_file_ref(app_id)]  # the gateway secret, and the database URL when there is one
     generated = app_id.startswith("gen-")
     network = f"dxos-gen-{app_id}" if generated else "dxos-apps-net"
     health_url = f"http://127.0.0.1:{runtime['port']}{runtime['health']}"

@@ -54,6 +54,7 @@ STATUS_NAMES = {"DRAFT": "Đang soạn", "PUBLISHED": "Đang dùng", "ARCHIVED":
 log = logging.getLogger("custom_books")
 # The root path (PREFIX) is set on the server, `uvicorn --root-path /apps/custom-books`.
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
+appkit.require_gateway(app)  # only requests that came through APISIX; /healthz stays open
 templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
 
 
