@@ -1,17 +1,29 @@
 /* SPDX-License-Identifier: MIT */
 /* SPDX-FileCopyrightText: 2026 OpenTea Developers */
 
-.workspace { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 12px; align-items: start; min-width: 0; }
-.map { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.map > div { height: 460px; }
-.note { margin: 0; font-size: 12.5px; color: var(--color-ink-secondary); }
-.title { margin: 0; padding: 12px 16px; font-size: 15px; font-weight: 700; color: var(--color-ink-heading); }
-.workspace td, .workspace th { padding-left: 10px; padding-right: 10px; }
+.workspace { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 12px; align-items: stretch; min-width: 0; }
+.map { display: flex; flex-direction: column; min-width: 0; }
+.map > div { height: 100%; min-height: 440px; }
+.sample { position: relative; min-width: 0; min-height: 440px; overflow: hidden; border-radius: var(--radius-card); background: url('/images/tea-hills-mist.jpg') center / cover; }
+.sample svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.sample polygon { stroke: var(--color-hero-text); stroke-width: 2px; vector-effect: non-scaling-stroke; }
+.a { fill: color-mix(in srgb, var(--accent-lime) 55%, transparent); }
+.b { fill: color-mix(in srgb, var(--color-success) 55%, transparent); }
+.label { position: absolute; display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -50%); padding: 4px 12px; border-radius: 8px; background: var(--color-surface-card); font-size: 12.5px; }
+.note { position: absolute; left: 12px; right: 12px; bottom: 12px; margin: 0; padding: 8px 12px; border-radius: var(--radius-button); background: var(--color-surface-card); font-size: 12px; }
+.title { display: flex; align-items: center; gap: 8px; margin: 0; padding: 12px 16px; font-size: 16px; font-weight: 800; color: var(--color-ink-heading); }
+.title svg { color: var(--color-primary); }
+.titleRow { display: flex; align-items: center; justify-content: space-between; padding-right: 16px; }
+.detail { margin: 0; }
+.detail div { display: flex; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--color-border-row); font-size: 13.5px; }
+.detail dt { width: 110px; flex: none; color: var(--color-ink-secondary); }
+.detail dd { margin: 0; font-weight: 700; }
+.workspace td, .workspace th { padding-left: 9px; padding-right: 9px; }
 
 @media (max-width: 1200px) {
   .workspace { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (max-width: 767px) {
-  .map > div { height: 340px; }
+  .map > div, .sample { min-height: 340px; }
 }

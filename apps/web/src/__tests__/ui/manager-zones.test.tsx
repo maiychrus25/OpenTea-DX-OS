@@ -16,11 +16,11 @@ beforeEach(() => {
 
 it('counts the parcels, filters by status and gives the head no drawing action', async () => {
   render(<ManagerZones />)
-  expect(await screen.findByText('TC-1')).toBeInTheDocument()
+  expect(await screen.findByRole('cell', { name: 'TC-1' })).toBeInTheDocument()
   expect(screen.getByText('3 ha')).toBeInTheDocument()
   expect(screen.queryByRole('link', { name: /Vẽ ranh giới/ })).not.toBeInTheDocument()
-  expect(screen.getByRole('button', { name: 'Xuất GeoJSON' })).toBeDisabled()
+  expect(screen.getByRole('img', { name: 'Bản đồ vùng trồng mẫu' })).toBeInTheDocument()
   fireEvent.change(screen.getByRole('combobox', { name: 'Trạng thái' }), { target: { value: 'DRAFT' } })
-  expect(screen.getByText('TC-2')).toBeInTheDocument()
-  expect(screen.queryByText('TC-1')).not.toBeInTheDocument()
+  expect(screen.getByRole('cell', { name: 'TC-2' })).toBeInTheDocument()
+  expect(screen.queryByRole('cell', { name: 'TC-1' })).not.toBeInTheDocument()
 })
