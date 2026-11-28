@@ -27,15 +27,16 @@ export default async function FarmerBulletinPage() {
 
   return (
     <div className={`${kit.page} ${styles.page}`}>
-      <div className={styles.head}>
-        <div>
-          <h1>Bản tin</h1>
-          <p>Thị trường, thời tiết và kỹ thuật canh tác chè, từ HTX và nguồn chính thống</p>
+      <div className={kit.hd}>
+        <span className={kit.hico}><Newspaper size={28} aria-hidden="true" /></span>
+        <div className={kit.hdText}>
+          <h1 className={kit.h1}>Bản tin</h1>
+          <p className={kit.sub}>Thị trường, thời tiết và kỹ thuật canh tác chè, từ HTX và nguồn chính thống</p>
         </div>
       </div>
 
       {bulletins.length === 0
-        ? <EmptyState icon={<Newspaper />} title="Chưa có bản tin nào" />
+        ? <section className={kit.pn} aria-label="Bản tin"><EmptyState icon={<Newspaper />} title="Chưa có bản tin nào" /></section>
         : bulletins.map(bulletin => <BulletinView key={bulletin.id} bulletin={bulletin} />)}
     </div>
   );

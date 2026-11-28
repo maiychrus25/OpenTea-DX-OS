@@ -1,8 +1,4 @@
 /* SPDX-License-Identifier: MIT */
 /* SPDX-FileCopyrightText: 2026 OpenTea Developers */
 
-.head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px; }
-.head h1 { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 24px; font-weight: 800; color: var(--color-ink-primary); }
-.head p { margin: 2px 0 0; font-size: 13px; color: var(--color-ink-secondary); }
-.head > span { font-size: 12.5px; color: var(--color-ink-secondary); }
 .page { gap: 12px; }
