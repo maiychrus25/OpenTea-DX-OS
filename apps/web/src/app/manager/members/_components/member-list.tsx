@@ -6,9 +6,10 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { Users, UserPlus, Download } from 'lucide-react';
+import { Users, UserPlus, Download, Eye, Pencil, Trash2, UserCheck, UserMinus, UserX } from 'lucide-react';
+import { Pager, StatCards, Tabs, pageOf } from '@/components/features/manager-web/parts';
+import ui from '@/components/features/manager-web/kit.module.css';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { SegmentedFilter } from '@/components/ui/SegmentedFilter';
 import table from '@/components/features/dashboard/dashboard.module.css';
 import kit from '@/components/features/dashboard/page-kit.module.css';
 import { Button } from '@/components/ui/Button';
@@ -28,6 +29,9 @@ export function MemberList() {
   // Parcels and area per household, matched to a farmer by phone number.
   const [land, setLand] = useState<Record<string, { id: string; parcels: number; area: number }>>({});
   const [query, setQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'LOCKED' | 'STOPPED'>('ALL');
+  const [page, setPage] = useState(1);
+  const [viewing, setViewing] = useState<Member | null>(null);
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
     action: 'APPROVE' | 'DELETE' | null;
@@ -125,11 +129,14 @@ export function MemberList() {
   const joined = members.filter((m) => m.status !== 'PENDING');
   const filteredMembers = joined.filter(
     (m) =>
+      (statusFilter === 'ALL' || m.status === statusFilter) &&
       (roleFilter === 'ALL' || rolesOf(m).includes(roleFilter.toLowerCase())) &&
       (!needle || [m.full_name, m.name, m.phone, m.email].some((v) => v?.toLowerCase().includes(needle)))
   );
 
-  const countRole = (role: string) => joined.filter((m) => rolesOf(m).includes(role.toLowerCase())).length;
+  const countStatus = (status: string) => joined.filter((m) => m.status === status).length;
+  const paged = pageOf(filteredMembers, page, 8);
+  const joinedOn = (m: Member) => (m.joinedAt ? new Date(m.joinedAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—');
   const phoneOf = (m: Member) => (m.phone && m.phone !== 'Chưa cập nhật' ? m.phone : '');
   const hectares = (value: number) => value.toLocaleString('vi-VN', { maximumFractionDigits: 2 });
 
@@ -155,20 +162,16 @@ export function MemberList() {
       <PageHeader
         icon={<Users size={28} />}
         title="Quản lý thành viên"
-        description={
-          loading
-            ? 'Danh sách thành viên và lời mời tham gia hợp tác xã'
-            : `${joined.length} thành viên · ${waiting.length} yêu cầu gia nhập đang chờ`
-        }
+        description="Quản lý tài khoản, phân quyền và trạng thái hoạt động của thành viên HTX."
         actions={
           <>
             <Button onClick={exportCsv} variant="secondary" disabled={filteredMembers.length === 0}>
               <Download size={16} aria-hidden="true" />
-              Xuất danh sách
+              Xuất
             </Button>
             <Button onClick={() => setIsInviteModalOpen(true)} variant="primary">
               <UserPlus size={16} aria-hidden="true" />
-              + Thêm thành viên
+              Thêm thành viên
             </Button>
           </>
         }
@@ -194,30 +197,36 @@ export function MemberList() {
         </section>
       )}
 
-      <div className={kit.card}>
-        <div className={kit.toolbar}>
-          <input
-            type="search"
-            className={kit.search}
-            aria-label="Tìm thành viên"
-            placeholder="Tìm theo tên, số điện thoại..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          <SegmentedFilter
-            label="Lọc theo vai trò"
-            value={roleFilter}
-            onChange={setRoleFilter}
-            options={[
-              { value: 'ALL', label: 'Tất cả', count: joined.length },
-              { value: 'FARMER', label: 'Nông hộ', count: countRole('FARMER') },
-              { value: 'OFFICER', label: 'Cán bộ KT', count: countRole('OFFICER') },
-              { value: 'ACCOUNTANT', label: 'Kế toán', count: countRole('ACCOUNTANT') },
-              { value: 'MANAGER', label: 'Trưởng HTX', count: countRole('MANAGER') },
-            ]}
-          />
-        </div>
+      <StatCards items={[
+        { label: 'Tổng thành viên', value: String(joined.length), icon: <Users size={26} /> },
+        { label: 'Đang hoạt động', value: String(countStatus('ACTIVE')), icon: <UserCheck size={26} /> },
+        { label: 'Tạm khóa', value: String(countStatus('LOCKED')), icon: <UserMinus size={26} />, tone: 'amber' },
+        { label: 'Ngừng sử dụng', value: '1', icon: <UserX size={26} />, tone: 'red', sample: true },
+      ]} />
 
+      <div className={ui.bar}>
+        <Tabs
+          label="Trạng thái"
+          value={statusFilter}
+          onChange={(key) => { setStatusFilter(key); setPage(1); }}
+          items={[
+            { key: 'ALL', label: `Tất cả (${joined.length})` },
+            { key: 'ACTIVE', label: `Hoạt động (${countStatus('ACTIVE')})` },
+            { key: 'LOCKED', label: `Tạm khóa (${countStatus('LOCKED')})` },
+            { key: 'STOPPED', label: 'Ngừng (Mẫu)' },
+          ]}
+        />
+        <input type="search" className={`${ui.control} ${ui.grow}`} aria-label="Tìm thành viên" placeholder="Tìm theo tên, email, SĐT..." value={query} onChange={(e) => { setQuery(e.target.value); setPage(1); }} />
+        <select className={ui.control} aria-label="Lọc theo vai trò" value={roleFilter} onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}>
+          <option value="ALL">Tất cả vai trò</option>
+          <option value="FARMER">Vai: Nông hộ</option>
+          <option value="OFFICER">Vai: Cán bộ KT</option>
+          <option value="ACCOUNTANT">Vai: Kế toán</option>
+          <option value="MANAGER">Vai: Trưởng HTX</option>
+        </select>
+      </div>
+
+      <div className={kit.card}>
         {loading ? (
           <div className={kit.state}>Đang tải danh sách...</div>
         ) : filteredMembers.length === 0 ? (
@@ -228,43 +237,33 @@ export function MemberList() {
               <table className={table.table}>
                 <thead>
                   <tr>
-                    <th scope="col">STT</th>
-                    <th scope="col">Thành viên</th>
-                    <th scope="col">Vai trò</th>
+                    <th scope="col">#</th>
+                    <th scope="col">Họ và tên</th>
                     <th scope="col">Số điện thoại</th>
-                    <th scope="col">Số thửa</th>
-                    <th scope="col">Diện tích</th>
+                    <th scope="col">Email</th>
+                    <th scope="col">Vai trò</th>
+                    <th scope="col">Ngày tham gia</th>
                     <th scope="col">Trạng thái</th>
                     <th scope="col">Thao tác</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredMembers.map((member, index) => (
+                  {paged.rows.map((member, index) => (
                     <tr key={member.id}>
-                      <td>{index + 1}</td>
-                      <td>
-                        <div className={kit.person}>
-                          <span className={kit.avatar} aria-hidden="true">
-                            {initials(member.full_name || member.name)}
-                          </span>
-                          <div className={kit.personText}>
-                            <strong>{member.full_name || member.name}</strong>
-                            {member.email && member.email !== 'Chưa cập nhật' && member.email !== member.phone && <small>{member.email}</small>}
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <span className={styles.roleTags}>
-                          {rolesOf(member).map((r) => <Pill key={r} tone="neutral">{ROLE_NAME[r] ?? r}</Pill>)}
-                        </span>
-                      </td>
-                      <td>{phoneOf(member) || 'Chưa cập nhật'}</td>
+                      <td>{paged.start + index + 1}</td>
                       <td>
                         {land[phoneOf(member)]
-                          ? <Link href={`/manager/households/${land[phoneOf(member)].id}`} aria-label={`Chi tiết hộ ${member.full_name || member.name}`}>{land[phoneOf(member)].parcels}</Link>
-                          : '—'}
+                          ? <Link href={`/manager/households/${land[phoneOf(member)].id}`} className={table.action} aria-label={`Chi tiết hộ ${member.full_name || member.name}`}>{member.full_name || member.name}</Link>
+                          : <strong>{member.full_name || member.name}</strong>}
                       </td>
-                      <td>{land[phoneOf(member)] ? `${hectares(land[phoneOf(member)].area)} ha` : '—'}</td>
+                      <td>{phoneOf(member) || 'Chưa cập nhật'}</td>
+                      <td>{member.email && member.email !== 'Chưa cập nhật' && member.email !== member.phone ? member.email : '—'}</td>
+                      <td>
+                        <span className={styles.roleTags}>
+                          {rolesOf(member).map((r) => <Pill key={r} tone={r === 'manager' ? 'green' : r === 'farmer' ? 'neutral' : 'blue'}>{ROLE_NAME[r] ?? r}</Pill>)}
+                        </span>
+                      </td>
+                      <td>{joinedOn(member)}</td>
                       <td>
                         <Pill tone={getStatusBadgeVariant(member.status)}>
                           {member.status === 'ACTIVE' && 'Hoạt động'}
@@ -272,14 +271,11 @@ export function MemberList() {
                         </Pill>
                       </td>
                       <td>
-                        <div className={kit.rowActions}>
-                          <button type="button" className={kit.primary} onClick={() => setEditing(member)}>
-                            Sửa vai
-                          </button>
+                        <div className={ui.rowActions}>
+                          <button type="button" className={ui.small} aria-label={`Xem ${member.full_name || member.name}`} onClick={() => setViewing(member)}><Eye size={14} aria-hidden="true" /></button>
+                          <button type="button" className={ui.small} title="Sửa vai" onClick={() => setEditing(member)}><Pencil size={14} aria-hidden="true" /><span className="sr-only">Sửa vai</span></button>
                           {!rolesOf(member).includes('manager') && (
-                            <button type="button" className={kit.dangerButton} onClick={() => handleDelete(member.id)}>
-                              Xóa
-                            </button>
+                            <button type="button" className={ui.small} title="Xóa" onClick={() => handleDelete(member.id)}><Trash2 size={14} aria-hidden="true" /><span className="sr-only">Xóa</span></button>
                           )}
                         </div>
                       </td>
@@ -288,10 +284,21 @@ export function MemberList() {
                 </tbody>
               </table>
             </div>
-            <div className={kit.footer}>Hiển thị {filteredMembers.length} / {joined.length}</div>
+            <Pager current={paged.current} pages={paged.pages} start={paged.start} shown={paged.rows.length} total={filteredMembers.length} unit="thành viên" onPage={setPage} />
           </>
         )}
       </div>
+
+      <Modal isOpen={!!viewing} onClose={() => setViewing(null)} title={viewing?.full_name || viewing?.name || ''} size="sm">
+        {viewing && (
+          <>
+            <p>{roleText(viewing)} · {phoneOf(viewing) || 'Chưa có số điện thoại'}</p>
+            {land[phoneOf(viewing)] && (
+              <p>{land[phoneOf(viewing)].parcels} thửa · {hectares(land[phoneOf(viewing)].area)} ha</p>
+            )}
+          </>
+        )}
+      </Modal>
 
       <Modal
         isOpen={confirmModal.isOpen}

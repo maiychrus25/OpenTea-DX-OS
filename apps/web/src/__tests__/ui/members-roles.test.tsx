@@ -88,7 +88,7 @@ describe('members with several roles', () => {
 
   test('the invitation can carry several roles', async () => {
     await open()
-    fireEvent.click(screen.getByText('+ Thêm thành viên'))
+    fireEvent.click(screen.getByText('Thêm thành viên'))
     fireEvent.click(screen.getByLabelText('Kế toán'))
     fireEvent.change(screen.getByPlaceholderText('VD: Nguyễn Văn A'), { target: { value: 'Trần Văn B' } })
     fireEvent.change(screen.getByPlaceholderText('VD: 0912345678'), { target: { value: '0912345678' } })
