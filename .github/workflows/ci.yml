@@ -77,6 +77,13 @@ jobs:
         working-directory: apps/disease-api
         run: python -m pytest tests -q -W error
 
+      - name: Tea model matches its registry
+        run: |
+          expected=$(jq -r .sha256 ai-models/tea/registry.json)
+          file=$(jq -r .file ai-models/tea/registry.json)
+          actual=$(sha256sum "ai-models/$file" | cut -d' ' -f1)
+          test "$expected" = "$actual" || { echo "ai-models/$file sha256 $actual != registry $expected"; exit 1; }
+
   lint-n8n:
     name: Lint n8n Workflows
     runs-on: ubuntu-latest

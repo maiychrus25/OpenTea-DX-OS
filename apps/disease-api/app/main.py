@@ -7,6 +7,7 @@
 # See ai-models/ATTRIBUTION.md for full license text
 
 import asyncio
+import hashlib
 import io
 import json
 import logging
@@ -33,6 +34,8 @@ MODEL_FILES = {
     "tea": ("tea_leaf_model.keras", "tea_class_names.txt"),
 }
 TEA_NAMES_VI_FILE = "tea_class_names_vi.json"
+# Pins the tea model's version and sha256 (ai-models/tea/registry.json); a file that differs is not loaded.
+TEA_REGISTRY_FILE = "tea/registry.json"
 # From ai-models/tea/MODEL_CARD.md; override with TEA_CONFIDENCE_THRESHOLD.
 DEFAULT_TEA_CONFIDENCE_THRESHOLD = 0.60
 IMAGE_SIZE = (224, 224)
@@ -112,12 +115,15 @@ class PredictResponse(BaseModel):
     top3: List[Top3Item]
     model: str
     uncertain: bool
+    model_version: Optional[str] = None  # registry version for tea, null for general
 
 
 class HealthResponse(BaseModel):
     status: str
     model_loaded: bool  # the general model, as before
     models: Dict[str, bool]
+    versions: Dict[str, Optional[str]]  # registry version of the loaded tea model
+    reasons: Dict[str, Optional[str]]  # why the tea model is not loaded (English); null when it is
 
 
 class ErrorResponse(BaseModel):
@@ -130,6 +136,8 @@ class ErrorResponse(BaseModel):
 _models: Dict[str, tuple] = {}
 _tea_names_vi: Dict[str, str] = {}
 _tea_threshold = DEFAULT_TEA_CONFIDENCE_THRESHOLD
+_tea_version: Optional[str] = None
+_tea_reason: Optional[str] = None
 
 
 def _read_tea_threshold() -> float:
@@ -144,6 +152,27 @@ def _read_tea_threshold() -> float:
     if not 0.0 < value <= 1.0:
         raise ValueError(f"TEA_CONFIDENCE_THRESHOLD must be a number in (0, 1], got {raw!r}")
     return value
+
+
+def _check_tea_registry() -> tuple:
+    """(version, None) when the tea model file matches registry.json, else (None, English reason)."""
+    path = MODEL_DIR / TEA_REGISTRY_FILE
+    if not path.exists():
+        return None, "registry.json missing"
+    try:
+        registry = json.loads(path.read_text(encoding="utf-8"))
+        version, file, expected = registry["version"], registry["file"], registry["sha256"]
+        model_path = MODEL_DIR / file
+        if file != MODEL_FILES["tea"][0] or not model_path.exists():
+            return None, "model file missing"
+        actual = hashlib.sha256(model_path.read_bytes()).hexdigest()
+    except Exception as exc:
+        logger.error("Failed to read tea registry %s: %s", path, exc)
+        return None, "registry.json unreadable"
+    if actual != expected:
+        logger.error("Tea model sha256 %s does not match registry %s", actual, expected)
+        return None, "sha256 mismatch"
+    return version, None
 
 
 def _load_model_sync(model_file: str, class_names_file: str) -> Optional[tuple]:
@@ -211,22 +240,31 @@ def _run_inference(model, img_array: np.ndarray) -> np.ndarray:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Load both models on startup, cleanup on shutdown."""
-    global _tea_threshold, _tea_names_vi
+    global _tea_threshold, _tea_names_vi, _tea_version, _tea_reason
     _tea_threshold = _read_tea_threshold()
     logger.info("Starting Disease API — loading models...")
     _models.clear()
+    _tea_version, _tea_reason = None, None
+    tea_version, tea_reason = _check_tea_registry()
     for name, (model_file, class_names_file) in MODEL_FILES.items():
+        if name == "tea" and tea_reason:
+            continue
         loaded = _load_model_sync(model_file, class_names_file)
         if loaded is not None:
             _models[name] = loaded
+        elif name == "tea":
+            tea_reason = "model files missing or unreadable"
     names_vi = _load_tea_names_vi() if "tea" in _models else None
     missing = [] if names_vi is None else [i for i in _models["tea"][1] if i not in names_vi]
     if missing:
         logger.error("Tea model disabled: %s lacks Vietnamese names for %s", TEA_NAMES_VI_FILE, missing)
     if names_vi is None or missing:
         _models.pop("tea", None)
-    else:
+        tea_reason = tea_reason or "Vietnamese class names missing or incomplete"
+    elif "tea" in _models:
         _tea_names_vi = names_vi
+        _tea_version = tea_version
+    _tea_reason = None if "tea" in _models else tea_reason
     yield
     logger.info("Disease API shutting down")
 
@@ -250,6 +288,8 @@ def health_check():
         "status": "ok",
         "model_loaded": "general" in _models,
         "models": {name: name in _models for name in MODEL_FILES},
+        "versions": {"tea": _tea_version if "tea" in _models else None},
+        "reasons": {"tea": _tea_reason},
     }
 
 
@@ -359,4 +399,5 @@ async def predict(file: UploadFile = File(...), model: str = "general"):
         top3=top3,
         model=model,
         uncertain=uncertain,
+        model_version=_tea_version if model == "tea" else None,
     )
