@@ -1,0 +1,33 @@
+/* SPDX-License-Identifier: MIT */
+/* Copyright (c) 2026 OpenTea Developers */
+
+.page { display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 680px; margin: 0 auto; padding: 16px; box-sizing: border-box; color: var(--color-ink-primary); }
+.head { display: flex; flex-direction: column; gap: 4px; padding: 18px; border-radius: 16px; background: var(--color-hero-bg); color: var(--color-hero-text); }
+.brand { margin: 0; font-size: 12.5px; font-weight: 600; opacity: 0.85; }
+.title { margin: 0; font-size: 22px; line-height: 1.25; overflow-wrap: anywhere; }
+.code { margin: 0; font-size: 15px; font-weight: 700; overflow-wrap: anywhere; }
+.muted { color: var(--color-ink-secondary); font-size: 13.5px; }
+.locked { display: flex; align-items: center; gap: 8px; margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--color-info-subtle); color: var(--color-info); font-size: 13.5px; font-weight: 600; }
+.verified { display: flex; gap: 10px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--color-border); background: var(--color-warning-subtle); color: var(--color-warning); font-size: 13.5px; }
+.layer { display: flex; flex-direction: column; gap: 10px; min-width: 0; padding: 16px; border-radius: 16px; background: var(--color-surface-card); border: 1px solid var(--color-border); }
+.layerTitle { margin: 0; font-size: 16px; color: var(--color-ink-heading); }
+.plainList { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+.plainList li { display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.pass { color: var(--color-success); font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; }
+.fail { color: var(--color-danger); font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; }
+.batch, .certificate { padding: 10px 12px; border-radius: 12px; background: var(--color-surface-sunken); }
+.timeline { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 13.5px; }
+.timeline li { display: grid; grid-template-columns: minmax(0, 96px) minmax(0, 1fr); gap: 4px 10px; min-width: 0; overflow-wrap: anywhere; }
+.timelineDate { color: var(--color-ink-secondary); font-variant-numeric: tabular-nums; }
+.tableScroll { overflow-x: auto; max-width: 100%; }
+.table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.table th { padding: 8px 10px; text-align: left; background: var(--color-table-head); color: var(--color-ink-secondary); border-bottom: 1px solid var(--color-border); white-space: nowrap; }
+.table td { padding: 8px 10px; border-bottom: 1px solid var(--color-border-row); white-space: nowrap; }
+.link { color: var(--color-primary); font-weight: 600; text-decoration: none; font-size: 14px; }
+.link:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; border-radius: 4px; }
+.disclaimer { display: flex; gap: 8px; margin: 4px 0 0; color: var(--color-ink-secondary); font-size: 12.5px; }
+
+@media (max-width: 480px) {
+  .page { padding: 12px; }
+  .timeline li { grid-template-columns: minmax(0, 1fr); }
+}

@@ -78,6 +78,7 @@ export default function ManagerLotsPage() {
         icon={<Package size={28} />}
         title="Lô hàng"
         description="Kiểm soát nghiệm thu, hồ sơ và mã QR trước khi xuất hàng"
+        actions={<Link href="/manager/lots/from-batches" className={kit.primary}>Đóng lô từ mẻ</Link>}
       />
 
       {/* Manager chỉ xem + export QR — việc tạo lô hàng do Cán bộ kỹ thuật thực hiện (api-contract.md) */}

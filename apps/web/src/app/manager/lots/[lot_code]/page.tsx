@@ -12,6 +12,8 @@ import { CoreGatewayClient } from '@/infrastructure/core/core-gateway.client'
 import { GatewayLotReader } from '@/infrastructure/core/gateway-lot-reader'
 import { StepTrack } from './_components/step-track'
 import { QrVisual } from './_components/qr-visual'
+import { LotSourcesSection } from '@/components/features/lots/LotSourcesSection'
+import { loadLotTraceOrNull } from '@/lib/lots/lot-trace-page'
 import styles from './lot-detail.module.css'
 
 interface PageProps {
@@ -32,6 +34,8 @@ export default async function LotDetailPage({ params }: PageProps) {
   }
 
   const weight = lot.actual_weight_kg ?? lot.estimated_weight_kg
+  // Old snapshots have no batch or certificate lists; the section then says so.
+  const trace = await loadLotTraceOrNull(lotId)
   const statusLabel = lot.status === 'QR_EXPORTED' ? 'Đã xuất QR' : 'Sẵn sàng'
   const statusTone = lot.status === 'QR_EXPORTED' ? 'blue' : 'green'
 
@@ -85,6 +89,8 @@ export default async function LotDetailPage({ params }: PageProps) {
             </div>
           </div>
 
+          {trace && <div className={styles.reviewSection}><LotSourcesSection trace={trace} /></div>}
+
           <div className={styles.readOnlyNotice}>
             Manager chỉ có quyền xem lô hàng. Tạo, sửa, lưu nháp và xuất QR thuộc luồng Officer.
           </div>
@@ -97,9 +103,14 @@ export default async function LotDetailPage({ params }: PageProps) {
             {lot.status === 'QR_EXPORTED' ? 'QR đã sẵn sàng trên trang truy xuất công khai' : 'QR sẽ được sinh sau khi Officer xuất'}
           </span>
           {lot.status === 'QR_EXPORTED' && (
-            <Link href={`/lot/${lot.lot_code}`} className={styles.publicLink}>
-              Mở trang QR
-            </Link>
+            <>
+              <Link href={`/q/${lot.lot_code}`} className={styles.publicLink}>
+                Mở trang QR
+              </Link>
+              <Link href={`/manager/lots/${lot.lot_code}/labels`} className={styles.publicLink}>
+                In tem
+              </Link>
+            </>
           )}
         </div>
       </div>

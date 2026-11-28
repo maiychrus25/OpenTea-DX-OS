@@ -60,6 +60,10 @@ class MockLotTraceRepo implements LotTraceRepository {
 const READY_LOT = { status: 'READY', lot_code: 'LOT-123', harvest_date: new Date('2026-11-02T00:00:00Z') } as LotSummary
 
 describe('ExportQrUseCase', () => {
+  // These lots have no batch source: the old path runs only while labs is on (phase 2).
+  const labsBefore = process.env.DXOS_LABS
+  beforeAll(() => { process.env.DXOS_LABS = '1' })
+  afterAll(() => { if (labsBefore === undefined) delete process.env.DXOS_LABS; else process.env.DXOS_LABS = labsBefore })
   let lotPort: MockLotPort
   let traceRepo: MockLotTraceRepo
   let storagePort: jest.Mocked<StoragePort>
@@ -108,7 +112,7 @@ describe('ExportQrUseCase', () => {
     } as LotTraceData)
     
     await expect(useCase.execute('lot-1')).rejects.toThrow(DomainError)
-    await expect(useCase.execute('lot-1')).rejects.toThrow('WITHDRAWAL_NOT_PASSED')
+    await expect(useCase.execute('lot-1')).rejects.toThrow('Lô hàng chưa an toàn')
   })
 
   it('throws if a parcel of the lot has no harvested round', async () => {
@@ -170,7 +174,7 @@ describe('ExportQrUseCase', () => {
     } as LotTraceData)
     const spyExportQr = jest.spyOn(lotPort, 'exportQr')
 
-    await expect(useCase.execute('lot-1')).rejects.toThrow('WITHDRAWAL_NOT_PASSED')
+    await expect(useCase.execute('lot-1')).rejects.toThrow('Lô hàng chưa an toàn')
     expect(spyExportQr).not.toHaveBeenCalled()
   })
 

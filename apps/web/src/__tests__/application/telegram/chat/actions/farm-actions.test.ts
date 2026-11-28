@@ -247,6 +247,15 @@ describe('harvest.schedule', () => {
 
 describe('lot.create', () => {
   const a = () => action('lot.create')
+  const labsBefore = process.env.DXOS_LABS
+  beforeEach(() => { process.env.DXOS_LABS = '1' })
+  afterEach(() => { if (labsBefore === undefined) delete process.env.DXOS_LABS; else process.env.DXOS_LABS = labsBefore })
+
+  it('refuses with a pointer to batches when labs is off', async () => {
+    delete process.env.DXOS_LABS
+    await expect(a().execute({ parcel_id: 'p1', weight_kg: 120 }, officer, deps, NOW)).rejects.toThrow('Tạo lô từ thửa đã chuyển sang Đóng lô từ mẻ.')
+    expect(mockFakes.createLot).not.toHaveBeenCalled()
+  })
 
   it('is for officers and offers parcels in a state a lot accepts', async () => {
     expect([...a().roles]).toEqual(['officer'])
@@ -286,7 +295,7 @@ describe('lot.export_qr', () => {
   it('exports through ExportQrUseCase', async () => {
     mockFakes.lotById.mockResolvedValue(lot)
     expect(await a().execute({ lot_id: 'l1' }, officer, deps, NOW)).toBe('Đã xuất mã QR cho lô TC-CHE-1.')
-    expect(mockFakes.exportQr).toHaveBeenCalledWith('l1', undefined, process.env.NEXT_PUBLIC_BASE_URL)
+    expect(mockFakes.exportQr).toHaveBeenCalledWith('l1', undefined, process.env.NEXT_PUBLIC_BASE_URL, { htxProfileId: 'htx-tc' })
   })
 
   it("answers not found for another cooperative's lot (Review Focus 1)", async () => {

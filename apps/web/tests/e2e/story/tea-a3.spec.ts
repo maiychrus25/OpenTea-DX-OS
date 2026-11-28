@@ -3,6 +3,7 @@
 
 // "Một ngày của lô chè A3" (spec §7) on the real stack, after `npm run seed` and `make platform-smoke`:
 //   E2E_CORE=1 E2E_BASE_URL=http://localhost:3000 npx playwright test tests/e2e/story/tea-a3.spec.ts --project=chromium --no-deps
+// The stack must run with DXOS_LABS=1: the officer creates lots from parcels and exports them without a batch (frozen since phase 2).
 // The disease-api container must be up. The farmer is the demo user farmer_tc, who owns parcel A3 and has no TOTP step;
 // a login does not change the user. The officer is smoke_officer_tc, because the demo officers must set up TOTP first.
 import { execFileSync } from 'child_process'
@@ -175,6 +176,10 @@ test('một ngày của lô chè A3', async ({ browser }) => {
 
     const card = officer.locator('div', { has: officer.getByText(lotCode, { exact: true }) }).filter({ has: officer.getByRole('button', { name: 'Xuất QR' }) }).last()
     await card.getByRole('button', { name: 'Xuất QR' }).click()
+    // The export dialog lists the HTX's certificates; this HTX has none, so the dialog says the lot goes out without them.
+    const dialog = officer.getByRole('dialog', { name: `Xuất QR cho lô ${lotCode}` })
+    await expect(dialog.getByText('HTX chưa có chứng nhận nào. Lô vẫn xuất QR, không kèm chứng nhận.')).toBeVisible()
+    await dialog.getByRole('button', { name: 'Xuất QR' }).click()
     await expect(officer.getByText(`Đã xuất QR thành công! Mã: ${lotCode}`)).toBeVisible()
   })
 
@@ -184,27 +189,33 @@ test('một ngày của lô chè A3', async ({ browser }) => {
   const publicContext = await browser.newContext()
   const visitor = await publicContext.newPage()
 
-  await test.step('the public trace page shows the exported lot and its safety status', async () => {
+  await test.step('the one public page (/q/<code>) shows the exported lot and the parcel it came from', async () => {
     await visitor.goto(`/q/${encodeURIComponent(lotCode)}`)
-    await expect(visitor.getByText(lotCode, { exact: true })).toBeVisible()
-    await expect(visitor.getByText('Mã thửa: TC-A2', { exact: false })).toBeVisible()
-    await expect(visitor.getByText('Không sử dụng thuốc BVTV').first()).toBeVisible()
-  })
-
-  await test.step('the page the printed QR opens (/lot/<code>) shows the exported lot in Vietnamese', async () => {
-    await visitor.goto(`/lot/${encodeURIComponent(lotCode)}`)
-    await expect(visitor.getByText(lotCode, { exact: true })).toBeVisible()
-    await expect(visitor.getByText('Đã xuất QR', { exact: true })).toBeVisible()
+    await expect(visitor.getByText(`Mã lô ${lotCode}`, { exact: true })).toBeVisible()
+    await expect(visitor.getByRole('heading', { name: '1. Vùng trồng' })).toBeVisible()
+    await expect(visitor.getByText(/Thửa TC-A2 · 0[.,]6 ha/)).toBeVisible()
     await expect(visitor.getByText('QR_EXPORTED')).toHaveCount(0)
-    await expect(visitor.getByText(/đã được xác nhận và khóa/i)).toBeVisible()
   })
 
-  await test.step('the public trace page of the previous A3 round shows the passed withdrawal', async () => {
+  await test.step('the page the printed QR opens (/lot/<code>) redirects to /q/<code> and shows the lock banner', async () => {
+    await visitor.goto(`/lot/${encodeURIComponent(lotCode)}`)
+    // The browser keeps the code percent-encoded in the address bar (È becomes %C3%88).
+    await expect(visitor).toHaveURL(new RegExp(`/q/${encodeURIComponent(lotCode).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`))
+    await expect(visitor.getByText(`Mã lô ${lotCode}`, { exact: true })).toBeVisible()
+    await expect(visitor.getByText(/đã được xác nhận và khoá/)).toBeVisible()
+    await expect(visitor.getByText('QR_EXPORTED')).toHaveCount(0)
+  })
+
+  await test.step('the public page of the previous A3 round shows its spray, its safe verdict and no batch or certificate layer', async () => {
     await visitor.goto('/q/TC-CHE-A3-001')
-    await expect(visitor.getByText('TC-CHE-A3-001', { exact: true })).toBeVisible()
-    await expect(visitor.getByText('Đạt chuẩn An Toàn')).toBeVisible()
-    await expect(visitor.getByText(/Thuốc cuối cùng: Chế phẩm sinh học trừ rầy\. Thời gian cách ly: \d+ ngày \/ yêu cầu 7 ngày\./)).toBeVisible()
-    await expect(visitor.getByText('ĐẠT', { exact: true })).toBeVisible()
+    await expect(visitor.getByText('Mã lô TC-CHE-A3-001', { exact: true })).toBeVisible()
+    await expect(visitor.getByRole('heading', { name: '1. Vùng trồng' })).toBeVisible()
+    await expect(visitor.getByRole('heading', { name: '2. An toàn cách ly' })).toBeVisible()
+    await expect(visitor.getByText(/Đạt: mọi phiếu cân nguồn đã qua ngày an toàn\./)).toBeVisible()
+    await expect(visitor.getByText('Chế phẩm sinh học trừ rầy', { exact: false }).first()).toBeVisible()
+    await expect(visitor.getByRole('heading', { name: '3. Mẻ sao chế biến' })).toHaveCount(0)
+    await expect(visitor.getByRole('heading', { name: '4. Chứng nhận' })).toHaveCount(0)
+    await expect(visitor.getByText(/đã được xác nhận và khoá/)).toBeVisible()
   })
 
   await publicContext.close()

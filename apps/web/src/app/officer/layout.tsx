@@ -5,7 +5,7 @@ import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { AppShell } from '@/components/layout/AppShell'
 import { NoHtxNotice } from '@/components/layout/NoHtxNotice'
-import { Home, Map, FileText, PackageCheck, Stethoscope, FolderOpen, MessageCircle, User, Users, Bell, Calendar, Sparkles, FlaskConical } from 'lucide-react'
+import { Home, Map, FileText, PackageCheck, Stethoscope, FolderOpen, MessageCircle, User, Users, Bell, Calendar, Sparkles, FlaskConical, Flame, Award } from 'lucide-react'
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/repositories/PrismaHtxProfileRepository'
 import { PrismaProposalRepository } from '@/infrastructure/db/agent/PrismaProposalRepository'
@@ -30,6 +30,8 @@ export default async function OfficerLayout({ children }: { children: React.Reac
     { label: 'Bản đồ', href: '/officer/farm-zones', icon: <Map size={20} />, group: 'Vận hành' },
     { label: 'Nông hộ', href: '/officer/households', icon: <Users size={20} />, group: 'Vận hành' },
     { label: 'Nhật ký', href: '/officer/journal', icon: <FileText size={20} />, group: 'Vận hành' },
+    { label: 'Xưởng sao sấy', href: '/officer/processing', icon: <Flame size={20} />, group: 'Vận hành' },
+    { label: 'Chứng nhận', href: '/officer/certificates', icon: <Award size={20} />, group: 'Vận hành' },
     { label: 'Lô hàng', href: '/officer/lots', icon: <PackageCheck size={20} />, group: 'Vận hành' },
     { label: 'Nhật ký bệnh', href: '/officer/diseases', icon: <Stethoscope size={20} />, group: 'Vận hành' },
     { label: 'Danh mục thuốc', href: '/officer/pesticides', icon: <FlaskConical size={20} />, group: 'Vận hành' },

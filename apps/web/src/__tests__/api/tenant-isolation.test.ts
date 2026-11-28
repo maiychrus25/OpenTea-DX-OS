@@ -147,6 +147,11 @@ const rows: Row[] = [
   { name: 'GET cycles/[id]/weighing-summary', role: 'manager', call: () => weighingSummary.GET(json('GET'), ctx('r1')) },
 ]
 
+// Creating a lot from parcels is frozen behind DXOS_LABS (phase 2); these tests exercise that old path.
+const labsBefore = process.env.DXOS_LABS
+beforeAll(() => { process.env.DXOS_LABS = '1' })
+afterAll(() => { if (labsBefore === undefined) delete process.env.DXOS_LABS; else process.env.DXOS_LABS = labsBefore })
+
 beforeEach(() => {
   fns().forEach((fn) => fn.mockReset())
   jest.spyOn(console, 'error').mockImplementation(() => undefined)

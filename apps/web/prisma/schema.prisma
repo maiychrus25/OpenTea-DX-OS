@@ -108,6 +108,10 @@ model HtxProfile {
   input_advances     InputAdvance[]
   settlement_periods SettlementPeriod[]
   ledger_entries     MemberLedgerEntry[]
+  processing_batches ProcessingBatch[]
+  certificates       HtxCertificate[]
+  // Phase 2: names of people reach the public trace page only when the cooperative allows it.
+  public_show_names  Boolean             @default(false)
 
   @@map("htx_profiles")
 }
@@ -287,8 +291,8 @@ model HtxPesticideLabel {
 // â”€â”€â”€ Lots & QR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 model Lot {
-  id                  String    @id @default(cuid())
-  lot_code            String    @unique // e.g. "TC-CHE-20261110-001"
+  id                  String       @id @default(cuid())
+  lot_code            String       @unique // e.g. "TC-CHE-20261110-001"
   commodity           String
   quality_grade       String? // "Grade 1" | "Grade 2" | "Ungraded"
   harvest_date        DateTime
@@ -300,15 +304,18 @@ model Lot {
   packaging_date      DateTime?
   total_weight_kg     Float?
   packaging_spec      String?
-  status              LotStatus @default(DRAFT)
+  status              LotStatus    @default(DRAFT)
   qr_image_url        String? // MinIO URL of generated QR PNG
-  certificate_keys    String[]  @default([]) // MinIO object keys of attached certificates
+  certificate_keys    String[]     @default([]) // MinIO object keys of attached certificates
   public_page_data    Json? // JSONB snapshot of trace data for public QR page
+  dry_grade           DryTeaGrade? // null for lots made before phase 2
   created_by_id       String? // keycloak officer user ID
-  created_at          DateTime  @default(now())
-  updated_at          DateTime  @updatedAt
+  created_at          DateTime     @default(now())
+  updated_at          DateTime     @updatedAt
 
-  lot_parcels LotParcel[]
+  lot_parcels   LotParcel[]
+  batch_sources LotBatchSource[]
+  certificates  LotCertificate[]
 
   htx_profile_id String?
   htx_profile    HtxProfile? @relation(fields: [htx_profile_id], references: [id])
@@ -540,35 +547,38 @@ enum LeafTicketStatus {
 
 // Immutable once written: a wrong ticket is voided and weighed again.
 model FreshLeafTicket {
-  id               String            @id @default(cuid())
-  htx_profile_id   String
-  htx_profile      HtxProfile        @relation(fields: [htx_profile_id], references: [id])
-  ticket_no        String            @unique // {HTX_CODE}-PC-{YYYYMMDD}-{NNN}
-  household_id     String
-  household        Household         @relation(fields: [household_id], references: [id])
-  parcel_id        String
-  parcel           Parcel            @relation(fields: [parcel_id], references: [id])
-  cycle_id         String? // null for a parcel without any flush (legacy data)
-  cycle            ParcelCropCycle?  @relation(fields: [cycle_id], references: [id])
-  grade_id         String
-  grade            LeafGrade         @relation(fields: [grade_id], references: [id])
-  weighed_at       DateTime
-  gross_kg         Decimal           @db.Decimal(7, 1)
-  deduction_pct    Decimal           @db.Decimal(4, 1)
-  net_kg           Decimal           @db.Decimal(7, 1)
-  price_vnd_per_kg Int
-  amount_vnd       BigInt
-  status           LeafTicketStatus  @default(VALID)
-  void_reason      String?
-  voided_by_id     String?
-  voided_at        DateTime?
-  created_by_id    String // Keycloak sub
-  client_id        String? // client-generated uuid, makes replays idempotent
-  settlement_id    String?
-  settlement       MemberSettlement? @relation(fields: [settlement_id], references: [id], onDelete: Restrict)
-  created_at       DateTime          @default(now())
+  id                  String            @id @default(cuid())
+  htx_profile_id      String
+  htx_profile         HtxProfile        @relation(fields: [htx_profile_id], references: [id])
+  ticket_no           String            @unique // {HTX_CODE}-PC-{YYYYMMDD}-{NNN}
+  household_id        String
+  household           Household         @relation(fields: [household_id], references: [id])
+  parcel_id           String
+  parcel              Parcel            @relation(fields: [parcel_id], references: [id])
+  cycle_id            String? // null for a parcel without any flush (legacy data)
+  cycle               ParcelCropCycle?  @relation(fields: [cycle_id], references: [id])
+  grade_id            String
+  grade               LeafGrade         @relation(fields: [grade_id], references: [id])
+  weighed_at          DateTime
+  gross_kg            Decimal           @db.Decimal(7, 1)
+  deduction_pct       Decimal           @db.Decimal(4, 1)
+  net_kg              Decimal           @db.Decimal(7, 1)
+  price_vnd_per_kg    Int
+  amount_vnd          BigInt
+  status              LeafTicketStatus  @default(VALID)
+  void_reason         String?
+  voided_by_id        String?
+  voided_at           DateTime?
+  created_by_id       String // Keycloak sub
+  client_id           String? // client-generated uuid, makes replays idempotent
+  settlement_id       String?
+  settlement          MemberSettlement? @relation(fields: [settlement_id], references: [id], onDelete: Restrict)
+  processing_batch_id String?
+  processing_batch    ProcessingBatch?  @relation(fields: [processing_batch_id], references: [id], onDelete: Restrict)
+  created_at          DateTime          @default(now())
 
   @@unique([created_by_id, client_id])
+  @@index([processing_batch_id])
   @@index([htx_profile_id, weighed_at])
   @@index([household_id])
   @@index([parcel_id])
@@ -718,4 +728,119 @@ model MemberLedgerEntry {
 
   @@index([household_id, created_at])
   @@map("member_ledger_entries")
+}
+
+enum ProcessingBatchStatus {
+  OPEN
+  FINISHED
+  CANCELLED
+}
+
+enum DryTeaGrade {
+  DINH
+  TOM_NON
+  MOC_CAU
+  BOM
+  CAM
+}
+
+model ProcessingBatch {
+  id              String                @id @default(cuid())
+  htx_profile_id  String
+  htx_profile     HtxProfile            @relation(fields: [htx_profile_id], references: [id])
+  batch_code      String                @unique // {HTX_CODE}-MS-{YYYYMMDD}-{NN}
+  processed_on    DateTime              @db.Date
+  status          ProcessingBatchStatus @default(OPEN)
+  master_name     String?
+  shift           String?
+  notes           String?
+  fresh_kg        Decimal?              @db.Decimal(10, 1)
+  dry_kg          Decimal?              @db.Decimal(10, 1)
+  recovery_ratio  Decimal?              @db.Decimal(5, 2)
+  out_of_band     Boolean               @default(false)
+  deviation_note  String?
+  created_by_id   String
+  created_at      DateTime              @default(now())
+  finished_by_id  String?
+  finished_at     DateTime?
+  cancelled_by_id String?
+  cancelled_at    DateTime?
+  cancel_reason   String?
+
+  tickets FreshLeafTicket[]
+  outputs ProcessingBatchOutput[]
+
+  @@index([htx_profile_id, processed_on])
+  @@map("processing_batches")
+}
+
+model ProcessingBatchOutput {
+  id       String          @id @default(cuid())
+  batch_id String
+  batch    ProcessingBatch @relation(fields: [batch_id], references: [id], onDelete: Restrict)
+  grade    DryTeaGrade
+  kg       Decimal         @db.Decimal(9, 1)
+
+  lot_sources LotBatchSource[]
+
+  @@unique([batch_id, grade])
+  @@map("processing_batch_outputs")
+}
+
+model LotBatchSource {
+  id        String                @id @default(cuid())
+  lot_id    String
+  lot       Lot                   @relation(fields: [lot_id], references: [id], onDelete: Restrict)
+  output_id String
+  output    ProcessingBatchOutput @relation(fields: [output_id], references: [id], onDelete: Restrict)
+  kg        Decimal               @db.Decimal(9, 1)
+
+  @@unique([lot_id, output_id])
+  @@index([output_id])
+  @@map("lot_batch_sources")
+}
+
+// Phase 2 track B: certificates with a stored file. Never deleted; revoked instead.
+enum CertificateKind {
+  VIETGAP
+  OCOP
+  ORGANIC
+  OTHER
+}
+
+model HtxCertificate {
+  id             String          @id @default(cuid())
+  htx_profile_id String
+  htx_profile    HtxProfile      @relation(fields: [htx_profile_id], references: [id])
+  kind           CertificateKind
+  number         String
+  issuer         String
+  issued_on      DateTime        @db.Date
+  expires_on     DateTime        @db.Date
+  scope_note     String?
+  file_key       String // para/<htx_code>/Certificates/...
+  file_name      String
+  file_mime      String
+  file_size      Int
+  created_by_id  String // Keycloak sub
+  created_at     DateTime        @default(now())
+  revoked_at     DateTime?
+  revoked_by_id  String?
+  revoke_reason  String?
+
+  lots LotCertificate[]
+
+  @@index([htx_profile_id, expires_on])
+  @@map("htx_certificates")
+}
+
+model LotCertificate {
+  id             String         @id @default(cuid())
+  lot_id         String
+  lot            Lot            @relation(fields: [lot_id], references: [id])
+  certificate_id String
+  certificate    HtxCertificate @relation(fields: [certificate_id], references: [id])
+
+  @@unique([lot_id, certificate_id])
+  @@map("lot_certificates")
 }
