@@ -573,9 +573,15 @@ Officer approves or rejects a pending disease report of their HTX (another HTX's
 ### `GET /health`
 Health check.
 ```json
-{ "status": "ok", "model_loaded": true, "models": { "general": true, "tea": true } }
+{
+  "status": "ok",
+  "model_loaded": true,
+  "models": { "general": true, "tea": true },
+  "versions": { "tea": "tea-2026.11.0" },
+  "reasons": { "tea": null }
+}
 ```
-`model_loaded` is the general model, as before; `models` lists each model. Tea is `false` (and `model=tea` answers 503) when its files are missing or `tea_class_names_vi.json` lacks a class id.
+`model_loaded` is the general model, as before; `models` lists each model. Tea is `false` (and `model=tea` answers 503) when its files are missing, `tea_class_names_vi.json` lacks a class id, or `ai-models/tea/registry.json` is missing or its sha256 differs from the model file. `versions.tea` is the registry `version` when tea is loaded, else `null`; `reasons.tea` is an English reason (for example `"sha256 mismatch"`) when it is not, else `null`. `general` keeps serving either way.
 
 ### `POST /predict`
 Classify crop disease from image.
@@ -597,9 +603,12 @@ file: UploadFile (JPEG/PNG)
     { "label": "healthy", "confidence": 0.026 }
   ],
   "model": "general",
-  "uncertain": false
+  "uncertain": false,
+  "model_version": null
 }
 ```
+
+`model_version` is the registry `version` for `model=tea` and `null` for `general`.
 
 `model=tea` uses the tea leaf model (`ai-models/tea_leaf_model.keras`, 8 classes): `disease_name_en` is the readable class id (`brown_blight` → `Brown blight`), `disease_name_vi` comes from `tea_class_names_vi.json`, and `top3` labels are class ids. When the top confidence is below `TEA_CONFIDENCE_THRESHOLD` (default `0.60`, see `ai-models/tea/MODEL_CARD.md`; a value outside (0, 1] stops startup), `uncertain` is `true`, both names are `null` and `top3` is kept. The general model is never `uncertain`. Every tea result, `healthy` included, still needs an officer's review.
 

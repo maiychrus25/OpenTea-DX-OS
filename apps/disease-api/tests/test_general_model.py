@@ -27,7 +27,13 @@ def client():
 def test_health_reports_general_model_loaded(client):
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json() == {"status": "ok", "model_loaded": True, "models": {"general": True, "tea": True}}
+    assert response.json() == {
+        "status": "ok",
+        "model_loaded": True,
+        "models": {"general": True, "tea": True},
+        "versions": {"tea": "tea-2026.11.0"},  # ai-models/tea/registry.json
+        "reasons": {"tea": None},
+    }
 
 
 def test_predict_returns_existing_response_shape(client):
