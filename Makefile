@@ -12,7 +12,7 @@ export DXOS_GATEWAY_FILE := ../$(RUNTIME)/gateway/apisix.yaml
 # keycloak on every platform-up. Without the attestation the same inputs give the same ID, so nothing is recreated.
 export BUILDX_NO_DEFAULT_ATTESTATIONS := 1
 
-.PHONY: builder-image gateway-sync web-up gateway-up up-core up-docs up-sensors up-ai up-voice stt-measure up-workflow up-chat up-agent stop-extras platform-up platform-smoke apps-smoke platform-down up down build test lint appkit-sync mobile-client mcp-client
+.PHONY: builder-image gateway-sync web-up gateway-up up-core up-docs up-sensors up-ai up-voice stt-measure up-workflow up-chat up-agent stop-extras platform-up apps-recreate platform-smoke apps-smoke platform-down up down build test lint appkit-sync mobile-client mcp-client
 
 # APISIX mounts $(RUNTIME)/gateway/apisix.yaml; create it before any container starts, or Docker makes it a directory.
 gateway-sync:
@@ -37,6 +37,15 @@ platform-up: gateway-sync
 		sleep 2; \
 	done; echo "hasura or apisix did not come back after restart" >&2; exit 1
 	$(COMPOSE) --profile tools run --rm ollama-init
+	$(MAKE) apps-recreate
+
+# gateway-sync flags an installed app (<id>.recreate) when it just made the app's gateway secret or added env_file to its
+# compose file; a restart would not re-read the env file, so the container is recreated, then the flag is cleared.
+apps-recreate:
+	@for flag in $(RUNTIME)/apps/*.recreate; do \
+		[ -e "$$flag" ] || continue; id="$$(basename "$$flag" .recreate)"; \
+		$(COMPOSE) -f $(RUNTIME)/apps/$$id.compose.yml up -d --force-recreate --no-deps --wait app-$$id && rm -f "$$flag" || exit 1; \
+	done
 
 # Rebuild or start web (and the disease service) on the generated route file, so apisix is not recreated on the base one.
 web-up: gateway-sync

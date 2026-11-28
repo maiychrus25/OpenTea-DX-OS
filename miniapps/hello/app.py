@@ -3,7 +3,10 @@
 """Mini-app mẫu: chào người dùng bằng claim trong access token (spec §8). Chỉ dùng thư viện chuẩn."""
 import base64
 import html
+import hmac
 import json
+import os
+import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, quote, urlsplit
 
@@ -29,7 +32,19 @@ def claims(header: str) -> dict | None:
     return data if isinstance(data, dict) else None
 
 
+def from_gateway(header: str | None) -> bool:
+    """Only APISIX knows DXOS_APP_GATEWAY_SECRET and sets it in X-Dxos-App-Gateway; without the secret nothing passes."""
+    secret = os.environ.get("DXOS_APP_GATEWAY_SECRET", "")
+    return bool(secret) and hmac.compare_digest((header or "").encode(), secret.encode())
+
+
 class Handler(BaseHTTPRequestHandler):
+    def refused(self) -> bool:
+        if from_gateway(self.headers.get("X-Dxos-App-Gateway")):
+            return False
+        self.reply(403, "Forbidden", {"Content-Type": "text/plain; charset=utf-8"})
+        return True
+
     def reply(self, code: int, body: str = "", headers: dict | None = None) -> None:
         data = body.encode()
         self.send_response(code)
@@ -41,8 +56,10 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         url = urlsplit(self.path)
-        if url.path == "/healthz":
+        if url.path == "/healthz":  # the Docker check, the only open path
             return self.reply(200, "ok")
+        if self.refused():
+            return
         if url.path != "/":
             return self.reply(404, "Không có trang này")
         if (user := claims(self.headers.get("Authorization", ""))) is None:
@@ -63,6 +80,8 @@ class Handler(BaseHTTPRequestHandler):
             theme_input=f'<input type="hidden" name="theme" value="{theme}">' if theme else ""))
 
     def do_POST(self):
+        if self.refused():
+            return
         if urlsplit(self.path).path != "/echo":
             return self.reply(404, "Không có trang này")
         if claims(self.headers.get("Authorization", "")) is None:
@@ -78,4 +97,6 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
+    if not os.environ.get("DXOS_APP_GATEWAY_SECRET"):
+        print("DXOS_APP_GATEWAY_SECRET is not set: refusing every request except /healthz", file=sys.stderr)
     ThreadingHTTPServer(("", 8080), Handler).serve_forever()

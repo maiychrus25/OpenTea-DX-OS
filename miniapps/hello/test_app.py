@@ -4,11 +4,14 @@
 import base64
 import http.client
 import json
+import os
 import threading
 import unittest
 from http.server import ThreadingHTTPServer
 
 import app
+
+SECRET = "test-gateway-secret"
 
 
 def bearer(claims) -> str:
@@ -19,6 +22,7 @@ def bearer(claims) -> str:
 class HelloTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        os.environ["DXOS_APP_GATEWAY_SECRET"] = SECRET
         cls.server = ThreadingHTTPServer(("127.0.0.1", 0), app.Handler)
         threading.Thread(target=cls.server.serve_forever, daemon=True).start()
 
@@ -28,10 +32,25 @@ class HelloTest(unittest.TestCase):
 
     def request(self, method, path, headers=None, body=None):
         conn = http.client.HTTPConnection("127.0.0.1", self.server.server_port, timeout=5)
-        conn.request(method, path, body=body, headers=headers or {})
+        headers = {"X-Dxos-App-Gateway": SECRET, **(headers or {})}
+        conn.request(method, path, body=body, headers={k: v for k, v in headers.items() if v is not None})
         resp = conn.getresponse()
         self.last_headers = resp.headers
         return resp.status, resp.read().decode()
+
+    def test_refuses_a_request_that_did_not_come_through_the_gateway(self):
+        auth = {"Authorization": bearer({"sub": "x"})}
+        for gateway in (None, "wrong", ""):
+            for method, path in (("GET", "/"), ("GET", "/nope"), ("POST", "/echo")):
+                status, _ = self.request(method, path, {**auth, "X-Dxos-App-Gateway": gateway}, body=b"" if method == "POST" else None)
+                self.assertEqual(status, 403, (gateway, method, path))
+        self.assertEqual(self.request("GET", "/healthz", {"X-Dxos-App-Gateway": None})[0], 200)
+
+    def test_refuses_everything_but_health_without_the_secret(self):
+        del os.environ["DXOS_APP_GATEWAY_SECRET"]
+        self.addCleanup(os.environ.__setitem__, "DXOS_APP_GATEWAY_SECRET", SECRET)
+        self.assertEqual(self.request("GET", "/", {"Authorization": bearer({"sub": "x"}), "X-Dxos-App-Gateway": ""})[0], 403)
+        self.assertEqual(self.request("GET", "/healthz")[0], 200)
 
     def test_greets_name_htx_and_role(self):
         auth = bearer({"name": "An <b>", "htx_code": "TC", "realm_access": {"roles": ["manager", "x"]}})
