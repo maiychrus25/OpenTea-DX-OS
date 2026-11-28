@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Farmer screens (`apps/web`)**: dashboard, ledger, journal, harvest calendar, diagnosis, handbook, bulletin and account pages follow one layout. On phones the hero comes first and the bottom bar is Tổng quan, Nhật ký, Chẩn đoán, Sổ tiền. The ledger shows totals, weigh tickets, input advances and settlements together; diagnosis has a take-photo button. The dashboard no longer repeats the handbook card and the upcoming-harvest table, and the account page drops its disabled edit buttons.
+- **Farmer money and journal detail (`apps/web`)**: weigh tickets show the grade, price per kg, gross weight and deduction; the ledger lists its history rows; the dashboard shows the balance and the last three unsettled tickets; a harvest entry shows the fresh leaf weight.
 
 ### Added
 

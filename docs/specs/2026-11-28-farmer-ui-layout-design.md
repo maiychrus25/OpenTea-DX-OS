@@ -27,6 +27,8 @@ Không làm theo thiết kế ở các chỗ sau:
 - Nút "Đổi mật khẩu", nhiều ảnh minh chứng, ô tìm nhật ký, ảnh trong bản tin, ảnh lịch sử chẩn đoán: chỉ hiện khi mã hiện tại đã có.
 - Mọi tên người, số tiền, giá, ngày, tên phẩm cấp và ảnh trong thiết kế là minh họa.
 
+Bổ sung dữ liệu đã có sẵn mà bộ thiết kế không vẽ (chỉ đọc, không đổi API): phiếu cân có phẩm cấp, đơn giá, kg gộp và phần trăm trừ; Sổ tiền có "Lịch sử ghi sổ"; Tổng quan có thẻ "Tiền búp của tôi" (số dư và ba phiếu gần nhất chưa quyết toán); chi tiết nhật ký có sản lượng búp tươi.
+
 ## 3. Thay đổi
 
 | Đợt | Màn hình | Việc chính |
