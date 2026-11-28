@@ -7,7 +7,12 @@ import React, { useEffect, useRef, useState, useCallback } from 'react'
 import Link from 'next/link'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { MapPin, Search, Plus, Trash2, Edit2, List, Loader2, X } from 'lucide-react'
+import { MapPin, Search, Plus, Trash2, Edit2, List, Loader2, X, Download, Handshake, Store, Users, Warehouse } from 'lucide-react'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { StatCards } from '@/components/features/manager-web/parts'
+import ui from '@/components/features/manager-web/kit.module.css'
+import kit from '@/components/features/dashboard/page-kit.module.css'
+import { downloadCsv } from '@/lib/manager/download-csv'
 import { toast } from 'sonner'
 import { Modal } from '@/components/ui/Modal/Modal'
 import { Button } from '@/components/ui'
@@ -41,7 +46,9 @@ export default function PartnerMap() {
   const [isAdding, setIsAdding] = useState(false)
   const [category, setCategory] = useState('all')
   const nameInputRef = useRef<HTMLInputElement>(null)
-  const visiblePartners = partners.filter(p => category === 'all' || p.partner_type === category)
+  const [find, setFind] = useState('')
+  const visiblePartners = partners.filter(p => (category === 'all' || p.partner_type === category) && p.name.toLocaleLowerCase('vi').includes(find.trim().toLocaleLowerCase('vi')))
+  const ofType = (type: string) => partners.filter(p => p.partner_type === type).length
 
   useEffect(() => {
     if (isAdding) nameInputRef.current?.focus()
@@ -406,22 +413,39 @@ export default function PartnerMap() {
   const canSubmit = form.name.trim().length > 0 && (selected !== null || form.address.trim().length > 0)
 
   return (
-    <div>
-      <div className={mapStyles.toolbar}>
-        {partners.length > 0 ? (
-        <div className={mapStyles.chips} role="group" aria-label="Loại đối tác">
-          <button type="button" className={mapStyles.chip} aria-pressed={category === 'all'} onClick={() => setCategory('all')}>Tất cả · {partners.length}</button>
-          {Object.entries(PARTNER_TYPE_MAP).map(([type, label]) => (
-            <button key={type} type="button" className={mapStyles.chip} aria-pressed={category === type} onClick={() => setCategory(type)}>{label} · {partners.filter(p => p.partner_type === type).length}</button>
-          ))}
-        </div>
-        ) : <span />}
-        <Button type="button" onClick={() => setIsAdding(value => !value)} aria-expanded={isAdding} aria-controls="add-partner-form">
-          {isAdding ? <X size={16} aria-hidden="true" /> : <Plus size={16} aria-hidden="true" />}
-          {isAdding ? 'Đóng biểu mẫu' : 'Thêm đối tác'}
-        </Button>
+    <div className={kit.page}>
+      <PageHeader
+        icon={<MapPin size={28} />}
+        title="Bản đồ đối tác"
+        description="Xem vị trí, thông tin và phân bố các đối tác (người mua, thương lái, nhà kho)."
+        actions={
+          <>
+            <Button type="button" onClick={() => setIsAdding(value => !value)} aria-expanded={isAdding} aria-controls="add-partner-form">
+              {isAdding ? <X size={16} aria-hidden="true" /> : <Plus size={16} aria-hidden="true" />}
+              {isAdding ? 'Đóng biểu mẫu' : 'Thêm đối tác'}
+            </Button>
+            <button type="button" className={kit.secondary} disabled={partners.length === 0} onClick={() => downloadCsv('doi-tac.csv', [['Tên', 'Loại', 'Điện thoại', 'Địa chỉ'], ...visiblePartners.map(p => [p.name, PARTNER_TYPE_MAP[p.partner_type] || p.partner_type, p.contact_phone ?? '', p.address ?? ''])])}><Download size={16} aria-hidden="true" />Xuất</button>
+          </>
+        }
+      />
+      <StatCards items={[
+        { label: 'Tổng đối tác', value: String(partners.length), icon: <Users size={26} /> },
+        { label: 'Người mua', value: String(ofType('BUYER')), icon: <Handshake size={26} /> },
+        { label: 'Thương lái', value: String(ofType('MIDDLEMAN')), icon: <Store size={26} /> },
+        { label: 'Nhà kho', value: String(ofType('WAREHOUSE')), icon: <Warehouse size={26} />, tone: 'amber' },
+      ]} />
+      <div className={ui.bar}>
+        <input type="search" className={`${ui.control} ${ui.grow}`} aria-label="Tìm đối tác" placeholder="Tìm tên đối tác..." value={find} onChange={e => setFind(e.target.value)} />
+        {partners.length > 0 && (
+          <div className={mapStyles.chips} role="group" aria-label="Loại đối tác">
+            <button type="button" className={mapStyles.chip} aria-pressed={category === 'all'} onClick={() => setCategory('all')}>Tất cả · {partners.length}</button>
+            {Object.entries(PARTNER_TYPE_MAP).map(([type, label]) => (
+              <button key={type} type="button" className={mapStyles.chip} aria-pressed={category === type} onClick={() => setCategory(type)}>{label} · {ofType(type)}</button>
+            ))}
+          </div>
+        )}
       </div>
-      <div className={mapStyles.workspace}>
+      <div className={`${mapStyles.workspace} ${styles.designed}`}>
       <div className={mapStyles.sidebar}>
         {/* Keep the map interactive while the form is open. */}
         {isAdding && <div id="add-partner-form" className={styles.panel}>
