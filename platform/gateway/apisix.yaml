@@ -248,6 +248,24 @@ routes:
         headers:
           set:
             X-Dxos-Gateway: "${{DXOS_INTERNAL_GATEWAY_SECRET:=dev-internal-gateway-secret}}"
+  # Core Action API for mini-apps on the internal port: a mini-app forwards the manager's own bearer token. The user claim schema
+  # refuses every service token here, and the web verifies the token again (client, role manager, htx_code) before it acts.
+  - id: internal-apps
+    uri: /api/internal/apps/*
+    upstream_id: web
+    vars: [["server_port", "==", "9081"]]
+    plugins:
+      openid-connect: *oidc_aud
+      limit-count:
+        count: 120
+        time_window: 60
+        key_type: var_combination
+        key: "$http_authorization"
+        rejected_code: 429
+      proxy-rewrite:
+        headers:
+          set:
+            X-Dxos-Gateway: "${{DXOS_INTERNAL_GATEWAY_SECRET:=dev-internal-gateway-secret}}"
   # The web's own token (client dxos-web-service) for the disease API when there is no browser session: a photo sent in
   # Telegram chat (issue #80). Internal port only, POST only; the user route above refuses this token.
   - id: internal-web-disease
