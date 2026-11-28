@@ -13,10 +13,16 @@ import { localDay } from '@/domain/shared/local-day'
 import { fetchJson, LOAD_FAILED_MESSAGE } from '@/lib/api/fetch-json'
 import { formatVnd } from '@/lib/ledger/money'
 import type { LedgerMine } from '@/lib/ledger/types'
-import { dayMonthYear, clockVn } from '@/lib/weighing/format'
+import { dayMonthYear, clockVn, money } from '@/lib/weighing/format'
 import styles from './ledger.module.css'
 
 const kg = (value: number) => value.toLocaleString('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+const ENTRY_LABELS = { LEAF_CREDIT: 'Tiền búp', INPUT_DEBIT: 'Trừ vật tư', PAYOUT: 'HTX đã trả', ADJUSTMENT: 'Điều chỉnh' } as const
+const HISTORY_SHORT = 8
+const signedVnd = (value: string) => {
+  const amount = BigInt(value)
+  return `${amount < BigInt(0) ? '−' : '+'}${formatVnd(amount < BigInt(0) ? -amount : amount)} đ`
+}
 const sumVnd = (rows: { amount_vnd: string; status: string }[]) =>
   rows.reduce((total, r) => (r.status === 'VOIDED' ? total : total + BigInt(r.amount_vnd)), BigInt(0)).toString()
 
@@ -32,6 +38,7 @@ export function balanceText(balanceVnd: string): string {
 export function FarmerLedger() {
   const [ledger, setLedger] = useState<LedgerMine | null>(null)
   const [error, setError] = useState('')
+  const [allHistory, setAllHistory] = useState(false)
 
   useEffect(() => {
     fetchJson<{ data: LedgerMine }>('/api/ledger/mine')
@@ -42,7 +49,7 @@ export function FarmerLedger() {
   if (error) return <p role="alert" className={styles.error}>{error}</p>
   if (!ledger) return <p className={kit.muted}>Đang tải sổ tiền...</p>
 
-  const { unsettled_tickets: tickets, unsettled_advances: advances, lines } = ledger
+  const { unsettled_tickets: tickets, unsettled_advances: advances, lines, entries } = ledger
   // Voided tickets stay listed but are left out of every total.
   const valid = tickets.filter(t => t.status !== 'VOIDED')
   const totalKg = kg(valid.reduce((total, t) => total + Number(t.net_kg), 0))
@@ -121,9 +128,9 @@ export function FarmerLedger() {
                           {t.status === 'VOIDED' && t.void_reason && <span className={kit.muted}>{t.void_reason}</span>}
                         </td>
                         <td><time dateTime={t.weighed_at}>{dayMonthYear(localDay(t.weighed_at))}{' '}<span className={kit.muted}>{clockVn(t.weighed_at)}</span></time></td>
-                        <td>{t.parcel_code}</td>
-                        <td className={styles.ticketNumeric}>{kg(Number(t.net_kg))}</td>
-                        <td className={styles.ticketNumeric}>{formatVnd(t.amount_vnd)} đ</td>
+                        <td>{t.parcel_code}<span className={kit.muted}>{t.grade_name}</span></td>
+                        <td className={styles.ticketNumeric}>{kg(Number(t.net_kg))}<span className={kit.muted}>Gộp {kg(Number(t.gross_kg))}</span><span className={kit.muted}>Trừ {Number(t.deduction_pct).toLocaleString('vi-VN')}%</span></td>
+                        <td className={styles.ticketNumeric}>{formatVnd(t.amount_vnd)} đ<span className={kit.muted}>{money(t.price_vnd_per_kg)} đ/kg</span></td>
                       </tr>
                     ))}
                   </tbody>
@@ -177,6 +184,26 @@ export function FarmerLedger() {
           </section>
         </div>
       </div>
+
+      <section className={kit.pn} aria-labelledby="ledger-history">
+        <div className={kit.ph}><h2 id="ledger-history">Lịch sử ghi sổ</h2></div>
+        {entries.length === 0
+          ? <p className={`${kit.muted} ${styles.pad}`}>Chưa có dòng nào trong sổ.</p>
+          : (
+            <ul className={`${kit.list} ${styles.history}`} aria-label="Lịch sử ghi sổ">
+              {(allHistory ? entries : entries.slice(0, HISTORY_SHORT)).map(e => (
+                <li key={e.id}>
+                  <time dateTime={e.created_at}>{dayMonthYear(localDay(e.created_at))}</time>
+                  <span><strong>{ENTRY_LABELS[e.entry_type] ?? e.entry_type}</strong>{e.note && <small className={kit.muted}>{e.note}</small>}</span>
+                  <b className={e.amount_vnd.startsWith('-') ? styles.minus : styles.plus}>{signedVnd(e.amount_vnd)}</b>
+                </li>
+              ))}
+            </ul>
+          )}
+        {!allHistory && entries.length > HISTORY_SHORT && (
+          <div className={styles.pad}><button type="button" className={kit.btn2} onClick={() => setAllHistory(true)}>Xem tất cả {entries.length} dòng</button></div>
+        )}
+      </section>
     </div>
   )
 }

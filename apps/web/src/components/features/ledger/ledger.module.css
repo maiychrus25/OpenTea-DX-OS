@@ -82,11 +82,11 @@
 .farmerLedger .balanceLine { font-size: clamp(28px, 3vw, 36px); line-height: 1.3; margin-bottom: 10px; }
 .farmerLedger .link { display: inline-flex; align-items: center; min-height: 44px; }
 .farmerTickets { table-layout: fixed; font-variant-numeric: tabular-nums; }
-.ticketNumberColumn { width: 23%; }
-.ticketDateColumn { width: 24%; }
+.ticketNumberColumn { width: 22%; }
+.ticketDateColumn { width: 22%; }
 .ticketParcelColumn { width: 16%; }
-.ticketWeightColumn { width: 12%; }
-.ticketAmountColumn { width: 25%; }
+.ticketWeightColumn { width: 17%; }
+.ticketAmountColumn { width: 23%; }
 .farmerTickets th { white-space: normal; overflow-wrap: anywhere; }
 .farmerTickets td > span, .farmerTickets time > span { display: block; margin-top: 4px; }
 .farmerTickets .ticketNumeric { text-align: right; }
@@ -116,3 +116,20 @@
   .farmerTickets { font-size: 12px; }
   .farmerTickets th, .farmerTickets td { padding: 10px 5px; }
 }
+
+.history li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 9px 16px; border-bottom: 1px solid var(--color-border-row); font-size: 13.5px; }
+.history time { color: var(--color-ink-secondary); font-variant-numeric: tabular-nums; }
+.history small { display: block; overflow-wrap: anywhere; }
+.history b { font-variant-numeric: tabular-nums; }
+.plus { color: var(--color-success); }
+.minus { color: var(--color-danger); }
+.moneyBalance { margin: 0; padding: 10px 16px; font-size: 22px; font-weight: 800; color: var(--color-ink-heading); overflow-wrap: anywhere; }
+.moneyTickets li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 12px; padding: 5px 16px; border-top: 1px solid var(--color-border-row); font-size: 13px; }
+.moneyTickets li strong { text-align: right; font-variant-numeric: tabular-nums; }
+.farmerTickets .ticketNumeric span { white-space: nowrap; font-size: 11.5px; }
+@media (max-width: 767px) {
+  .farmerTickets th, .farmerTickets td { padding-inline: 4px; }
+  .farmerTickets .ticketNumeric span { font-size: 10.5px; }
+  .moneyBalance { font-size: 19px; }
+}
+.moneyHead { display: inline-flex; flex: none; align-items: center; gap: 4px; margin-left: auto; white-space: nowrap; }

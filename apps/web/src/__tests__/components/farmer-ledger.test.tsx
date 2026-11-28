@@ -64,7 +64,7 @@ test('tickets keep their full identifiers, local date-time, parcel, weight, amou
     .toEqual(['Số phiếu', 'Ngày giờ', 'Thửa', 'Kg', 'Thành tiền'])
   const rows = within(table).getAllByRole('row').slice(1)
   expect(within(rows[0]).getAllByRole('cell').map(cell => cell.textContent))
-    .toEqual(['HTX-PC-20261128-001Hợp lệ', '28/11/2026 10:00', 'T-01', '95,0', '1.235.000 đ'])
+    .toEqual(['HTX-PC-20261128-001Hợp lệ', '28/11/2026 10:00', 'T-01Loại 1', '95,0Gộp 100,0Trừ 5%', '1.235.000 đ13.000 đ/kg'])
   expect(rows[1]).toHaveTextContent('HTX-PC-20261128-002')
   expect(rows[1]).toHaveTextContent('Đã huỷ')
   expect(rows[1]).toHaveTextContent('Cân nhầm thửa')
@@ -128,4 +128,14 @@ test('a failed load shows the error and no balance', async () => {
   render(<FarmerLedger />)
   expect(await screen.findByRole('alert')).toHaveTextContent('Không thể tải dữ liệu')
   expect(screen.queryByText(/Số dư/)).not.toBeInTheDocument()
+})
+
+test('the ledger history names each row and signs its amount', async () => {
+  mine = { ...(mine as object), entries: [
+    { id: 'e1', entry_type: 'LEAF_CREDIT', amount_vnd: '1235000', created_at: '2026-11-28T03:00:00Z', note: null },
+    { id: 'e2', entry_type: 'INPUT_DEBIT', amount_vnd: '-30000', created_at: '2026-11-27T03:00:00Z', note: 'Phân NPK' },
+  ] }
+  render(<FarmerLedger />)
+  const rows = within(await screen.findByRole('list', { name: 'Lịch sử ghi sổ' })).getAllByRole('listitem')
+  expect(rows.map(r => r.textContent)).toEqual(['28/11/2026Tiền búp+1.235.000 đ', '27/11/2026Trừ vật tưPhân NPK−30.000 đ'])
 })
