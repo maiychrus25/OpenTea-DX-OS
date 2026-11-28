@@ -182,9 +182,9 @@ export function AppStoreClient({ initial, labs = false }: { initial: AppStoreDat
                         </h2>
                         <span className={styles.version}>v{app.version}</span>
                       </div>
+                      {app.category && <span className={styles.category}>{CATEGORY_LABELS[app.category]}</span>}
                       {app.description && <p className={styles.description}>{app.description}</p>}
                       <p className={styles.meta}>
-                        {app.category && <>{CATEGORY_LABELS[app.category]} · </>}
                         {app.publisher} · {app.license}
                         {app.roles.length > 0 && <> · Dành cho {app.roles.map(role => ROLE_LABELS[role] ?? role).join(', ')}</>}
                         {app.hasPublic && <> · Có trang công khai</>}
@@ -205,8 +205,8 @@ export function AppStoreClient({ initial, labs = false }: { initial: AppStoreDat
                           </Pill>
                         )}
                         {app.status === 'available' && (
-                          <Button size="sm" isLoading={pendingId === app.id} onClick={() => request(app, 'ENABLE')}>
-                            Cài
+                          <Button size="sm" variant="secondary" className={styles.install} aria-label="Cài" isLoading={pendingId === app.id} onClick={() => request(app, 'ENABLE')}>
+                            Cài đặt
                           </Button>
                         )}
                         {app.status === 'enabled' && (
