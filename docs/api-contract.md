@@ -64,6 +64,8 @@ Or stream binary audio directly (Content-Type: audio/wav).
 
 **Roles:** manager, officer, farmer
 
+**GĐ4-A:** tối đa 20 lần mỗi phút cho mỗi người; vượt thì `429` `{ "error": { "code": "RATE_LIMITED", "message": "Bạn nghe nhiều quá, thử lại sau một phút." } }` kèm `Retry-After: 60`. Âm thanh cùng giọng và cùng văn bản được trả từ bộ đệm 7 ngày (`para/_tts-cache/`) mà không gọi Piper. `GET /api/tts/status` vẫn công khai.
+
 ---
 
 ## Chatbot (Manager & Officer)
@@ -1103,6 +1105,14 @@ Cấu hình AI của một HTX, gồm hạn mức USD hằng tháng. **Vai:** `p
 
 ### `GET /api/agent/settings` và `PUT` (thay đổi GĐ1)
 `GET` (`manager`, `officer`) chỉ đọc: `can_edit` luôn `false`. `PUT` không còn lưu gì và luôn trả 403 `FORBIDDEN` ("Cấu hình AI do quản trị nền tảng đặt.").
+
+### `GET /api/agent/settings/cross-check` và `PUT` (GĐ4-A)
+Ngưỡng của agent đối soát chéo, theo HTX của phiên. Quy tắc: [rules-and-limits.md](./rules-and-limits.md) mục 3.31.
+
+- **`GET`** (`manager`, `officer`): `{ "data": { "thresholds": { "grace_days": 10, "fresh_norm_kg_per_ha_flush": 1800, "norm_tolerance": 1.35, "realert_extra": 0.2 }, "can_edit": bool } }`; `can_edit` chỉ `true` với `manager`. Khoá chưa lưu trả giá trị mặc định.
+- **`PUT`** (`manager`): một phần bất kỳ của bốn khoá (ít nhất một), khoá lạ bị từ chối. Khoảng: `grace_days` nguyên 3–30, `fresh_norm_kg_per_ha_flush` nguyên 300–6000, `norm_tolerance` 1.00–3.00 (tối đa 2 chữ số thập phân), `realert_extra` 0.05–1.00. Trả `{ "data": { "thresholds", "can_edit": true } }`. Thay đổi được kiểm toán với tác nhân `user:<id>`.
+
+**Errors:** 400 `VALIDATION_ERROR`; 401 `UNAUTHORIZED`; 403 `FORBIDDEN`.
 
 ---
 
