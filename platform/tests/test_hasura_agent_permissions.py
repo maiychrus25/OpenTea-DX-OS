@@ -104,3 +104,9 @@ def test_phase_tables_expose_exact_columns_without_money_and_stay_in_the_coopera
         assert not MONEY_COLUMNS & set(perm["columns"]), table
         assert perm["filter"] == PHASE_FILTERS[table], table
         assert perm["allow_aggregations"] is True, table
+
+
+def test_agent_reads_only_the_subject_keys_of_its_own_cross_check_proposals():
+    perm = agent_permissions()["platform.agent_proposals"]
+    assert perm["columns"] == ["subject_ids"]
+    assert perm["filter"] == {"_and": [*COOPERATIVE_FILTER["_and"], {"agent": {"_eq": "cross-check"}}]}

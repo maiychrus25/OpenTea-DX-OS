@@ -16,3 +16,8 @@ select_permissions:
         - created_at
         - decided_at
       filter: {_and: [{htx_code: {_eq: X-Hasura-Htx-Code}}, {htx_code: {_neq: ''}}]}
+  - role: agent
+    permission:
+      columns:
+        - subject_ids
+      filter: {_and: [{htx_code: {_eq: X-Hasura-Htx-Code}}, {htx_code: {_neq: ''}}, {agent: {_eq: cross-check}}]}
