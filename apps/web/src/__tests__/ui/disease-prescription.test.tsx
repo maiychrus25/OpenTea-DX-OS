@@ -17,6 +17,7 @@ beforeEach(() => {
   global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
     if (url === '/api/officer/diseases') return { ok: true, status: 200, json: async () => ({ data: [{ id: 'd1', ai_disease_name: 'Thán thư', ai_confidence: 0.9, farmer_name: 'A', parcel_code: 'P-1', detection_date: '2026-11-10T00:00:00Z' }] }) }
     if (url.startsWith('/api/pesticides')) return { ok: true, status: 200, json: async () => ({ data: [product] }) }
+    if (url === '/api/disease-labels') return { ok: true, status: 200, json: async () => ({ data: [{ code: 'green_leafhopper', name_vi: 'Rầy xanh', scientific_name: null, group: 'PEST', is_target: true, sort_order: 1 }] }) }
     review = JSON.parse(String(init?.body))
     return { ok: true, status: 200, json: async () => ({ data: {} }) }
   }) as unknown as typeof fetch
@@ -25,6 +26,7 @@ beforeEach(() => {
 const fill = async () => {
   await screen.findByLabelText(/^Tên bệnh đã xác nhận/)
   fireEvent.change(screen.getByLabelText(/Nhập hướng dẫn/), { target: { value: 'Cắt lá bệnh' } })
+  fireEvent.change(await screen.findByLabelText('Nhãn bệnh/sâu (Bắt buộc khi Duyệt)'), { target: { value: 'green_leafhopper' } })
 }
 
 test('the prescription is optional and hidden until opened', async () => {
