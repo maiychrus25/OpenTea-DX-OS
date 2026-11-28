@@ -2,24 +2,12 @@
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 import type { SeasonReport } from '@/domain/report/views'
+import { SeasonReportUseCase } from '@/application/report/SeasonReportUseCase'
+import { PrismaReportSource } from '@/infrastructure/db/report/PrismaReportSource'
 
-/**
- * The season report's one data step for the two report pages.
- * TODO(integration): SeasonReportUseCase (phase 3 R1): return new SeasonReportUseCase(new PrismaReportSource()).read(htxProfileId, from, to).
- * Until it lands every section is null, so each section shows "Chưa tải được phần này" and the page still renders.
- */
-export async function loadSeasonReport(_htxProfileId: string, from: string, to: string, htxName: string, now: Date): Promise<SeasonReport> {
-  return {
-    htx_name: htxName,
-    from,
-    to,
-    generated_at: now.toISOString(),
-    members: null,
-    purchases: null,
-    member_money: null,
-    processing: null,
-    lots: null,
-    sales: null,
-    safety: null,
-  }
+/** The season report's one data step for the two report pages; each section that fails comes back null. */
+export async function loadSeasonReport(htxProfileId: string, from: string, to: string, htxName: string, _now: Date): Promise<SeasonReport> {
+  const report = await new SeasonReportUseCase(new PrismaReportSource()).read(htxProfileId, from, to)
+  // The use case leaves the name empty when its lookup fails; the page already knows it.
+  return { ...report, htx_name: report.htx_name || htxName }
 }
