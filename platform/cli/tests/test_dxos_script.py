@@ -305,3 +305,40 @@ def test_staff_is_in_usage_and_takes_an_action_and_a_cooperative():
     text = DXOS.read_text()
     assert "staff <enable|disable> <HTX>" in text
     assert "staff)" in text
+
+
+def test_zalo_credentials_reach_the_helper_on_stdin_only(tmp_path):
+    body = subprocess.run(["sed", "-n", "/^zalo_env_write()/,/^}/p", str(DXOS)], capture_output=True, text=True).stdout
+    stub = f"compose() {{ echo \"$@\" >{tmp_path}/args; cat >{tmp_path}/stdin; }}"
+    snippet = (f"set -e\n{stub}\n{body}\n"
+               "printf 'DXOS_ZALO_CLIENT_SECRET=s3cret\\n' | zalo_env_write /run/dxos-zalo zalo.env\n")
+    run = subprocess.run(["bash", "-c", snippet], capture_output=True, text=True)
+    assert run.returncode == 0, run.stderr
+    args = (tmp_path / "args").read_text()
+    assert "s3cret" not in args and "zalo.env" in args and "dxos-zalo-env" in args
+    assert (tmp_path / "stdin").read_text() == "DXOS_ZALO_CLIENT_SECRET=s3cret\n"
+
+
+def test_zalo_disable_removes_its_credentials_and_client(tmp_path):
+    body = subprocess.run(["sed", "-n", "/^zalo_disable()/,/^}/p", str(DXOS)], capture_output=True, text=True).stdout
+    snippet = (f"set -e\nkc_exec() {{ echo kc >>{tmp_path}/calls; }}\n"
+               f"zalo_env_remove() {{ echo \"rm $1/$2\" >>{tmp_path}/calls; }}\n"
+               "zalo_restart() { echo restart >>" f"{tmp_path}/calls; }}\n"
+               f"{body}\nzalo_disable\n")
+    run = subprocess.run(["bash", "-c", snippet], capture_output=True, text=True)
+    assert run.returncode == 0, run.stderr
+    assert (tmp_path / "calls").read_text().splitlines() == ["kc", "rm /run/dxos-zalo/zalo.env", "restart"]
+
+
+def test_zalo_enable_makes_the_client_with_its_role_and_pipes_the_secret():
+    enable = subprocess.run(["sed", "-n", "/^zalo_enable()/,/^}/p", str(DXOS)], capture_output=True, text=True).stdout
+    assert "clientId=dxos-zalo" in enable and "service-account-dxos-zalo" in enable and "--rolename zalo" in enable
+    assert "| zalo_env_write /run/dxos-zalo zalo.env" in enable
+    assert "echo \"$secret\"" not in enable  # the secret is piped to the helper, never echoed
+    disable = subprocess.run(["sed", "-n", "/^zalo_disable()/,/^}/p", str(DXOS)], capture_output=True, text=True).stdout
+    assert "clientId=dxos-zalo" in disable
+
+
+def test_zalo_is_in_usage_and_takes_one_action():
+    text = DXOS.read_text()
+    assert "zalo <enable|disable>" in text and "  zalo)\n    [ $# -eq 1 ] || usage" in text

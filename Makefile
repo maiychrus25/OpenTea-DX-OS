@@ -29,7 +29,7 @@ platform-up: gateway-sync
 # stack needs a restart. A fresh start must not get one: it would hide a wrong migrate order from the smoke test.
 # gateway-sync writes the runtime route file in place (same inode), so later app routes reach APISIX without one.
 	@running="$$($(COMPOSE) ps -q --status running hasura apisix)"; \
-	$(COMPOSE) up -d --build --wait postgres keycloak seaweedfs n8n hasura apisix clamav dxos-scanner mosquitto dxos-ingest dxos-lifecycle ollama dxos-agent dxos-telegram || exit 1; \
+	$(COMPOSE) up -d --build --wait postgres keycloak seaweedfs n8n hasura apisix clamav dxos-scanner mosquitto dxos-ingest dxos-lifecycle ollama dxos-agent dxos-telegram dxos-zalo || exit 1; \
 	[ -z "$$running" ] && exit 0; \
 	$(COMPOSE) restart hasura apisix || exit 1; \
 	for _ in $$(seq 1 60); do \
@@ -59,7 +59,7 @@ EXTRAS_AI := disease-api ollama
 EXTRAS_VOICE := piper dxos-stt
 EXTRAS_WORKFLOW := n8n
 EXTRAS_CHAT := mattermost
-EXTRAS_AGENT := dxos-agent dxos-telegram
+EXTRAS_AGENT := dxos-agent dxos-telegram dxos-zalo
 
 up-docs: gateway-sync
 	$(COMPOSE) up -d --no-deps $(EXTRAS_DOCS)

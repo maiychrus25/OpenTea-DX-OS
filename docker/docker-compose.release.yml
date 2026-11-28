@@ -1,10 +1,10 @@
 # Copyright (c) 2026 OpenTea Developers
 # Licensed under the MIT License. See LICENSE file in the project root for full license information.
 #
-# Release override: run web, disease-api, postgres, migrate, dxos-scanner, the dataops services (dxos-ingest, dxos-lifecycle, dxos-simulator), dxos-agent and dxos-telegram from prebuilt GHCR images instead of building from source.
+# Release override: run web, disease-api, postgres, migrate, dxos-scanner, the dataops services (dxos-ingest, dxos-lifecycle, dxos-simulator), dxos-agent, dxos-telegram and dxos-zalo from prebuilt GHCR images instead of building from source.
 # Usage (from the release bundle root):
 #   export OPENTEA_VERSION=1.2.0
-#   docker compose --env-file docker/.env.local -f docker/docker-compose.yml -f docker/docker-compose.release.yml pull web disease-api postgres migrate dxos-scanner dxos-ingest dxos-lifecycle dxos-agent dxos-telegram
+#   docker compose --env-file docker/.env.local -f docker/docker-compose.yml -f docker/docker-compose.release.yml pull web disease-api postgres migrate dxos-scanner dxos-ingest dxos-lifecycle dxos-agent dxos-telegram dxos-zalo
 #   (dxos-simulator, profile demo, shares the dataops image; add it to pull only when running the demo)
 #   (see README "Bản phát hành" for the order: postgres, platform-init, migrate, platform-init again, rest, then `--profile tools run --rm ollama-init`;
 #   set the secrets in docker/.env.local first: the broker refuses change_me* passwords and SeaweedFS refuses placeholder MINIO_* keys;
@@ -75,6 +75,14 @@ services:
 
   dxos-telegram-env:
     image: ${OPENTEA_IMAGE_PREFIX:-ghcr.io/maiychrus25/opentea-dx-os}-telegram:${OPENTEA_VERSION:?Set OPENTEA_VERSION to the release version, e.g. 1.2.0}
+    build: !reset null
+
+  dxos-zalo:
+    image: ${OPENTEA_IMAGE_PREFIX:-ghcr.io/maiychrus25/opentea-dx-os}-zalo:${OPENTEA_VERSION:?Set OPENTEA_VERSION to the release version, e.g. 1.2.0}
+    build: !reset null
+
+  dxos-zalo-env:
+    image: ${OPENTEA_IMAGE_PREFIX:-ghcr.io/maiychrus25/opentea-dx-os}-zalo:${OPENTEA_VERSION:?Set OPENTEA_VERSION to the release version, e.g. 1.2.0}
     build: !reset null
 
   # Refuse to start with placeholder (change_me*) broker passwords.

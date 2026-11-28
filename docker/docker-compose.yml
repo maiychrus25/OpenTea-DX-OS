@@ -599,6 +599,67 @@ services:
     networks:
       - agrimarket-net
 
+  # Zalo ZNS relay (GĐ4-C). Without OA tokens in the web it only sends heartbeats and stays healthy.
+  dxos-zalo:
+    build: ../platform/zalo
+    image: opentea-dx-os/zalo:local
+    container_name: agrimarket-zalo
+    restart: always
+    mem_limit: 128m
+    read_only: true
+    tmpfs: ["/tmp:size=16m"]  # heartbeat file
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 64
+    cpus: "0.5"
+    environment:
+      DXOS_ZALO_INTERVAL_SECONDS: "30"
+      ZALO_API_BASE: ${ZALO_API_BASE:-https://business.openapi.zalo.me}
+      ZALO_OAUTH_URL: ${ZALO_OAUTH_URL:-https://oauth.zaloapp.com/v4/oa/access_token}
+      # The OA's app id and secret refresh the OA token; the tokens themselves live in the web (platform.zalo_credentials).
+      ZALO_APP_ID: ${ZALO_APP_ID:-}
+      ZALO_APP_SECRET: ${ZALO_APP_SECRET:-}
+      DXOS_GATEWAY_URL: http://apisix:9081
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080/realms/agrimarket
+      DXOS_ZALO_ENV_DIR: /run/dxos-zalo
+    volumes:
+      - dxos-zalo-env:/run/dxos-zalo:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os,sys,time; sys.exit(0 if time.time()-os.path.getmtime(os.environ.get('DXOS_HEARTBEAT_PATH','/tmp/dxos-zalo.heartbeat')) < max(3*float(os.environ.get('DXOS_ZALO_INTERVAL_SECONDS','30')),60) else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - agrimarket-net
+
+  # Writes the relay's Keycloak client credentials for ./dxos zalo (tools profile only). Root with no network, like dxos-agent-env.
+  dxos-zalo-env:
+    build: ../platform/zalo
+    image: opentea-dx-os/zalo:local
+    profiles: ["tools"]
+    restart: "no"
+    user: "0:0"
+    network_mode: none
+    volumes:
+      - dxos-zalo-env:/run/dxos-zalo
+
+  # Test double of the ZNS API for the platform smoke test (profile zalo-test only). Host port is loopback-only.
+  dxos-zalo-stub:
+    build: ../platform/zalo
+    image: opentea-dx-os/zalo:local
+    profiles: ["zalo-test"]
+    restart: "no"
+    read_only: true
+    tmpfs: ["/tmp:size=16m"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    command: ["python", "-m", "dxos_zalo.stub_zns_api"]
+    ports:
+      - "127.0.0.1:8084:8084"
+    networks:
+      - agrimarket-net
+
   # Test-only stand-in for dxos-stt (platform/tests/stub_stt.py): the voice smoke runs it instead of whisper.cpp, under the
   # network alias dxos-stt that the relay posts to. Never started together with the real dxos-stt; not in the release bundle.
   stt-test-stub:
@@ -796,6 +857,7 @@ volumes:
   mattermost_config:
   dxos-agent-env:
   dxos-telegram-env:
+  dxos-zalo-env:
   dxos-web-env:
 
 networks:

@@ -69,6 +69,8 @@ jobs:
             context: ./platform/agent
           - service: telegram
             context: ./platform/telegram
+          - service: zalo
+            context: ./platform/zalo
     steps:
       - uses: actions/checkout@v4
 
@@ -139,6 +141,7 @@ jobs:
           - \`${prefix}-dataops:${VERSION}\`
           - \`${prefix}-agent:${VERSION}\`
           - \`${prefix}-telegram:${VERSION}\`
+          - \`${prefix}-zalo:${VERSION}\`
 
           ## Deploy
 

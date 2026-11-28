@@ -17,7 +17,7 @@ ID_RE='^[a-z][a-z0-9-]{1,30}$'  # same as "id" in platform/apps/manifest.schema.
 HTX_RE='^[A-Z0-9_-]{1,20}$'
 
 usage() {
-  echo "Dùng: ./dxos install <dir> | upgrade <dir> | remove <id> [--purge] | list | validate <dir>... | worker | builder [--once] | agent <enable|disable> <HTX> | staff <enable|disable> <HTX> | telegram <enable|disable> | apps actor enable" >&2
+  echo "Dùng: ./dxos install <dir> | upgrade <dir> | remove <id> [--purge] | list | validate <dir>... | worker | builder [--once] | agent <enable|disable> <HTX> | staff <enable|disable> <HTX> | telegram <enable|disable> | zalo <enable|disable> | apps actor enable" >&2
   exit 2
 }
 
@@ -555,6 +555,60 @@ telegram_disable() {
   echo "Đã tắt Telegram: đã xoá client dxos-telegram, dxos-web-roles và dxos-web-service"
 }
 
+# Zalo relay credentials: dxos-zalo reads zalo.env from dxos-zalo-env. The OA tokens are not here: platform_admin enters them in the web.
+zalo_env_write() {  # <dir in the helper> <file name>: content on stdin
+  compose --profile tools run --rm -T --no-deps dxos-zalo-env \
+    sh -c 'umask 077 && cat > "$1/$2" && chown 10001:10001 "$1/$2" && chmod 600 "$1/$2"' sh "$1" "$2"
+}
+zalo_env_remove() {  # <dir in the helper> <file name>
+  compose --profile tools run --rm -T --no-deps dxos-zalo-env rm -f "$1/$2"
+}
+# A running relay keeps the credentials it started with; restart it so the new ones (or none) take effect.
+zalo_restart() {
+  if [ -n "$(compose ps -q dxos-zalo 2>/dev/null)" ]; then compose restart dxos-zalo >/dev/null; fi
+}
+
+zalo_enable() {
+  local secret
+  secret="$(kc_exec '
+    set -eu
+    K=/opt/keycloak/bin/kcadm.sh
+    "$K" config credentials --server http://localhost:8080 --realm master --user "$KEYCLOAK_ADMIN" --password "$KEYCLOAK_ADMIN_PASSWORD" >/dev/null
+    if ! "$K" get roles/zalo -r agrimarket >/dev/null 2>&1; then
+      "$K" create roles -r agrimarket -s name=zalo -s "description=Rơle Zalo (client credentials, chỉ gọi /api/internal/zalo/*)" >/dev/null
+    fi
+    CID="$("$K" get clients -r agrimarket -q "clientId=dxos-zalo" --fields id --format csv --noquotes | head -n 1)"
+    if [ -z "$CID" ]; then
+      "$K" create clients -r agrimarket \
+        -s clientId=dxos-zalo -s enabled=true -s publicClient=false -s serviceAccountsEnabled=true \
+        -s standardFlowEnabled=false -s implicitFlowEnabled=false -s directAccessGrantsEnabled=false \
+        -s "defaultClientScopes=[\"roles\",\"dx-os-core\"]" -s "optionalClientScopes=[]" >/dev/null
+      CID="$("$K" get clients -r agrimarket -q "clientId=dxos-zalo" --fields id --format csv --noquotes | head -n 1)"
+    fi
+    "$K" add-roles -r agrimarket --uusername service-account-dxos-zalo --rolename zalo >/dev/null
+    "$K" get "clients/$CID/client-secret" -r agrimarket --fields value --format csv --noquotes | head -n 1
+  ')"
+  [ -n "$secret" ] || { echo "Không lấy được client secret của Zalo" >&2; exit 1; }
+  printf 'DXOS_ZALO_CLIENT_ID=dxos-zalo\nDXOS_ZALO_CLIENT_SECRET=%s\n' "$secret" | zalo_env_write /run/dxos-zalo zalo.env
+  zalo_restart
+  echo "Đã bật Zalo: client dxos-zalo (platform_admin nhập token OA ở /platform/zalo; ZALO_APP_ID và ZALO_APP_SECRET trong docker/.env.local để rơle làm mới token)"
+}
+
+zalo_disable() {
+  kc_exec '
+    set -eu
+    K=/opt/keycloak/bin/kcadm.sh
+    "$K" config credentials --server http://localhost:8080 --realm master --user "$KEYCLOAK_ADMIN" --password "$KEYCLOAK_ADMIN_PASSWORD" >/dev/null
+    CID="$("$K" get clients -r agrimarket -q "clientId=dxos-zalo" --fields id --format csv --noquotes | head -n 1)"
+    if [ -n "$CID" ]; then
+      "$K" delete "clients/$CID" -r agrimarket >/dev/null
+    fi
+  '
+  zalo_env_remove /run/dxos-zalo zalo.env
+  zalo_restart
+  echo "Đã tắt Zalo: đã xoá client dxos-zalo"
+}
+
 [ $# -ge 1 ] || usage
 cmd="$1"; shift
 case "$cmd" in
@@ -602,6 +656,14 @@ case "$cmd" in
     case "$subcmd" in
       enable) cd "$ROOT"; telegram_enable ;;
       disable) cd "$ROOT"; telegram_disable ;;
+      *) usage ;;
+    esac ;;
+  zalo)
+    [ $# -eq 1 ] || usage
+    subcmd="$1"
+    case "$subcmd" in
+      enable) cd "$ROOT"; zalo_enable ;;
+      disable) cd "$ROOT"; zalo_disable ;;
       *) usage ;;
     esac ;;
   apps)
