@@ -121,6 +121,9 @@ export const TELEGRAM_COVERAGE: TelegramCoverage = {
     'POST /api/certificates/[id]/revoke',
     'GET /api/htx/public-settings',
     'PUT /api/htx/public-settings',
+    'GET /api/htx/disease-training-consent',
+    'PUT /api/htx/disease-training-consent',
+    'GET /api/disease-labels',
     'GET /api/households',
     // Processing batches (phase 2): the workshop is a web screen, chat does not open or finish a batch.
     'GET /api/processing-batches',
@@ -182,6 +185,7 @@ export const TELEGRAM_COVERAGE: TelegramCoverage = {
     'GET /api/platform/htx/[code]/agent-settings',
     'PUT /api/platform/htx/[code]/agent-settings',
     'PUT /api/platform/pesticides/[id]',
+    'GET /api/platform/disease-dataset',
     'GET /api/dev-login',
     'GET /api/debug/session',
     'GET /api/seed-farmer',

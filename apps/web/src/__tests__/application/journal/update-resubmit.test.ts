@@ -78,6 +78,21 @@ describe('UpdateJournalEntryUseCase resubmission', () => {
     )
   })
 
+  it('"Đã phun" on a prescribed DRAFT applies the withdrawal floor: below it is refused, at it goes through', async () => {
+    port.findById.mockResolvedValue(entry('DRAFT', 'OFFICER'))
+    const spray = (withdrawal_days: number) => ({ activities: [{ activity_type: 'SPRAYING' as const, pesticide_product_id: 'catex', withdrawal_days }], submit: true })
+
+    await expect(useCase.execute('e1', spray(5), 'FARMER', 'hh1', 'htx', actor)).rejects.toBeInstanceOf(WithdrawalBelowFloorError)
+    expect(port.update).not.toHaveBeenCalled()
+
+    await useCase.execute('e1', spray(14), 'FARMER', 'hh1', 'htx', actor)
+    expect(port.update).toHaveBeenCalledWith(
+      'e1',
+      expect.objectContaining({ submitted_role: 'FARMER', activities: [expect.objectContaining({ withdrawal_days: 14 })] }),
+      true
+    )
+  })
+
   it('saving a DRAFT without submit keeps it a draft', async () => {
     port.findById.mockResolvedValue(entry('DRAFT', 'OFFICER'))
     await useCase.execute('e1', { observation: 'x' }, 'FARMER', 'hh1', 'htx', actor)

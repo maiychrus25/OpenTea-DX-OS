@@ -1,0 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 OpenTea Developers
+# Tests of the training stages; no TensorFlow. Pins match requirements.txt and apps/disease-api/requirements-dev.txt.
+numpy==2.4.6
+Pillow==13.0.0
+pytest==9.1.1

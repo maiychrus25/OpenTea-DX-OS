@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2026 OpenTea Developers
 
+import hashlib
 import io
 import json
 import shutil
@@ -18,6 +19,7 @@ GENERAL_CLASSES = ["Tomato___Late_blight", "Tomato___healthy", "Potato___Early_b
 GENERAL_PROBS = [0.5, 0.3, 0.2]  # below the tea threshold on purpose: it must not apply to the general model
 TEA_CLASSES = ["brown_blight", "healthy", "gray_blight"]
 TEA_PROBS = [0.7, 0.2, 0.1]
+TEA_VERSION = "tea-test-1"
 TEA_NAMES_VI = {
     "brown_blight": {"vi": "Tên thử brown blight", "needs_officer_review": True},
     "healthy": {"vi": "Tên thử lá khoẻ", "needs_officer_review": True},
@@ -45,6 +47,15 @@ def _save_stand_in(path, probs):
         model.save(path)
 
 
+def write_registry(path, sha256=None):
+    """registry.json for the stand-in tea model; pass `sha256` to fake a mismatch."""
+    digest = sha256 or hashlib.sha256((path / "tea_leaf_model.keras").read_bytes()).hexdigest()
+    (path / "tea").mkdir(exist_ok=True)
+    (path / "tea" / "registry.json").write_text(
+        json.dumps({"version": TEA_VERSION, "file": "tea_leaf_model.keras", "sha256": digest}), encoding="utf-8"
+    )
+
+
 @pytest.fixture(scope="module")
 def model_dir(tmp_path_factory):
     path = tmp_path_factory.mktemp("models")
@@ -53,6 +64,7 @@ def model_dir(tmp_path_factory):
     _save_stand_in(path / "tea_leaf_model.keras", TEA_PROBS)
     (path / "tea_class_names.txt").write_text("\n".join(TEA_CLASSES) + "\n", encoding="utf-8")
     (path / "tea_class_names_vi.json").write_text(json.dumps(TEA_NAMES_VI, ensure_ascii=False), encoding="utf-8")
+    write_registry(path)
     return path
 
 
@@ -79,6 +91,7 @@ def test_default_model_is_general(start_client):
     with start_client() as client:
         body = _post(client).json()
     assert body["model"] == "general"
+    assert body["model_version"] is None
     assert body["uncertain"] is False
     assert body["disease_name_en"] == "Tomato___Late_blight"
     assert body["disease_name_vi"] == "Cà chua - Bệnh mốc sương"
@@ -95,6 +108,7 @@ def test_tea_model_selected(start_client):
     assert body["disease_name_en"] == "Brown blight"
     assert body["disease_name_vi"] == "Tên thử brown blight"
     assert body["confidence"] == pytest.approx(0.7, abs=1e-4)
+    assert body["model_version"] == TEA_VERSION
     assert [item["label"] for item in body["top3"]] == TEA_CLASSES
 
 
@@ -131,7 +145,13 @@ def test_existing_callers_unchanged(start_client):
 def test_health_reports_both_models(start_client):
     with start_client() as client:
         body = client.get("/health").json()
-    assert body == {"status": "ok", "model_loaded": True, "models": {"general": True, "tea": True}}
+    assert body == {
+        "status": "ok",
+        "model_loaded": True,
+        "models": {"general": True, "tea": True},
+        "versions": {"tea": TEA_VERSION},
+        "reasons": {"tea": None},
+    }
 
 
 def test_general_keeps_serving_without_tea_files(start_client, model_dir, tmp_path, monkeypatch):
@@ -145,6 +165,8 @@ def test_general_keeps_serving_without_tea_files(start_client, model_dir, tmp_pa
         tea_status = _post(client, "?model=tea").status_code
         default_status = _post(client).status_code
     assert health["models"] == {"general": True, "tea": False}
+    assert health["versions"] == {"tea": None}
+    assert health["reasons"]["tea"]
     assert tea_status == 503
     assert default_status == 200
 

@@ -53,6 +53,30 @@ def test_every_permanent_code_is_permanent(stub, code):
     api(stub).send("tok", ITEM)  # the injected failure was used up
 
 
+# (code, description, permanent, token_expired): the owner's ZNS reference of 2026-11-28
+OWNER_TABLE = [
+    (-100, "Zalo gặp lỗi hệ thống", False, False),
+    (-108, "Số điện thoại không hợp lệ", True, False),
+    (-109, "ID mẫu ZNS không hợp lệ", True, False),
+    (-111, "Tham số mẫu ZNS không hợp lệ", True, False),
+    (-112, "Tham số mẫu ZNS không hợp lệ", True, False),
+    (-115, "Hết số dư hoặc hạn mức gửi ZNS", True, False),
+    (-117, "OA không có quyền dùng mẫu ZNS này", True, False),
+    (-118, "Tài khoản Zalo không tồn tại", True, False),
+    (-124, "Access token không hợp lệ hoặc đã hết hạn", False, True),
+    (-126, "Hết số dư hoặc hạn mức gửi ZNS", True, False),
+    (-131, "Mẫu ZNS chưa được duyệt", True, False),
+    (-211, "Hết số dư hoặc hạn mức gửi ZNS", True, False),
+    (-216, "Access token không hợp lệ hoặc đã hết hạn", False, True),
+]
+
+
+def test_the_table_is_the_owner_reference():
+    assert {c: (e.description, e.permanent, e.token_expired) for c, e in ERROR_CODES.items()} == {
+        c: (d, p, t) for c, d, p, t in OWNER_TABLE
+    }
+
+
 def test_server_error_is_retryable(stub):
     control(stub, "/control/fail-next", {"code": 503, "times": 1})
     with pytest.raises(ZnsError) as err:

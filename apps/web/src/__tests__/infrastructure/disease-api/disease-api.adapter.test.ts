@@ -37,7 +37,7 @@ describe('DiseaseApiAdapter', () => {
     expect(init.headers).toEqual({ Authorization: 'Bearer tok-1' })
     expect(init.body).toBeInstanceOf(FormData)
     expect(timeout).toHaveBeenCalledWith(60000)
-    expect(result).toEqual({ disease_name: 'Đạo ôn', confidence_score: 0.9, uncertain: false })
+    expect(result).toEqual({ disease_name: 'Đạo ôn', confidence_score: 0.9, uncertain: false, model_version: null })
     timeout.mockRestore()
   })
 
@@ -68,7 +68,7 @@ describe('DiseaseApiAdapter', () => {
     const result = await new DiseaseApiAdapter('t').predict(image, 'tea')
 
     expect(fetchMock.mock.calls[0][0]).toBe('http://gateway:9081/api/ai/disease/predict?model=tea')
-    expect(result).toEqual({ disease_name: 'Lá khoẻ', confidence_score: 0.988, uncertain: false })
+    expect(result).toEqual({ disease_name: 'Lá khoẻ', confidence_score: 0.988, uncertain: false, model_version: null })
   })
 
   test('returns an uncertain tea result with no name', async () => {
@@ -83,6 +83,7 @@ describe('DiseaseApiAdapter', () => {
       disease_name: null,
       confidence_score: 0.41,
       uncertain: true,
+      model_version: null,
     })
   })
 
@@ -106,5 +107,15 @@ describe('DiseaseApiAdapter on the web-service route', () => {
     const [url, init] = fetchMock.mock.calls[0]
     expect(url).toBe('http://gateway:9081/api/internal/web/disease/predict?model=tea')
     expect(init.headers).toEqual({ Authorization: 'Bearer svc-tok' })
+  })
+
+  test('keeps the model version of a tea result and maps an absent one to null', async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ disease_name_vi: 'Lá khoẻ', confidence: 0.9, model: 'tea', model_version: 'tea-2026.11.0' }), { status: 200 })
+    )
+    expect((await new DiseaseApiAdapter('t').predict(image, 'tea')).model_version).toBe('tea-2026.11.0')
+
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ disease_name_vi: 'Lá khoẻ', confidence: 0.9, model_version: null }), { status: 200 }))
+    expect((await new DiseaseApiAdapter('t').predict(image, 'general')).model_version).toBeNull()
   })
 })

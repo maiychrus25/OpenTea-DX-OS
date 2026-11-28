@@ -104,6 +104,19 @@ describe('technical chatbot passages', () => {
     expect(readPdf).toHaveBeenCalledWith(`${R}quy-trinh.pdf`, true)
   })
 
+  it('names the files of the passages as sources when the model writes no "Nguồn:" line', async () => {
+    const storage = bucket({
+      [`${R}quy-trinh.pdf`]: { size: 5000 },
+      [`${R}quy-trinh.pdf.txt`]: { text: 'Sau khi phun thuoc Sagi doi 7 ngay cach ly.' },
+      [`${R}lich-phun.md`]: { text: 'Sagi phun lua 2, cach ly 7 ngay.' },
+    })
+    create.mockResolvedValue((async function* () { yield { choices: [{ delta: { content: 'Cách ly 7 ngày.' } }] } })())
+    const useCase = new ChatbotUseCase(storage as never, undefined, undefined, undefined, 'TC', async (key) => (await storage.getDocumentContent(`${key}.txt`)) || null)
+    const stream = await useCase.execute('thuoc Sagi cach ly bao lau', [], undefined, undefined, 'technical')
+    const lines = (await new Response(stream).text()).trim().split('\n').map((l) => JSON.parse(l))
+    expect(lines.at(-1).sources.sort()).toEqual(['lich-phun.md', 'quy-trinh.pdf'])
+  })
+
   it('says a scanned PDF cannot be read and puts no text from it in the prompt', async () => {
     const storage = bucket({ [`${R}scan.pdf`]: { size: 5000 } })
     const prompt = await ask(storage, 'cach ly thuoc', async () => null)

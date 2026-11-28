@@ -149,13 +149,13 @@ describe('cooperative settings and deliveries', () => {
       { htxCode: 'OTHER', eventKind: 'PRICE_PUBLISHED', eventId: 'p2', householdId: 'hh-9', phone: '84900000000', templateKey: 'price_today', params: {}, status: 'pending', lastError: null, nextAttemptAt: new Date() },
     ])
     mockState.repo.rows[0].status = 'failed'
-    mockState.repo.rows[0].lastError = 'Zalo -108 not a zalo user'
+    mockState.repo.rows[0].lastError = '-108 Số điện thoại không hợp lệ' // the relay's "<code> <description>"
     for (const role of ['manager', 'accountant']) {
       signIn(role)
       const { data } = await (await getDeliveries(json('http://x/d', 'GET'), undefined)).json()
       expect(data).toHaveLength(2)
       expect(JSON.stringify(data)).not.toMatch(/84912345678|0912345678/)
-      expect(data.find((d: { kind: string }) => d.kind === 'TICKET_RECEIPT')).toMatchObject({ phone_masked: '***678', status: 'failed', reason_vi: 'Số điện thoại này không dùng Zalo.' })
+      expect(data.find((d: { kind: string }) => d.kind === 'TICKET_RECEIPT')).toMatchObject({ phone_masked: '***678', status: 'failed', reason_vi: 'Số điện thoại của hộ không hợp lệ.' })
     }
     const filtered = await (await getDeliveries(json('http://x/d?status=pending&kind=PRICE_PUBLISHED', 'GET'), undefined)).json()
     expect(filtered.data.map((d: { kind: string }) => d.kind)).toEqual(['PRICE_PUBLISHED'])

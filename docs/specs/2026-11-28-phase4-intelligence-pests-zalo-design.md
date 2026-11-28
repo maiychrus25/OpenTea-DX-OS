@@ -300,3 +300,24 @@ Những chỗ code khác thân đặc tả ở trên. Quy tắc đang áp dụng
 - **Token OA** lưu mã hoá AES-256-GCM trong `platform.zalo_credentials`, khoá từ `DXOS_ZALO_TOKEN_KEY`, không lưu trong volume bí mật (§5.3). Volume `dxos-zalo-env` chỉ giữ thông tin client Keycloak của relay. Relay làm mới token bằng `ZALO_APP_ID` và `ZALO_APP_SECRET`.
 - **Trang `/manager/households/[id]`** là trang mới tối giản, chỉ có ô ghi đồng ý nhận tin. Trưởng HTX vào trang này từ số thửa trong danh sách thành viên.
 - **Bảng mã lỗi ZNS** trong `zns_api.py` chưa đối chiếu với tài liệu Zalo; phải kiểm trước khi chạy thật.
+
+## 10. Ghi chú sau phát hành (GĐ4-B, v1.23.0)
+
+Quy tắc đang áp dụng ở [rules-and-limits.md](../rules-and-limits.md) mục 3.36.
+
+- **Xuất ảnh** là route `GET /api/platform/disease-dataset` cộng lệnh `train.py fetch-field`, không phải lệnh `./dxos disease export` của §4.2.
+  - Manifest là JSON `{ items }`, không phải `manifest.csv`.
+  - `fetch-field` đăng nhập bằng cookie phiên `platform_admin` (`DXOS_WEB_COOKIE`), vì các route `/api/platform` chỉ nhận phiên.
+  - Băm trong manifest là băm của ảnh gốc. EXIF và GPS bị xoá lúc tải về, sau khi kiểm băm.
+- **Ngưỡng 150 ảnh** chỉ loại các lớp không có ảnh công khai. Bọ xít muỗi vẫn học từ ảnh công khai khi ảnh thực địa chưa đủ, để không làm mô hình hiện tại kém đi.
+- **Cổng độ chính xác thực địa** (≥ 0,75) giữ riêng ảnh theo HTX khi có từ hai HTX; **quyết định của chủ dự án 2026-11-28 (tối):** khi mới có một HTX thì giữ riêng theo hộ của HTX đó, tự đổi lại tách theo HTX từ HTX thứ hai. Chế độ (`field_split`, `field_split_label`) được ghi trong báo cáo, `registry.json` và dòng in ra. Ảnh một hộ không bao giờ nằm ở hai tập; manifest cấp `household_key` ẩn danh và có phân trang `next_cursor`. Lớp có dưới 3 nhóm (lớp chỉ có ảnh thực địa: dưới 3 hộ) thì `prepare` và `evaluate` in `BLOCKED` nêu lớp và lý do, không còn `AssertionError`. Xem rules-and-limits.md mục 3.36.
+- **Lớp `not_tea_leaf`** hiện chỉ có 300 ảnh nhiễu tổng hợp, chưa có ảnh thật không phải lá.
+- **Tên khoa học** của Rầy xanh và Bọ cánh tơ theo tài liệu chè trong nước: *Empoasca flavescens*, *Physothrips setiventris*.
+- **Tên tiếng Việt cho phía trình duyệt:** `DISEASE_LABEL_VI`, dùng trong thẻ đề xuất của agent, vẫn là hằng số trong mã, vì phía trình duyệt không đọc được CSDL. Một test buộc nó khớp với dữ liệu gieo của `disease_labels`.
+- **Kế hoạch chăm sóc** (`treatment-plan.ts`) vẫn chọn theo tên tiếng Việt. Đã thêm bước riêng cho 4 mục tiêu mới và bước "chụp lại" cho ảnh không phải lá chè.
+- **Kiểm chứng trước pilot (2026-11-28 tối):**
+  - Nút "Nghe" nói qua Piper thật (`rhasspy/wyoming-piper:2.5.2`, giọng `vi_VN-vais1000-medium`). Lần đầu tổng hợp WAV; lần lặp lấy từ bộ đệm.
+  - Một PDF có chữ thật trong `Resources/` được trích, chọn đoạn và đưa tới `qwen2.5:0.5b`. Câu trả lời đúng tháng phát bệnh.
+  - Đã sửa nguồn của chatbot: khi model không tự ghi dòng "Nguồn:", `sources` liệt kê tên các tệp đã đưa vào ngữ cảnh.
+  - `make up-voice` hỏng trên Mac Apple Silicon, vì image whisper.cpp chỉ có bản amd64. Compose nay khai báo `platform: linux/amd64` cho hai dịch vụ whisper.
+

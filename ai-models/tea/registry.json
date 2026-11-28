@@ -1,0 +1,77 @@
+{
+  "version": "tea-2026.11.0",
+  "file": "tea_leaf_model.keras",
+  "sha256": "6c9f3a8ffd8bd838d96166b483e5b723bbcd5cb77caeed33bdd01c2b10b8b324",
+  "classes": [
+    "algal_leaf_spot",
+    "birds_eye_spot",
+    "brown_blight",
+    "gray_blight",
+    "healthy",
+    "helopeltis",
+    "red_leaf_spot",
+    "white_spot"
+  ],
+  "threshold": 0.6,
+  "metrics": {
+    "test_accuracy": 0.8683,
+    "test_images": 1025,
+    "per_class": {
+      "algal_leaf_spot": {
+        "precision": 0.8542,
+        "recall": 0.8662,
+        "f1": 0.8601,
+        "support": 142
+      },
+      "birds_eye_spot": {
+        "precision": 0.5357,
+        "recall": 1.0,
+        "f1": 0.6977,
+        "support": 15
+      },
+      "brown_blight": {
+        "precision": 0.8667,
+        "recall": 0.7852,
+        "f1": 0.8239,
+        "support": 149
+      },
+      "gray_blight": {
+        "precision": 0.7306,
+        "recall": 0.8343,
+        "f1": 0.779,
+        "support": 169
+      },
+      "healthy": {
+        "precision": 0.9702,
+        "recall": 0.912,
+        "f1": 0.9402,
+        "support": 250
+      },
+      "helopeltis": {
+        "precision": 0.9907,
+        "recall": 0.9386,
+        "f1": 0.964,
+        "support": 114
+      },
+      "red_leaf_spot": {
+        "precision": 0.9085,
+        "recall": 0.8528,
+        "f1": 0.8797,
+        "support": 163
+      },
+      "white_spot": {
+        "precision": 0.6897,
+        "recall": 0.8696,
+        "f1": 0.7692,
+        "support": 23
+      }
+    },
+    "field_accuracy": null
+  },
+  "trained_on": "2026-11-10",
+  "sources": [
+    "kimutai",
+    "islam",
+    "billah"
+  ]
+}

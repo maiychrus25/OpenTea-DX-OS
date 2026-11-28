@@ -749,9 +749,55 @@ Một Zalo OA chung của nền tảng; web giữ hàng đợi, người nhận,
 - **Khi HTX tắt Zalo thì không ghi dòng nào.** Khi đã bật, dòng được ghi `skipped` kèm lý do (không bao giờ gửi) khi: loại tin bị tắt; hộ chưa có dòng đồng ý `OPTED_IN` mới nhất; chưa có mẫu; mẫu có tham số không hợp lệ; số điện thoại không hợp lệ; đã đủ hạn mức tháng. Lúc relay thuê dòng, web kiểm lại cài đặt, mẫu và đồng ý: hộ tắt nhận tin sau khi tin đã xếp hàng thì tin thành `skipped` (`CONSENT_REVOKED`).
 - **Hạn mức** mặc định 2.000 tin mỗi tháng Việt Nam mỗi HTX, đếm mọi dòng không phải `skipped`.
 - **Giờ im lặng** mặc định 21:00–06:00 giờ Việt Nam: tin rơi vào khoảng này dời tới 06:00; giá ngày và hết cách ly được gửi từ 05:00.
-- **Thử lại:** tối đa 10 lần, chờ `min(5 × 2^(n−1), 900)` giây (hoặc theo `retry_after_seconds` của relay), vẫn tôn trọng giờ im lặng. Lỗi vĩnh viễn (sai mẫu, số không dùng Zalo, hết hạn mức của Zalo) dừng ngay và hiện lý do tiếng Việt ở `/manager/zalo`. Bảng mã lỗi ZNS trong `platform/zalo/dxos_zalo/zns_api.py` **chưa được đối chiếu với tài liệu Zalo**; phải kiểm trước khi chạy thật.
+- **Thử lại:** tối đa 10 lần, chờ `min(5 × 2^(n−1), 900)` giây (hoặc theo `retry_after_seconds` của relay), vẫn tôn trọng giờ im lặng. Lỗi vĩnh viễn (sai mẫu, số không dùng Zalo, hết hạn mức của Zalo) dừng ngay và hiện lý do tiếng Việt ở `/manager/zalo`. Bảng mã lỗi ZNS trong `platform/zalo/dxos_zalo/zns_api.py` theo bảng tham chiếu ZNS của chủ dự án (2026-11-28); mã -124 và -216 (token hết hạn) làm mới token rồi gửi lại một lần, không đánh dấu thất bại ngay.
 - **Đồng ý nhận tin** (`zalo_consents`, chỉ thêm dòng, dòng mới nhất là trạng thái hiện hành, có trigger kiểm toán): cán bộ và Trưởng HTX ghi `OPTED_IN` hoặc `OPTED_OUT` cho mọi hộ của HTX; nông dân chỉ được ghi `OPTED_OUT` (nguồn `MEMBER`) cho hộ gắn với chính tài khoản của mình; mọi trường hợp khác 403. Mỗi dòng ghi người ghi và thời điểm.
 - **Token OA** chỉ `platform_admin` nhập ở `/platform/zalo`; web lưu mã hoá AES-256-GCM bằng khoá `DXOS_ZALO_TOKEN_KEY` và chỉ hiện lại 4 ký tự cuối. Bản dev và CI dùng một khoá dev công khai; bản release bỏ khoá đó và từ chối khởi động nếu gặp lại nó, còn thiếu khoá thì web chỉ từ chối lưu token (422 `ZALO_TOKEN_KEY_MISSING`). Relay đọc token qua route nội bộ và tự làm mới bằng `ZALO_APP_ID`/`ZALO_APP_SECRET`. Không ghi log token; số điện thoại chỉ hiện 3 số cuối. Chưa có token thì relay chỉ cập nhật nhịp tim và vẫn khoẻ.
+
+### 3.36 Nhãn sâu bệnh, ảnh huấn luyện và sổ mô hình chè (GĐ4-B)
+
+- **Một danh mục nhãn** `disease_labels`, 14 mã:
+  - 5 mục tiêu: `green_leafhopper` (Rầy xanh), `tea_thrips` (Bọ cánh tơ), `red_spider_mite` (Nhện đỏ), `blister_blight` (Phồng lá chè), `helopeltis` (Bọ xít muỗi);
+  - các lớp chè đã có;
+  - `healthy`, `not_tea_leaf`, `other`.
+
+  `GET /api/disease-labels` trả mục tiêu trước.
+- **Duyệt báo cáo bệnh:**
+  - Khi cán bộ xác nhận (`CONFIRMED`), báo cáo **bắt buộc** có một mã nhãn trong danh mục. Thiếu mã thì 400 "Vui lòng chọn nhãn bệnh/sâu trước khi duyệt.", mã lạ cũng 400. Từ chối (`REJECTED`) thì không cần nhãn.
+  - Tên tự gõ vẫn giữ.
+  - Telegram cũng hỏi nhãn khi xác nhận.
+  - Báo cáo cũ chỉ được gán nhãn khi tên trùng đúng `name_vi`.
+- **AI không kê thuốc.** Kế hoạch chăm sóc sau chẩn đoán chỉ gồm việc không dùng thuốc:
+  - mỗi mục tiêu có bước riêng, lấy theo bộ cẩm nang chè;
+  - ảnh "Không phải lá chè" chỉ nhận một bước: chụp lại;
+  - thuốc, liều và thời điểm phun do cán bộ kê theo luồng S1 (khoá cách ly áp như mọi lần phun).
+- **Đồng ý dùng ảnh để huấn luyện:**
+  - mặc định **tắt** theo từng HTX;
+  - chỉ Trưởng HTX bật hoặc tắt (`PUT /api/htx/disease-training-consent`); khi bật có bước xác nhận;
+  - mỗi lần đổi ghi thời điểm và người đổi, và được kiểm toán.
+- **Manifest ảnh thực địa** (`GET /api/platform/disease-dataset`), chỉ `platform_admin`:
+  - chỉ gồm báo cáo `CONFIRMED` có nhãn và ảnh, của HTX đã bật đồng ý;
+  - không có tên hay số điện thoại, và không có mã hộ thật: mỗi mục có `household_key` = 16 ký tự đầu của `sha256(htx_code + ":" + household_id)` (chữ thường, hex), để tách theo hộ mà không lộ hộ nào;
+  - phân trang: mỗi trang tối đa 500 mục, phản hồi là `{ items, next_cursor }`; `next_cursor` khác `null` khi còn trang sau, truyền lại bằng `?cursor=` (con trỏ đục, ổn định cả khi nhiều dòng cùng `confirmed_at`); `since` vẫn dùng được;
+  - mỗi mục có `sha256` của ảnh gốc và một URL tải chỉ sống **15 phút**.
+- **`train.py fetch-field`** đọc manifest:
+  - nguồn là URL, kèm cookie phiên `platform_admin` trong biến `DXOS_WEB_COOKIE`, giống `./dxos para seed`, hoặc là tệp JSON đã tải (một trang `{ items }` hoặc danh sách các trang);
+  - với URL, đi theo `next_cursor` đến khi hết, và tải ảnh của từng trang trước khi lấy trang sau (URL ảnh chỉ sống 15 phút);
+  - lưu `household_key` cạnh mỗi ảnh;
+  - kiểm `sha256` trên đúng byte tải về, rồi **lưu lại chỉ phần điểm ảnh**, nên mọi EXIF và GPS bị xoá;
+  - chạy lại không tải trùng.
+- **Huấn luyện:**
+  - Một lớp chỉ có ảnh thực địa phải có ít nhất **150 ảnh** mới vào mô hình; thiếu thì báo cáo đánh giá ghi "chưa đủ dữ liệu".
+  - Lớp đã có ảnh công khai (Bọ xít muỗi) vẫn dùng ảnh công khai.
+  - Lớp `not_tea_leaf` luôn có 300 ảnh nhiễu tổng hợp.
+  - Cổng của `evaluate`: độ chính xác ≥ 0,80; recall ≥ 0,70 cho mỗi lớp mục tiêu có mặt; độ chính xác ≥ 0,75 trên ảnh thực địa giữ riêng. Không đạt thì in `BLOCKED`, thoát mã 1 và không ghi sổ.
+  - Cách giữ riêng ảnh thực địa tự đổi theo số HTX (quyết định của chủ dự án 2026-11-28): từ **hai HTX** trở lên thì giữ nguyên cả HTX (`field_split: "htx"`, "tách theo HTX"); khi mới có **một HTX** thì giữ nguyên cả hộ của HTX đó (`field_split: "household"`, "tách theo hộ, 1 HTX"). Từ HTX thứ hai trở đi tự quay về tách theo HTX. Chế độ được ghi trong báo cáo đánh giá, trong `registry.json` (`metrics.field_split`, `metrics.field_split_label`) và in ra khi chạy.
+  - Mọi ảnh của một hộ cùng một nhóm (`field:<htx>:<household_key>`), nên không bao giờ nằm ở hai tập train, val, test.
+  - Đơn vị chỉ được giữ riêng khi mọi lớp có ảnh trong đó vẫn còn ít nhất hai nhóm cho train và val. Một lớp có ít hơn **3 nhóm** (với lớp chỉ có ảnh thực địa, là 3 hộ) không tách được train/val/test: `prepare`, `train` và `evaluate` kết thúc bằng `BLOCKED` nêu rõ lớp và lý do, thoát mã khác 0 và không ghi sổ, không còn `AssertionError`.
+- **Sổ mô hình** `ai-models/tea/registry.json`:
+  - ghi `version`, tệp, `sha256`, các lớp, ngưỡng, số liệu, ngày huấn luyện và nguồn dữ liệu;
+  - `disease-api` không nạp tệp `.keras` có băm khác sổ: `/health` báo `models.tea: false` kèm `reasons.tea`, còn mô hình `general` vẫn chạy;
+  - mỗi kết quả chè trả `model_version`, và web lưu nó vào báo cáo;
+  - CI kiểm băm khớp sổ.
 
 ## 4. Security Rules
 

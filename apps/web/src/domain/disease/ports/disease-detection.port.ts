@@ -8,6 +8,8 @@ export interface DiseaseDetectionResult {
   disease_name: string | null;
   confidence_score: number;
   uncertain: boolean;
+  /** The tea model version that answered; null for the general model or an older disease-api. */
+  model_version: string | null;
   // AI INVARIANT: MUST NOT CONTAIN treatment OR recommendation
 }
 

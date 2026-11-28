@@ -18,6 +18,17 @@ import { UNCERTAIN_DISEASE_NAME } from '@/domain/disease/display-disease-name';
 const PENDING = diseaseStatusLabel('PENDING');
 
 const DIAGNOSIS_REQUIRED_MESSAGE = 'Vui lòng nhập tên bệnh đã xác nhận trước khi duyệt.';
+const LABEL_REQUIRED_MESSAGE = 'Chọn nhãn bệnh/sâu trước khi xác nhận.';
+const LABELS_FAILED_MESSAGE = 'Không tải được danh mục nhãn.';
+
+interface DiseaseLabel {
+  code: string;
+  name_vi: string;
+  scientific_name: string | null;
+  group: 'PEST' | 'DISEASE' | 'HEALTHY' | 'OTHER';
+  is_target: boolean;
+  sort_order: number;
+}
 
 interface ReportData {
   id: string;
@@ -41,6 +52,10 @@ export default function OfficerDiseaseDetailPage({ params }: { params: { id: str
   const [prescribing, setPrescribing] = useState(false);
   const [product, setProduct] = useState<PesticideChange>({ productId: null, customName: '', days: null, floorDays: 0 });
   const [dosage, setDosage] = useState('');
+  const [labels, setLabels] = useState<DiseaseLabel[]>([]);
+  const [labelsFailed, setLabelsFailed] = useState(false);
+  const [labelCode, setLabelCode] = useState('');
+  const [labelError, setLabelError] = useState('');
 
   useEffect(() => {
     // In a real implementation, we'd fetch the specific report.
@@ -64,12 +79,27 @@ export default function OfficerDiseaseDetailPage({ params }: { params: { id: str
       .finally(() => setLoading(false));
   }, [params.id]);
 
+  useEffect(() => {
+    fetchJson<{ data: DiseaseLabel[] }>('/api/disease-labels')
+      .then(body => setLabels(body.data))
+      .catch(() => setLabelsFailed(true));
+  }, []);
+
   const handleReview = async (status: 'CONFIRMED' | 'REJECTED') => {
     if (status === 'CONFIRMED' && !confirmedName.trim()) {
       setDiagnosisError(DIAGNOSIS_REQUIRED_MESSAGE);
       return;
     }
+    if (status === 'CONFIRMED' && labelsFailed) {
+      setError(LABELS_FAILED_MESSAGE);
+      return;
+    }
+    if (status === 'CONFIRMED' && !labelCode) {
+      setLabelError(LABEL_REQUIRED_MESSAGE);
+      return;
+    }
     setDiagnosisError('');
+    setLabelError('');
     if (status === 'CONFIRMED' && !treatment.trim()) {
       setError('Vui lòng nhập Hướng dẫn điều trị trước khi duyệt.');
       return;
@@ -86,6 +116,7 @@ export default function OfficerDiseaseDetailPage({ params }: { params: { id: str
           status,
           treatment_recommendation: treatment,
           confirmed_diagnosis: confirmedName.trim(),
+          ...(status === 'CONFIRMED' ? { confirmed_label_code: labelCode } : {}),
           ...(status === 'CONFIRMED' && prescribing && product.productId
             ? { prescription: { pesticide_product_id: product.productId, ...(dosage.trim() ? { dosage: dosage.trim() } : {}) } }
             : {}),
@@ -177,6 +208,33 @@ export default function OfficerDiseaseDetailPage({ params }: { params: { id: str
             )}
           </div>
           <div className={styles.formGroup}>
+            <label className={styles.label} htmlFor="confirmed-label">Nhãn bệnh/sâu (Bắt buộc khi Duyệt)</label>
+            {labelsFailed ? (
+              <p role="alert" className={styles.fieldError}>{LABELS_FAILED_MESSAGE}</p>
+            ) : (
+              <select
+                id="confirmed-label"
+                className={styles.input}
+                value={labelCode}
+                onChange={(e) => { setLabelCode(e.target.value); setLabelError(''); }}
+                aria-invalid={labelError ? true : undefined}
+                aria-describedby={labelError ? 'confirmed-label-error' : undefined}
+                disabled={submitting}
+              >
+                <option value="">Chọn nhãn...</option>
+                <optgroup label="5 dịch hại chủ lực">
+                  {labels.filter(l => l.is_target).map(l => <option key={l.code} value={l.code}>{l.name_vi}</option>)}
+                </optgroup>
+                <optgroup label="Khác">
+                  {labels.filter(l => !l.is_target).map(l => <option key={l.code} value={l.code}>{l.name_vi}</option>)}
+                </optgroup>
+              </select>
+            )}
+            {labelError && (
+              <p id="confirmed-label-error" role="alert" className={styles.fieldError}>{labelError}</p>
+            )}
+          </div>
+          <div className={styles.formGroup}>
             <label className={styles.label} htmlFor="treatment-recommendation">Nhập hướng dẫn (Bắt buộc khi Duyệt):</label>
             <textarea 
               id="treatment-recommendation"
@@ -211,7 +269,7 @@ export default function OfficerDiseaseDetailPage({ params }: { params: { id: str
             <Button 
               variant="primary" 
               onClick={() => handleReview('CONFIRMED')}
-              disabled={submitting}
+              disabled={submitting || labelsFailed}
             >
               Phê duyệt
             </Button>
