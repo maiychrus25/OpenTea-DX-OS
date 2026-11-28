@@ -212,16 +212,6 @@ export default async function FarmerDashboard() {
         />
       </div>
 
-      <div className={styles.shortcuts}>
-        {shortcuts.map(({ href, icon: Icon, tone, title, detail }) => (
-          <Link key={href} href={href} className={`${kit.pn} ${styles.shortcut}`}>
-            <span className={`${kit.ico} ${kit[tone]}`}><Icon size={20} aria-hidden="true" /></span>
-            <span className={kit.grow}><strong>{title}</strong><small>{detail}</small></span>
-            <ChevronRight size={18} aria-hidden="true" />
-          </Link>
-        ))}
-      </div>
-
       {withdrawals.length > 0 && (
         <div className={`${styles.pair} ${styles.single}`}>
           <section className={styles.alert} role="status">
@@ -307,6 +297,16 @@ export default async function FarmerDashboard() {
             </ul>
           )}
         </section>
+      </div>
+
+      <div className={styles.shortcuts}>
+        {shortcuts.map(({ href, icon: Icon, tone, title, detail }) => (
+          <Link key={href} href={href} className={`${kit.pn} ${styles.shortcut}`}>
+            <span className={`${kit.ico} ${kit[tone]}`}><Icon size={20} aria-hidden="true" /></span>
+            <span className={kit.grow}><strong>{title}</strong><small>{detail}</small></span>
+            <ChevronRight size={18} aria-hidden="true" />
+          </Link>
+        ))}
       </div>
 
       <section className={`${kit.pn} ${styles.harvest}`} aria-label="Lịch thu hái sắp tới">

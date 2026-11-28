@@ -88,15 +88,14 @@
   .pair, .columns { grid-template-columns: minmax(0, 1fr); }
 }
 
-/* Phone: banner, weather, warning, then the parcels; the rest stays reachable below. */
+/* Keep the visual order in sync with the DOM: hero/weather, warning, prices, parcels. */
 @media (max-width: 767px) {
   .page { gap: 12px; }
   .page .pair, .page .columns { display: contents; }
-  .hero { order: 1; }
-  .alert { order: 3; }
-  .parcels { order: 4; }
-  .shortcuts { order: 5; }
-  .recent { order: 6; }
-    .harvest { order: 8; }
+  .hero a, .alertLink { min-height: 44px; }
+  .alertLink { display: inline-flex; align-items: center; flex: none; }
+  .parcel { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .parcel > span[class*='tag'] { grid-column: 2 / -1; justify-self: start; white-space: normal; }
+  .parcel strong, .parcel small, .entry { overflow-wrap: anywhere; }
   .entry { flex-wrap: wrap; }
 }
