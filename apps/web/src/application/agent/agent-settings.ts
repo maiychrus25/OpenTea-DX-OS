@@ -16,7 +16,9 @@ import { ValidationError } from '@/domain/errors'
 import { PrismaAgentSettingsRepository } from '@/infrastructure/db/agent/PrismaAgentSettingsRepository'
 
 export interface AgentSettingsView {
-  agents: Record<ConfigurableAgent, { enabled: boolean; provider: AgentProvider; model: string | null; thresholds: Record<string, unknown> }>
+  agents: Record<ConfigurableAgent, { enabled: boolean; provider: AgentProvider; model: string | null; thresholds: Record<string, unknown> }> &
+    // The cross-check agent has thresholds only; it appears once the cooperative saved some.
+    { 'cross-check'?: { enabled: boolean; provider: AgentProvider; model: string | null; thresholds: Record<string, unknown> } }
   report_time: string
   budget: { monthly_limit_usd: number | null; spent_usd: number; month: string; exhausted: boolean }
 }
@@ -43,6 +45,9 @@ export class AgentSettingsUseCase {
         model: row?.model ?? null,
         thresholds: row?.thresholds ?? {},
       }
+    }
+    if (snapshot.crossCheckThresholds) {
+      agents['cross-check'] = { enabled: true, provider: 'ollama', model: null, thresholds: snapshot.crossCheckThresholds }
     }
     return {
       agents,
