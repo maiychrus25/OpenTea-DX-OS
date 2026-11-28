@@ -36,6 +36,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The cooperative head's home page is the director board. The world tea price and the area cards moved off it.
 - The accountant can read the partner list, to pick the buyer of a wholesale order.
 
+## [1.20.0] - 2026-11-28
+
+### Added
+
+- **Processing batches (`apps/web`)**:
+  - Officers and heads open a roasting and drying batch, add whole weighing tickets that are not in another batch, and record the dry tea out by grade (Đinh, Tôm nõn, Móc câu, Bồm, Cám).
+  - The fresh to dry ratio is checked against 4.50–5.00 : 1. A batch outside that range finishes only with a written explanation.
+  - A ticket in a batch cannot be voided.
+- **Lots from batches (`apps/web`)**: a lot is closed from the dry tea stock of finished batches, one grade at a time. Its weight is the stock drawn, never more than what is left.
+  - Its parcels and flushes come from the batches' tickets.
+  - Each ticket is checked against withdrawal on its own weigh day.
+- **Certificates (`apps/web`)**:
+  - The cooperative stores VietGAP, OCOP, organic and other certificates with number, issuer, dates and the original file (PDF, JPG or PNG up to 10 MB) in the stack's SeaweedFS store.
+  - A QR export attaches the certificates valid that day.
+  - The head can revoke a certificate, and the public page then shows it as revoked.
+- **One public QR page (`apps/web`)**:
+  - `/q/<lot code>` shows four layers: origin, withdrawal safety ticket by ticket, the processing batches with their ratio, and certificates.
+  - Names of people are hidden unless the head allows them in the cooperative profile.
+  - Old labels pointing at `/lot/<lot code>` are redirected with a 308.
+  - A label page prints QR labels at 50×30, 40×30 or 60×40 mm, one label per page.
+
+### Changed
+
+- Creating a lot straight from parcels (`POST /api/lots` and the chat action) and exporting a lot that has no batch behind it now need `DXOS_LABS`; lots already exported keep their pages.
+- Lot codes are numbered under a lock, so two lots made at the same moment no longer collide.
+
 ## [1.19.0] - 2026-11-28
 
 ### Added
