@@ -16,7 +16,7 @@ const signIn = (role: string | null) => (auth as jest.Mock).mockResolvedValue(ro
 
 beforeEach(() => {
   jest.clearAllMocks()
-  execute.mockResolvedValue({ items: [] })
+  execute.mockResolvedValue({ items: [], next_cursor: null })
 })
 
 describe('GET /api/platform/disease-dataset', () => {
@@ -32,12 +32,12 @@ describe('GET /api/platform/disease-dataset', () => {
 
   it('returns the manifest uncached, passing since and htx', async () => {
     signIn('platform_admin')
-    execute.mockResolvedValue({ items: [{ report_id: 'r1' }] })
-    const res = await get('?since=2026-11-01&htx=TC')
+    execute.mockResolvedValue({ items: [{ report_id: 'r1' }], next_cursor: 'abc' })
+    const res = await get('?since=2026-11-01&htx=TC&cursor=abc')
     expect(res.status).toBe(200)
     expect(res.headers.get('Cache-Control')).toBe('no-store')
-    expect(await res.json()).toEqual({ items: [{ report_id: 'r1' }] })
-    expect(execute).toHaveBeenCalledWith({ since: new Date('2026-11-01'), htxCode: 'TC' })
+    expect(await res.json()).toEqual({ items: [{ report_id: 'r1' }], next_cursor: 'abc' })
+    expect(execute).toHaveBeenCalledWith({ since: new Date('2026-11-01'), htxCode: 'TC', cursor: 'abc' })
   })
 
   it('answers 400 for a bad date', async () => {

@@ -113,7 +113,7 @@ maybeDisease('disease labels, consent and the training manifest on a real Postgr
     const mine = await dataset.findConsented({ htxCode: sites.yes.code, limit: 500 })
     expect(mine.map((r) => r.photo_minio_key).sort()).toEqual(['k', 'yes/ok.jpg', 'yes/old.jpg'])
     expect(mine.find((r) => r.report_id === confirmed.id)).toMatchObject({ label_code: 'helopeltis', htx_code: sites.yes.code })
-    expect(Object.keys(mine[0]).sort()).toEqual(['confirmed_at', 'htx_code', 'label_code', 'photo_minio_key', 'report_id'])
+    expect(Object.keys(mine[0]).sort()).toEqual(['confirmed_at', 'household_id', 'htx_code', 'label_code', 'photo_minio_key', 'report_id'])
   })
 
   it('honours since and limit, oldest first', async () => {
@@ -121,6 +121,9 @@ maybeDisease('disease labels, consent and the training manifest on a real Postgr
     expect(after.map((r) => r.photo_minio_key)).toEqual(['yes/ok.jpg', 'k'])
     expect((await dataset.findConsented({ htxCode: sites.yes.code, limit: 500 }))[0].photo_minio_key).toBe('yes/old.jpg')
     expect(await dataset.findConsented({ htxCode: sites.yes.code, limit: 1 })).toHaveLength(1)
+    const [first] = await dataset.findConsented({ htxCode: sites.yes.code, limit: 1 })
+    const rest = await dataset.findConsented({ htxCode: sites.yes.code, after: { confirmed_at: first.confirmed_at, id: first.report_id }, limit: 500 })
+    expect(rest.map((r) => r.photo_minio_key)).toEqual(['yes/ok.jpg', 'k'])
   })
 
   it('stops contributing the moment the head switches consent off', async () => {
