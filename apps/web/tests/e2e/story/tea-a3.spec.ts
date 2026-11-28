@@ -199,7 +199,8 @@ test('một ngày của lô chè A3', async ({ browser }) => {
 
   await test.step('the page the printed QR opens (/lot/<code>) redirects to /q/<code> and shows the lock banner', async () => {
     await visitor.goto(`/lot/${encodeURIComponent(lotCode)}`)
-    await expect(visitor).toHaveURL(`**/q/${lotCode}`)
+    // The browser keeps the code percent-encoded in the address bar (È becomes %C3%88).
+    await expect(visitor).toHaveURL(new RegExp(`/q/${encodeURIComponent(lotCode).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`))
     await expect(visitor.getByText(`Mã lô ${lotCode}`, { exact: true })).toBeVisible()
     await expect(visitor.getByText(/đã được xác nhận và khoá/)).toBeVisible()
     await expect(visitor.getByText('QR_EXPORTED')).toHaveCount(0)
