@@ -43,7 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **The cross-check agent (A13) never reached Hasura (since 1.22.0).** It declared its spraying and ticket filters as `timestamptz`, while `journal_entries.entry_date` and `fresh_leaf_tickets.weighed_at` are `timestamp` columns. Hasura refused the query, and the run only logged an error. The filters now use `timestamp`, from Vietnam midnight written in UTC.
+- **The cross-check agent (A13) never reached Hasura (since 1.22.0).** It declared its spraying and ticket filters as `timestamptz`, while `journal_entries.entry_date` and `fresh_leaf_tickets.weighed_at` are `timestamp` columns. Hasura refused the query, and the run only logged an error. The filters now use `timestamp`, from Vietnam midnight written in UTC. Its read of its own earlier proposals also filtered on a column the agent role cannot see; the Hasura permission already limits it to cross-check proposals. A test now checks every field it reads against the agent role's columns.
 
 ### Upgrade notes
 
