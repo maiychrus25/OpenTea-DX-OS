@@ -25,6 +25,7 @@ services:
       - ../platform/postgres/init/07-telemetry-views.sql:/docker-entrypoint-initdb.d/07-telemetry-views.sql
       - ../platform/postgres/init/08-agent.sql:/docker-entrypoint-initdb.d/08-agent.sql
       - ../platform/postgres/init/09-telegram.sql:/docker-entrypoint-initdb.d/09-telegram.sql
+      - ../platform/postgres/init/10-zalo.sql:/docker-entrypoint-initdb.d/10-zalo.sql
       - ../platform/postgres/init/11-hasura-agent-metrics.sql:/docker-entrypoint-initdb.d/11-hasura-agent-metrics.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U agrimarket"]
@@ -175,6 +176,8 @@ services:
       DXOS_TELEGRAM_WEBAPP_KEY: ${DXOS_TELEGRAM_WEBAPP_KEY:-}
       # The web's HTTPS base URL (D17): chat shows the Mini App buttons only when it is set. Same value as the relay's.
       DXOS_WEB_PUBLIC_URL: ${DXOS_WEB_PUBLIC_URL:-}
+      # Encrypts the Zalo OA tokens at rest (64 hex characters). Empty = the web refuses to store them.
+      DXOS_ZALO_TOKEN_KEY: ${DXOS_ZALO_TOKEN_KEY:-}
       HOSTNAME: "0.0.0.0"
       # Frozen features (ADR 0005): app factory, autopilot, strategy agent, MCP, staff sync. Off unless "1" or "true".
       DXOS_LABS: ${DXOS_LABS:-}

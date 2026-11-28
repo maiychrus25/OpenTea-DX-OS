@@ -18,6 +18,7 @@ const fake = new FakeTicketPort()
 const priceRepo = { listGrades: jest.fn(), createGrade: jest.fn(), updateGrade: jest.fn(), pricesFor: jest.fn(), upsertPrices: jest.fn() }
 const guard = { household: jest.fn(), parcel: jest.fn(), leafGrade: jest.fn(), leafTicket: jest.fn(), cropCycle: jest.fn() }
 
+jest.mock('@/application/zalo/zalo-services', () => ({ zaloNotifier: () => ({ enqueue: jest.fn(async () => ({ queued: 0, skipped: 0 })) }) }))
 jest.mock('@/auth', () => ({ auth: jest.fn() }))
 jest.mock('@/lib/api/tenant', () => ({ requireTenant: jest.fn() }))
 jest.mock('@/lib/api/tenant-guard', () => ({ TenantGuard: jest.fn(() => guard) }))

@@ -15,6 +15,7 @@ import { FakeSettlementPort } from '../../../__tests__/__mocks__/settlement-fake
 const fake = new FakeSettlementPort()
 const guard = { household: jest.fn() }
 
+jest.mock('@/application/zalo/zalo-services', () => ({ zaloNotifier: () => ({ enqueue: jest.fn(async () => ({ queued: 0, skipped: 0 })) }) }))
 jest.mock('@/auth', () => ({ auth: jest.fn() }))
 jest.mock('@/lib/api/tenant', () => ({ requireTenant: jest.fn() }))
 jest.mock('@/lib/api/tenant-guard', () => ({ TenantGuard: jest.fn(() => guard) }))

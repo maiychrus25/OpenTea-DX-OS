@@ -6,6 +6,7 @@ import { requireTenant } from '@/lib/api/tenant'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
 import { jsonBody, paramOf } from '@/lib/api/route-helpers'
 import { settlementCloseSchema } from '@/lib/validations/ledger.schema'
+import { zaloNotifier } from '@/application/zalo/zalo-services'
 import { CloseSettlementPeriodUseCase } from '@/application/ledger/SettlementUseCases'
 import { PrismaSettlementRepository } from '@/infrastructure/db/ledger/PrismaSettlementRepository'
 
@@ -13,7 +14,7 @@ import { PrismaSettlementRepository } from '@/infrastructure/db/ledger/PrismaSet
 async function closePeriod(request: Request, context: unknown) {
   const tenant = await requireTenant()
   const body = settlementCloseSchema.parse(await jsonBody(request))
-  const data = await new CloseSettlementPeriodUseCase(new PrismaSettlementRepository()).execute(tenant, await paramOf(context), {
+  const data = await new CloseSettlementPeriodUseCase(new PrismaSettlementRepository(), undefined, zaloNotifier()).execute(tenant, await paramOf(context), {
     household_count: body.expected_household_count,
     payable_total_vnd: body.expected_payable_total_vnd,
   })
