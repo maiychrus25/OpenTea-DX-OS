@@ -7,6 +7,7 @@ import { TenantGuard } from '@/lib/api/tenant-guard'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
 import { jsonBody, requireRole } from '@/lib/api/route-helpers'
 import { leafTicketCreateSchema, leafTicketListQuerySchema } from '@/lib/validations/weighing.schema'
+import { zaloNotifier } from '@/application/zalo/zalo-services'
 import { CreateFreshLeafTicketUseCase } from '@/application/weighing/CreateFreshLeafTicketUseCase'
 import { PrismaFreshLeafTicketRepository } from '@/infrastructure/db/weighing/PrismaFreshLeafTicketRepository'
 
@@ -18,7 +19,7 @@ async function createTicket(request: Request) {
   await guard.household(body.household_id)
   await guard.parcel(body.parcel_id)
   await guard.leafGrade(body.grade_id)
-  const { ticket, created } = await new CreateFreshLeafTicketUseCase(new PrismaFreshLeafTicketRepository()).execute(tenant, body)
+  const { ticket, created } = await new CreateFreshLeafTicketUseCase(new PrismaFreshLeafTicketRepository(), undefined, zaloNotifier()).execute(tenant, body)
   // A replay of an offline submission returns the first ticket instead of making a second.
   return NextResponse.json({ data: ticket }, { status: created ? 201 : 200 })
 }

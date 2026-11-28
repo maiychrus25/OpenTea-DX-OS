@@ -3,10 +3,12 @@
 
 import * as QRCode from 'qrcode'
 import { ConflictError, DomainError, ForbiddenError, NotFoundError } from '@/domain/errors'
+import type { ZaloEvent } from '@/domain/zalo/zalo-events'
 import type { SettlementPort, SlipSource } from '@/domain/ledger/ports/SettlementPort'
 import type { LedgerEntryView, LineView, PaymentMethod, PeriodView } from '@/domain/ledger/views'
 import { bankByBin, maskAccount, payload, transferNote } from '@/domain/payment/vietqr'
 import { vnDayOf } from '@/application/agent/campaign/vn-day'
+import { dong, raiseZaloEvents, type ZaloEventSink } from '@/application/zalo/zalo-events'
 import { draftLines, settleSlips, totalsOf, type PeriodTotals } from './settlement-detail'
 
 export interface SettlementActor {
@@ -88,7 +90,7 @@ export class CreateSettlementPeriodUseCase {
  * no agent and no schedule closes a period. A second call answers 409 and writes nothing.
  */
 export class CloseSettlementPeriodUseCase {
-  constructor(private readonly port: SettlementPort, private readonly clock: () => Date = () => new Date()) {}
+  constructor(private readonly port: SettlementPort, private readonly clock: () => Date = () => new Date(), private readonly zalo?: ZaloEventSink) {}
 
   async execute(actor: SettlementActor, id: string, expected: { household_count: number; payable_total_vnd: string }): Promise<PeriodDetail> {
     if (actor.role !== 'manager') throw new ForbiddenError('Forbidden')
@@ -128,8 +130,31 @@ export class CloseSettlementPeriodUseCase {
       await unit.closePeriod(period.id, { id: actor.userId, name: actor.userName ?? null }, this.clock())
     })
 
-    return new GetSettlementUseCase(this.port).execute(actor, id)
+    const detail = await new GetSettlementUseCase(this.port).execute(actor, id)
+    await raiseZaloEvents(this.zalo, settlementEvents(actor.htxCode, detail))
+    return detail
   }
+}
+
+/** One message per closed line: the net pay or the debt and a link to the slip. Never a bank account. */
+function settlementEvents(htxCode: string, detail: PeriodDetail): ZaloEvent[] {
+  const base = process.env.DXOS_WEB_PUBLIC_URL?.trim().replace(/\/+$/, '')
+  return detail.lines.flatMap((line) => {
+    if (!line.id) return []
+    const owes = BigInt(line.payable_vnd) === BigInt(0) && BigInt(line.debt_out_vnd) > BigInt(0)
+    return [{
+      kind: 'SETTLEMENT_CLOSED' as const,
+      htxCode,
+      eventId: line.id,
+      householdId: line.household_id,
+      params: {
+        period_code: detail.period.code,
+        result_label: owes ? 'Còn nợ' : 'Thực lĩnh',
+        amount_vnd: dong(owes ? line.debt_out_vnd : line.payable_vnd),
+        ...(base ? { slip_url: `${base}/farmer/settlements/${detail.period.id}` } : {}),
+      },
+    }]
+  })
 }
 
 /** Records that a line was paid. Only a line with a payable amount can be paid, and only once. */

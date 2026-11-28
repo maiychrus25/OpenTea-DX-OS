@@ -92,6 +92,32 @@ maybeZalo('Zalo channel on a real Postgres', () => {
     expect((await repo.recipients(htxCode, ids[0])).map((r) => r.id)).toEqual([ids[0]])
   })
 
+  it('finds the parcels whose spraying ends today and ignores a rejected spraying and another day', async () => {
+    const { PrismaWithdrawalScanRepository } = require('@/infrastructure/db/zalo/PrismaWithdrawalScanRepository')
+    const { WithdrawalEndedScan } = require('@/application/zalo/WithdrawalEndedScan')
+    const mk = async (code: string, status: string, safe: string) => {
+      const parcel = await prisma.parcel.create({ data: { parcel_code: `${code}-${run}`, household_id: ids[0], crop_type: 'Chè', area_ha: 1 } })
+      await prisma.journalEntry.create({
+        data: { parcel_id: parcel.id, entry_date: new Date('2026-11-20T00:00:00Z'), activity_type: 'SPRAYING', performed_by: 'x', submitted_role: 'FARMER', status,
+                activities: { create: [{ activity_detail: 'phun', safe_harvest_date: new Date(`${safe}T00:00:00+07:00`) }] } },
+      })
+      return parcel.id
+    }
+    const ends = await mk('A', 'APPROVED', '2026-11-28')
+    await mk('B', 'REJECTED', '2026-11-28')
+    await mk('C', 'APPROVED', '2026-11-27')
+    const candidates = await new PrismaWithdrawalScanRepository().candidates('2026-11-28')
+    expect(candidates.filter((c: { parcelCode: string }) => c.parcelCode.endsWith(`-${run}`)).map((c: { parcelId: string }) => c.parcelId)).toEqual([ends])
+    expect(candidates.find((c: { parcelId: string }) => c.parcelId === ends)).toMatchObject({ htxCode, householdId: ids[0] })
+
+    await opt(0, 'OPTED_IN')
+    const scan = new WithdrawalEndedScan(notifier, new PrismaWithdrawalScanRepository(), () => new Date('2026-11-28T05:00:00Z'))
+    await repo.saveSettings(htxCode, { enabled: true, kinds: ['TICKET_RECEIPT', 'PRICE_PUBLISHED', 'WITHDRAWAL_ENDED'], quietStartHour: 21, quietEndHour: 6, monthlyQuota: 2000 }, 'admin')
+    await repo.saveTemplates([{ templateKey: 'withdrawal_ended', znsTemplateId: 'T3', params: ['parcel_code', 'safe_date'] }], 'admin')
+    expect(await scan.run()).toBeGreaterThanOrEqual(1)
+    expect(await scan.run()).toBe(0)
+  })
+
   it('stores the OA credentials as one row', async () => {
     await repo.saveCredentials({ accessTokenEnc: 'v1:a:b:c', refreshTokenEnc: 'v1:d:e:f', expiresAt: new Date('2026-12-01T00:00:00Z') }, 'admin')
     await repo.saveCredentials({ accessTokenEnc: 'v1:g:h:i', refreshTokenEnc: 'v1:j:k:l', expiresAt: new Date('2026-12-02T00:00:00Z') }, 'admin')
