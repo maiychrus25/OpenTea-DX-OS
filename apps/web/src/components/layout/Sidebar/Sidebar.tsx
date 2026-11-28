@@ -7,7 +7,7 @@ import * as React from 'react'
 import { useState, useTransition, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Bell, ChevronsLeft, ChevronsRight, ChevronsUpDown, CircleHelp, LogOut, Map, Moon, Phone, Sprout, Sun, User, X } from 'lucide-react'
+import { Bell, ChevronDown, ChevronsLeft, ChevronsRight, ChevronsUpDown, CircleHelp, LogOut, Map, Moon, Phone, Sprout, Sun, User, X } from 'lucide-react'
 import { applyTheme, readStoredTheme, type ThemeChoice } from '@/components/ui/ThemeToggle/theme'
 import styles from './Sidebar.module.css'
 import { signOutAction } from '@/app/actions/signout-action'
@@ -96,7 +96,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     .toUpperCase() || 'U'
 
   return (
-    <aside className={`${styles.sidebar} ${isOpen ? styles.open : ''} ${collapsed ? styles.rail : ''}`} data-testid="sidebar">
+    <aside className={`${styles.sidebar} ${isOpen ? styles.open : ''} ${collapsed ? styles.rail : ''} ${role === 'manager' ? styles.head : ''}`} data-testid="sidebar">
       {/* Brand */}
       <div className={styles.brand}>
         <span className={styles.brandIcon}><Sprout size={24} aria-hidden="true" /></span>
@@ -117,7 +117,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* The cooperative. Farmers get no card: their name and role stand at the foot of the menu. */}
-      {role !== 'farmer' && role !== 'platform_admin' && (
+      {role !== 'farmer' && role !== 'platform_admin' && role !== 'manager' && (
         <div className={styles.coop}>
           <span className={styles.coopBadge}>HTX</span>
           <div className={styles.coopText}>
@@ -209,12 +209,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           )}
           <button type="button" className={styles.profile} aria-expanded={profileOpen} onClick={() => setProfileOpen(prev => !prev)}>
-            <span className={styles.avatar}>{initials}<i aria-hidden="true" /></span>
-            <span className={styles.profileText}>
-              <strong>{userName}</strong>
-              <small>{getRoleLabel(role)}</small>
-            </span>
-            <ChevronsUpDown size={16} aria-hidden="true" />
+            {role === 'manager' ? (
+              <>
+                {/* The head's card names the cooperative and opens the account menu. */}
+                <span className={styles.coopIcon}><Sprout size={22} aria-hidden="true" /></span>
+                <span className={styles.profileText}>
+                  <strong>{htxName || 'Đang tải...'}</strong>
+                  <small>{htxLocation || '---'}</small>
+                  <span className={styles.roleBadge}>{getRoleLabel(role)}</span>
+                </span>
+                <ChevronDown size={16} aria-hidden="true" />
+              </>
+            ) : (
+              <>
+                <span className={styles.avatar}>{initials}<i aria-hidden="true" /></span>
+                <span className={styles.profileText}>
+                  <strong>{userName}</strong>
+                  <small>{getRoleLabel(role)}</small>
+                </span>
+                <ChevronsUpDown size={16} aria-hidden="true" />
+              </>
+            )}
           </button>
         </div>
       </div>

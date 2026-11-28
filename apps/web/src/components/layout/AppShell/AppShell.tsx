@@ -101,6 +101,7 @@ export const AppShell: React.FC<AppShellProps> = ({
             roleName={getRoleLabel(role)} 
             userName={userName} 
             pageName={pageName}
+            htxName={htxName}
             onMenuClick={!hideSidebar ? () => setSidebarOpen(true) : undefined}
           />
           <div className={styles.pageContent}>

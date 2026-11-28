@@ -409,3 +409,32 @@ body {
   margin: 0;
   padding: 0;
 }
+
+/* The cooperative head's screens follow their own design's greens (light theme only). */
+:root:not([data-theme="dark"]) [data-role="manager"] {
+  --sidebar-bg: #0a3b22;
+  --color-sidebar: #0a3b22;
+  --color-sidebar-deep: #072c19;
+  --primary: #10672f;
+  --color-primary: #10672f;
+  --color-primary-hover: #0b5326;
+  --color-primary-strong: #0b5326;
+  --color-primary-subtle: #e5f3e7;
+  --color-surface-page: #f6f8f6;
+  --color-table-head: #eef4ef;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) [data-role="manager"] {
+    --sidebar-bg: inherit;
+    --color-sidebar: inherit;
+    --color-sidebar-deep: inherit;
+    --primary: inherit;
+    --color-primary: inherit;
+    --color-primary-hover: inherit;
+    --color-primary-strong: inherit;
+    --color-primary-subtle: inherit;
+    --color-surface-page: inherit;
+    --color-table-head: inherit;
+  }
+}

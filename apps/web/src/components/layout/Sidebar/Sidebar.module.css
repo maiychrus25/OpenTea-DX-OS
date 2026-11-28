@@ -458,3 +458,19 @@ div.popupItem {
     justify-content: center;
   }
 }
+
+/* The cooperative head's menu: tighter rows, ruled groups and the HTX card at the foot. */
+.coopIcon { display: flex; flex: none; width: 40px; height: 40px; align-items: center; justify-content: center; border-radius: var(--radius-button); background: var(--accent-lime); color: var(--sidebar-bg); }
+.roleBadge { align-self: flex-start; margin-top: 4px; padding: 1px 10px; border-radius: var(--radius-button); background: var(--accent-lime); color: var(--sidebar-bg); font-size: 11.5px; font-weight: 700; }
+.head .profile { padding: 8px 10px; border: 1px solid color-mix(in srgb, var(--sidebar-foreground) 16%, transparent); background: color-mix(in srgb, var(--sidebar-foreground) 5%, transparent); color: var(--sidebar-foreground); }
+.head .sidebarFoot { border-top: 0; }
+
+@media (min-width: 1024px) {
+  .head .brand { height: 62px; border-bottom: 0; }
+  .head .nav { gap: 0; padding: 0 14px 4px; }
+  .head .groupTitle { padding: 8px 10px 3px; color: var(--sidebar-foreground); font-size: 12px; letter-spacing: 0.02em; }
+  .head .groupTitle:not(:first-child) { margin-top: 5px; border-top: 1px solid color-mix(in srgb, var(--sidebar-foreground) 16%, transparent); }
+  .head .navItem { height: 28px; font-size: 13.5px; }
+  .head .icon svg { width: 17px; height: 17px; }
+  .head .sidebarFoot { padding: 6px 12px 10px; }
+}
