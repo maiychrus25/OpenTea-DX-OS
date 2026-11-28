@@ -21,11 +21,13 @@ type ProfileFormValues = Required<Pick<HtxProfileUpdateInput, 'name' | 'address'
 
 interface ProfileFormProps {
   initialData: HtxProfile | null
+  /** Open straight into the edit fields. */
+  startEditing?: boolean
 }
 
-export function ProfileForm({ initialData }: ProfileFormProps) {
+export function ProfileForm({ initialData, startEditing = false }: ProfileFormProps) {
   const router = useRouter()
-  const [isEditing, setIsEditing] = useState(false)
+  const [isEditing, setIsEditing] = useState(startEditing)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [profileData, setProfileData] = useState<HtxProfile | null>(initialData)
 
