@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Farmer screens (`apps/web`)**: dashboard, ledger, journal, harvest calendar, diagnosis, handbook, bulletin and account pages follow one layout. On phones the hero comes first and the bottom bar is Tổng quan, Nhật ký, Chẩn đoán, Sổ tiền. The ledger shows totals, weigh tickets, input advances and settlements together; diagnosis has a take-photo button. The dashboard no longer repeats the handbook card and the upcoming-harvest table, and the account page drops its disabled edit buttons.
+
 ### Added
 
 - **Cross-check agent (A13)**: every morning at 05:45 the agent raises two alerts for officers and the head, as proposals with evidence; it never changes data.
