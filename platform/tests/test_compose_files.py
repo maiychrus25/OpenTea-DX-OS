@@ -442,3 +442,13 @@ def test_zalo_image_is_built_and_released_like_telegram():
         text = (ROOT / ".github" / "workflows" / name).read_text()
         assert "- service: zalo\n            context: ./platform/zalo" in text, name
     assert "cd platform/zalo && python -m pip install -r requirements-dev.txt" in (ROOT / ".github" / "workflows" / "ci.yml").read_text()
+
+
+def test_platform_up_recreates_the_apps_gateway_sync_flagged():
+    # gateway-sync gives an app installed before the gateway secret its env file; only a recreate makes the container read it.
+    makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
+    recipe = makefile.split("\nplatform-up:", 1)[1].split("\n\n", 1)[0]
+    assert "$(MAKE) apps-recreate" in recipe
+    target = makefile.split("\napps-recreate:", 1)[1].split("\n\n", 1)[0]
+    assert "$(RUNTIME)/apps/*.recreate" in target and "--force-recreate --no-deps --wait" in target
+    assert ".PHONY" in makefile and "apps-recreate" in makefile.split("\n.PHONY:", 1)[1].split("\n", 1)[0]
