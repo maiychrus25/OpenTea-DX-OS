@@ -134,7 +134,7 @@ export function HarvestCalendar({ userRole }: { userRole: 'MANAGER' | 'OFFICER' 
   }
 
   return (
-    <div className={`${kit.page} ${styles.page}`}>
+    <div className={`${kit.page} ${styles.page} ${userRole === 'FARMER' ? styles.farmer : ''}`}>
       <div className={styles.top}>
         <div>
           <h1>Lịch thu hái</h1>
@@ -171,10 +171,16 @@ export function HarvestCalendar({ userRole }: { userRole: 'MANAGER' | 'OFFICER' 
             <div className={styles.scroll}>
               <div className={styles.grid}>
                 <div className={styles.weekdays}>
-                  {['Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy', 'Chủ Nhật'].map(day => <span key={day}>{day}</span>)}
+                  {['Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy', 'Chủ Nhật'].map((day, index) => (
+                    <span key={day} aria-label={day}>{userRole === 'FARMER' ? ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'][index] : day}</span>
+                  ))}
                 </div>
                 {weeks.map(week => {
                   const bars = weekBars(week, spans)
+                  // Farmer cells show short markers for each day; other roles keep their spanning bars.
+                  const visibleBars = userRole === 'FARMER'
+                    ? bars.flatMap(bar => Array.from({ length: bar.width }, (_, offset) => ({ ...bar, column: bar.column + offset, width: 1 })))
+                    : bars
                   const rows = Math.max(0, ...bars.map(bar => bar.row)) + 1
                   return (
                   <div key={week[0]} className={styles.week}>
@@ -188,15 +194,16 @@ export function HarvestCalendar({ userRole }: { userRole: 'MANAGER' | 'OFFICER' 
                         </div>
                       )
                     })}
-                    {bars.map(({ span, column, width, row }) => {
+                    {visibleBars.map(({ span, column, width, row }) => {
                       const Icon = KIND[span.kind].icon
                       return (
-                        <button key={span.key} type="button" className={`${styles.bar} ${styles[span.kind]}`}
+                        <button key={`${span.key}-${column}`} type="button" className={`${styles.bar} ${styles[span.kind]}`}
                           style={{ gridColumn: `${column} / span ${width}`, gridRow: row + 1 }}
                           title={`${span.event.parcelName} · ${KIND[span.kind].label}`}
-                          onClick={() => choose(Math.max(span.from, week[0]), span.key)}>
+                          aria-label={userRole === 'FARMER' ? span.event.parcelName ?? undefined : undefined}
+                          onClick={() => choose(userRole === 'FARMER' ? week[column - 1] : Math.max(span.from, week[0]), span.key)}>
                           <Icon size={12} aria-hidden="true" />
-                          <span>{span.event.parcelName}</span>
+                          <span>{userRole === 'FARMER' ? KIND[span.kind].label : span.event.parcelName}</span>
                         </button>
                       )
                     })}
