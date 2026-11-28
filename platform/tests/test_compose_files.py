@@ -350,3 +350,50 @@ def test_apps_route_takes_a_user_token_on_the_internal_port_and_refuses_service_
     assert schema["properties"]["realm_access"]["properties"]["roles"]["not"]["contains"]["enum"] == ["agent", "telegram", "staff-sync", "web-service"]
     assert route["plugins"]["limit-count"]["count"] == 120 and route["plugins"]["limit-count"]["key"] == "$http_authorization"
     assert "X-Dxos-Gateway" in route["plugins"]["proxy-rewrite"]["headers"]["set"]
+
+
+def test_zalo_credentials_live_in_their_own_volume_written_by_a_root_helper():
+    doc = load_document(COMPOSE)
+    assert doc["services"]["dxos-zalo"]["volumes"] == ["dxos-zalo-env:/run/dxos-zalo:ro"]
+    helper = doc["services"]["dxos-zalo-env"]
+    assert helper["profiles"] == ["tools"] and helper["user"] == "0:0" and helper["network_mode"] == "none"
+    assert helper["volumes"] == ["dxos-zalo-env:/run/dxos-zalo"]
+    assert "dxos-zalo-env" in doc["volumes"]
+
+
+def test_zalo_stub_is_test_only_and_loopback_published_on_8084():
+    stub = load_compose(COMPOSE)["dxos-zalo-stub"]
+    assert stub["profiles"] == ["zalo-test"]
+    assert stub["ports"] == ["127.0.0.1:8084:8084"]
+    assert "dxos-zalo-stub" not in load_compose(RELEASE)
+
+
+def test_zalo_relay_reaches_the_web_on_the_internal_port_and_takes_app_keys_from_the_operator():
+    env = load_compose(COMPOSE)["dxos-zalo"]["environment"]
+    assert env["DXOS_GATEWAY_URL"] == "http://apisix:9081"
+    assert env["ZALO_API_BASE"].startswith("${ZALO_API_BASE:-")
+    assert env["ZALO_APP_ID"] == "${ZALO_APP_ID:-}" and env["ZALO_APP_SECRET"] == "${ZALO_APP_SECRET:-}"
+    assert "ZALO_APP_SECRET" not in load_compose(COMPOSE)["web"]["environment"]
+
+
+def test_zalo_container_is_hardened_and_started_with_the_agent_extras():
+    svc = load_compose(COMPOSE)["dxos-zalo"]
+    assert svc["mem_limit"] == "128m" and svc["read_only"] is True and svc["cap_drop"] == ["ALL"]
+    assert svc["tmpfs"] == ["/tmp:size=16m"] and svc["pids_limit"] == 64 and svc["cpus"] == "0.5"
+    assert "/tmp/dxos-zalo.heartbeat" in svc["healthcheck"]["test"][3]
+    makefile = (ROOT / "Makefile").read_text()
+    assert "EXTRAS_AGENT := dxos-agent dxos-telegram dxos-zalo" in makefile
+
+
+def test_release_pulls_the_zalo_service_and_helper_from_the_registry():
+    release = load_compose(RELEASE)
+    for name in ("dxos-zalo", "dxos-zalo-env"):
+        assert release[name]["image"].startswith("${OPENTEA_IMAGE_PREFIX:-ghcr.io/maiychrus25/opentea-dx-os}-zalo:")
+        assert release[name]["build"] is None
+
+
+def test_zalo_image_is_built_and_released_like_telegram():
+    for name in ("docker-publish.yml", "release.yml"):
+        text = (ROOT / ".github" / "workflows" / name).read_text()
+        assert "- service: zalo\n            context: ./platform/zalo" in text, name
+    assert "cd platform/zalo && python -m pip install -r requirements-dev.txt" in (ROOT / ".github" / "workflows" / "ci.yml").read_text()

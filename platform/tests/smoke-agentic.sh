@@ -24,6 +24,7 @@ ids() { printf '%s' "$1" | jq -e 'has("errors")|not' >/dev/null || { printf 'ERR
 export SMOKE_REQUIRE_WEB=1
 source platform/tests/smoke-agent.sh
 source platform/tests/smoke-telegram.sh
+source platform/tests/smoke-zalo.sh
 source platform/tests/smoke-llm.sh
 source platform/tests/smoke-agents.sh
 source platform/tests/smoke-assistant.sh
