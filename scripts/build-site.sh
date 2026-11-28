@@ -25,7 +25,7 @@ copy_media docs/screenshots/web/settlement-slip.png settlement-slip.png
 copy_media docs/screenshots/web/lot-trace.png web-lot-trace.png
 copy_media miniapps/tea-shop/store/public-order.png shop-public-order.png
 copy_media miniapps/tea-shop/store/promotions.png shop-promotions.png
-copy_media miniapps/custom-books/store/book-in-use.png books-in-use.png
+copy_media miniapps/custom-books/store/designer.png books-designer.png
 copy_media apps/web/public/icon-512x512.png icon-512.png
 copy_media apps/web/public/icon-192x192.png icon-192.png
 
