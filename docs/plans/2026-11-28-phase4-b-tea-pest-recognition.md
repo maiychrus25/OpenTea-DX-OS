@@ -55,6 +55,19 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 | B-core | Sonnet | B1 → B2 → B3 (web part) |
 | B-model | Sonnet | B3 (API part) → B4 |
 | B-fe | Codex | F1 |
+| B-zalo | Sonnet | B5 (owner's pilot items, 2026-11-28 evening) |
+
+**Contract between B-model and B-core (`model_version`):**
+- The registry lives at `ai-models/tea/registry.json`, which disease-api sees as `/models/tea/registry.json`. Its `file` is relative to `/models`, for example `"tea_leaf_model.keras"`. `version` is a string such as `"tea-2026.11.0"`.
+- `POST /predict` adds `model_version: string | null` to `PredictResponse`. The value is the registry `version` for `model=tea`, and `null` for `general`.
+- `GET /health` adds `versions: { tea: string | null }` and `reasons: { tea: string | null }`. `reasons.tea` says why the tea model is not loaded, in English, for example `"sha256 mismatch"`. `models.tea` stays a boolean.
+- The web `DiseaseApiAdapter` maps `model_version` (absent means `null`) and `SubmitDiagnosisUseCase` stores it in `disease_reports.model_version`, which B1's migration creates.
+
+**Contract between B-core and B-fe:**
+- `GET /api/disease-labels` returns `{ data: [{ code, name_vi, scientific_name, group, is_target, sort_order }] }`, with targets first, then by `sort_order`.
+- The review body gains `confirmed_label_code: string`, which is required when `status` is `CONFIRMED`.
+- `PUT /api/htx/disease-training-consent` takes `{ enabled: boolean }` and returns `{ data: { enabled, at, by } }`. `GET` on the same path returns the same `data`.
+- Every response is wrapped in `{ data }`. The B-fe brief copies these shapes verbatim, and its tests mock them exactly.
 
 ### Task B1: label list and officer labels
 
@@ -110,8 +123,59 @@ Commit: `feat(model): train the tea model on consented field photos with stricte
 - **Profile:** a switch "Cho phép dùng ảnh đã xác nhận để huấn luyện mô hình nhận diện sâu bệnh", off by default. Its explanation says GPS and EXIF are removed, the photos are used only for the tea model, and the switch can be turned off at any time.
 - Run `next build` before reporting.
 
+### Task B5: real ZNS error codes and the relay image row (owner, 2026-11-28 evening)
+
+**Files:**
+- `platform/zalo/dxos_zalo/zns_api.py` (`ERROR_CODES`), which `stub_zns_api.py` already imports;
+- `apps/web/src/domain/zalo/zalo-events.ts` (`errorLabelVi`);
+- `platform/zalo/tests/*`, `apps/web/src/__tests__/domain/zalo/zalo-domain.test.ts`, `platform/tests/smoke-zalo.sh` if a code it injects changes meaning;
+- `DEPENDENCIES.md` (the `python:3.12.15-slim-bookworm` row);
+- `docs/rules-and-limits.md` §3.35, and the "Known limits" line in `CHANGELOG.md` Unreleased.
+
+**The code table** for `business.openapi.zalo.me/message/template`, as given by the owner. Descriptions are in Vietnamese, as the relay passes them to the web:
+
+| Code | Meaning | `permanent` | `token_expired` |
+|---|---|---|---|
+| -100 | Zalo gặp lỗi hệ thống | False | False |
+| -108 | Số điện thoại không hợp lệ | True | False |
+| -109 | ID mẫu ZNS không hợp lệ | True | False |
+| -111 | Tham số mẫu ZNS không hợp lệ | True | False |
+| -112 | Tham số mẫu ZNS không hợp lệ | True | False |
+| -115 | Hết số dư hoặc hạn mức gửi ZNS | True | False |
+| -117 | OA không có quyền dùng mẫu ZNS này | True | False |
+| -118 | Tài khoản Zalo không tồn tại | True | False |
+| -124 | Access token không hợp lệ hoặc đã hết hạn | **False** | **True** |
+| -126 | Hết số dư hoặc hạn mức gửi ZNS | True | False |
+| -131 | Mẫu ZNS chưa được duyệt | True | False |
+| -211 | Hết số dư hoặc hạn mức gửi ZNS | True | False |
+| -216 | Access token không hợp lệ hoặc đã hết hạn | False | True |
+
+- On -124 the relay refreshes the token and sends once more, exactly as on -216. The access token lives 25 hours. A token error must never mark a message failed on the first try.
+- `errorLabelVi` maps the relay's `"<code> <description>"` to one Vietnamese reason per group:
+  - -108: "Số điện thoại của hộ không hợp lệ.";
+  - -118: "Số điện thoại này không có tài khoản Zalo.";
+  - -109, -111, -112, -117, -131: "Mẫu tin ZNS sai hoặc chưa được duyệt.";
+  - -115, -126, -211: "Hết số dư hoặc hạn mức gửi tin ZNS.";
+  - -124, -216: "Token Zalo hết hạn; hệ thống sẽ tự làm mới.".
+
+  Match on the code at the start of the string, not on loose words: the current `/-124|quota|limit/` rule is wrong.
+- Remove the "unverified" comment in `zns_api.py`. Write instead that the table follows the owner's ZNS reference of 2026-11-28.
+- Update the docs: §3.35 drops "chưa được đối chiếu", and CHANGELOG "Known limits" drops the ZNS line.
+- `DEPENDENCIES.md`: add `dxos-zalo` to the list of services built on `python:3.12.15-slim-bookworm`. Add the relay's stub too, if it uses the same image.
+
+**Tests:**
+- Every code in the table maps to its `permanent` and `token_expired` values.
+- The relay, given -124 from the stub, refreshes and resends once, and the row ends `sent`.
+- Given -115, there is one call and the row ends `failed` with the Vietnamese reason.
+- `errorLabelVi('-124 Access token ...')` returns the token line, not the quota line.
+
+Commit: `fix(zalo): follow the real ZNS error codes and refresh the token on -124`.
+
 ## Verification (controller)
 
+- **Owner's pilot checks (2026-11-28 evening):**
+  - With the B throwaway stack up, run `make up-voice` from the owner's checkout. Point the throwaway web at Piper on `127.0.0.1:5500` (`PIPER_HOST` and `PIPER_PORT`). Press "Nghe" on the farmer dashboard and check that real Piper audio plays (`audio/wav`, non-empty) and that a second press is served from the cache. Then `make stop-extras`.
+  - Upload one real text PDF to a cooperative's `Resources/` and ask the technical chatbot a question whose answer is only in that PDF. The answer must cite the file, and the sidecar `<key>.txt` must exist. Use a real local LLM, so the passage reaches the model: a throwaway Ollama with `qwen2.5:0.5b`, or the owner's Ollama through a make target.
 - All suites, disease-api pytest, and the `ai-models/tea` tests.
 - On a throwaway stack:
   - confirm a report with a label;
