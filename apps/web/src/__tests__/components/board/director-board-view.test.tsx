@@ -23,6 +23,16 @@ const full: DirectorBoard = {
   ],
 }
 
+const receivablesFixture = {
+  outstanding_vnd: '3500000',
+  overdue_count: 2,
+  overdue_vnd: '1200000',
+  top: [
+    { partner_name: 'Thương lái A', outstanding_vnd: '2000000' },
+    { partner_name: 'Thương lái B', outstanding_vnd: '1500000' },
+  ],
+}
+
 const failing: DirectorBoard = { today: '2026-11-28', leaf: null, prices: null, payable: null, dry_stock: null, receivables: null, alerts: null }
 
 describe('manager board', () => {
@@ -53,11 +63,18 @@ describe('manager board', () => {
     expect(within(stock).getByText('4,5 kg')).toBeInTheDocument()
   })
 
-  test('the receivables block says there are no wholesale orders yet', () => {
-    render(<DirectorBoardView board={full} role="manager" />)
+  test('the receivables block shows the outstanding, the overdue part in red, and the top partners', () => {
+    render(<DirectorBoardView board={{ ...full, receivables: receivablesFixture }} role="manager" />)
     const block = screen.getByRole('region', { name: 'Thương lái còn nợ' })
-    expect(within(block).getByText('Chưa có đơn bán sỉ')).toBeInTheDocument()
-    expect(within(block).getByText('Có ở bước Bán hàng.')).toBeInTheDocument()
+    expect(within(block).getByText('3.500.000 đ')).toBeInTheDocument()
+    expect(within(block).getByText('2 đơn quá hạn · 1.200.000 đ')).toHaveClass('danger')
+    expect(within(block).getAllByRole('listitem')).toHaveLength(2)
+    expect(within(block).getByRole('link', { name: 'Xem chi tiết' })).toHaveAttribute('href', '/manager/sales')
+  })
+
+  test('a failed receivables read shows its own state', () => {
+    render(<DirectorBoardView board={{ ...full, receivables: null }} role="manager" />)
+    expect(screen.getByText('Chưa tải được công nợ')).toBeInTheDocument()
   })
 
   test('alerts link to their pages; an empty list reads as all clear', () => {
@@ -84,12 +101,13 @@ describe('manager board', () => {
 })
 
 describe('accountant board', () => {
-  test('shows the money blocks and no stock or wholesale blocks', () => {
-    render(<DirectorBoardView board={full} role="accountant" />)
+  test('shows the money blocks and the receivables, and no stock block', () => {
+    render(<DirectorBoardView board={{ ...full, receivables: receivablesFixture }} role="accountant" />)
     expect(screen.getByRole('region', { name: 'Búp thu hôm nay' })).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Phải trả xã viên' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Thương lái còn nợ' })).toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: 'Thương lái còn nợ' })).getByRole('link', { name: 'Xem chi tiết' })).toHaveAttribute('href', '/accountant/sales')
     expect(screen.queryByRole('region', { name: 'Tồn chè khô' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('region', { name: 'Thương lái còn nợ' })).not.toBeInTheDocument()
   })
 
   test('only money alerts appear, and the price block has no publish link', () => {

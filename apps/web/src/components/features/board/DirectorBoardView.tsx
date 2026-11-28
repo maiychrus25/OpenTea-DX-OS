@@ -28,7 +28,7 @@ export function DirectorBoardView({ board, role }: Props) {
       <PricesBlock prices={board.prices} canPublish={role === 'manager'} />
       <PayableBlock payable={board.payable} base={base} />
       {role === 'manager' && <DryStockBlock stock={board.dry_stock} />}
-      {role === 'manager' && <ReceivablesBlock />}
+      <ReceivablesBlock receivables={board.receivables} base={base} />
       <AlertsBlock alerts={board.alerts} role={role} />
     </div>
   )

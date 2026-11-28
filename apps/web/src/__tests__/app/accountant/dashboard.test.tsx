@@ -53,7 +53,7 @@ describe('accountant area', () => {
     expect(screen.getByRole('region', { name: 'Búp thu hôm nay' })).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Phải trả xã viên' })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Tồn chè khô' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('region', { name: 'Thương lái còn nợ' })).not.toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Thương lái còn nợ' })).toBeInTheDocument()
     expect(screen.getByText(/Lan/)).toBeInTheDocument()
   })
 

@@ -21,6 +21,8 @@
 .row > span { min-width: 0; overflow-wrap: anywhere; }
 .row > strong { flex: none; font-variant-numeric: tabular-nums; }
 
+.danger { margin: 0; font-size: 14px; font-weight: 700; color: var(--color-danger); }
+
 .primaryButton { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 16px; border-radius: 12px; background: var(--color-primary); color: var(--color-primary-foreground); font-weight: 700; font-size: 14px; text-decoration: none; }
 
 .alertList { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
