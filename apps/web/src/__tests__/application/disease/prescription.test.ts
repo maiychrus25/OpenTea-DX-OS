@@ -17,10 +17,10 @@ function build(floor: { productId: string; floorDays: number } | null = { produc
   const notifications = { sendDirectNotification: jest.fn() }
   const docs = { uploadDocument: jest.fn() }
   const pesticides = { floorFor: jest.fn(async () => floor) }
-  const useCase = new ReviewDiseaseReportUseCase(reports as never, notifications as never, { getFileBuffer: jest.fn() } as never, docs as never, pesticides as never)
+  const useCase = new ReviewDiseaseReportUseCase(reports as never, notifications as never, { getFileBuffer: jest.fn() } as never, docs as never, pesticides as never, { exists: jest.fn(async () => true) } as never)
   return { useCase, reports, notifications }
 }
-const confirm = { reportId: 'r1', officerId: 'o1', htxCode: 'TC', htxProfileId: 'htx', officerName: 'Cán bộ A', status: 'CONFIRMED' as const, treatment_recommendation: 'Phun thuốc', confirmed_diagnosis: 'Nhện đỏ' }
+const confirm = { reportId: 'r1', officerId: 'o1', htxCode: 'TC', htxProfileId: 'htx', officerName: 'Cán bộ A', status: 'CONFIRMED' as const, treatment_recommendation: 'Phun thuốc', confirmed_diagnosis: 'Nhện đỏ', confirmed_label_code: 'red_spider_mite' }
 
 describe('prescription on a confirmed disease report', () => {
   it('creates exactly one DRAFT spraying with the floor days and tells the farmer', async () => {

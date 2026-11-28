@@ -6,5 +6,10 @@
   "healthy": { "vi": "Lá khoẻ", "needs_officer_review": true },
   "helopeltis": { "vi": "Bọ xít muỗi", "needs_officer_review": true },
   "red_leaf_spot": { "vi": "Bệnh đốm đỏ (red leaf spot)", "needs_officer_review": true },
-  "white_spot": { "vi": "Bệnh đốm trắng (white spot)", "needs_officer_review": true }
+  "white_spot": { "vi": "Bệnh đốm trắng (white spot)", "needs_officer_review": true },
+  "green_leafhopper": { "vi": "Rầy xanh", "needs_officer_review": true },
+  "tea_thrips": { "vi": "Bọ cánh tơ", "needs_officer_review": true },
+  "red_spider_mite": { "vi": "Nhện đỏ", "needs_officer_review": true },
+  "blister_blight": { "vi": "Phồng lá chè", "needs_officer_review": true },
+  "not_tea_leaf": { "vi": "Không phải lá chè", "needs_officer_review": true }
 }

@@ -561,6 +561,8 @@ Officer approves or rejects a pending disease report of their HTX (another HTX's
 
 **Roles:** officer
 
+**GĐ4-B:** body thêm `confirmed_label_code` (mã trong `disease_labels`, xem `GET /api/disease-labels`). Với `CONFIRMED`, thiếu mã hoặc mã không có trong danh mục trả 400 `VALIDATION_ERROR` ("Vui lòng chọn nhãn bệnh/sâu trước khi duyệt." / "Nhãn bệnh/sâu không có trong danh sách."); với `REJECTED` trường này bị bỏ qua. Tên tự gõ `confirmed_diagnosis` vẫn bắt buộc như trước. Nếu chép sang P.A.R.A lỗi, hệ thống ghi cảnh báo, thử lại một lần, và không chặn việc duyệt.
+
 ---
 
 ## FastAPI — Disease Classifier Service
@@ -571,9 +573,15 @@ Officer approves or rejects a pending disease report of their HTX (another HTX's
 ### `GET /health`
 Health check.
 ```json
-{ "status": "ok", "model_loaded": true, "models": { "general": true, "tea": true } }
+{
+  "status": "ok",
+  "model_loaded": true,
+  "models": { "general": true, "tea": true },
+  "versions": { "tea": "tea-2026.11.0" },
+  "reasons": { "tea": null }
+}
 ```
-`model_loaded` is the general model, as before; `models` lists each model. Tea is `false` (and `model=tea` answers 503) when its files are missing or `tea_class_names_vi.json` lacks a class id.
+`model_loaded` is the general model, as before; `models` lists each model. Tea is `false` (and `model=tea` answers 503) when its files are missing, `tea_class_names_vi.json` lacks a class id, or `ai-models/tea/registry.json` is missing or its sha256 differs from the model file. `versions.tea` is the registry `version` when tea is loaded, else `null`; `reasons.tea` is an English reason (for example `"sha256 mismatch"`) when it is not, else `null`. `general` keeps serving either way.
 
 ### `POST /predict`
 Classify crop disease from image.
@@ -595,9 +603,12 @@ file: UploadFile (JPEG/PNG)
     { "label": "healthy", "confidence": 0.026 }
   ],
   "model": "general",
-  "uncertain": false
+  "uncertain": false,
+  "model_version": null
 }
 ```
+
+`model_version` is the registry `version` for `model=tea` and `null` for `general`.
 
 `model=tea` uses the tea leaf model (`ai-models/tea_leaf_model.keras`, 8 classes): `disease_name_en` is the readable class id (`brown_blight` → `Brown blight`), `disease_name_vi` comes from `tea_class_names_vi.json`, and `top3` labels are class ids. When the top confidence is below `TEA_CONFIDENCE_THRESHOLD` (default `0.60`, see `ai-models/tea/MODEL_CARD.md`; a value outside (0, 1] stops startup), `uncertain` is `true`, both names are `null` and `top3` is kept. The general model is never `uncertain`. Every tea result, `healthy` included, still needs an officer's review.
 
@@ -1441,6 +1452,19 @@ Mở tệp chứng nhận. **Vai:** `officer`, `manager`. **Response:** 302 chuy
 
 ### `PUT /api/htx/public-settings`
 Bật hoặc tắt hiện tên người trên trang QR công khai. **Vai:** `manager`. **Request:** `{ "public_show_names": true }` (khoá lạ bị từ chối). **Response:** `{ "data": { "public_show_names": true } }`. **Errors:** 400 `VALIDATION_ERROR`; 403 `FORBIDDEN`.
+
+### `GET /api/disease-labels` (GĐ4-B)
+Danh mục nhãn sâu bệnh để cán bộ chọn khi duyệt. **Vai:** `manager`, `officer`. **Response:** `{ "data": [{ "code": "helopeltis", "name_vi": "Bọ xít muỗi", "scientific_name": "Helopeltis theivora", "group": "PEST", "is_target": true, "sort_order": 50 }] }`, năm mục tiêu trước rồi theo `sort_order`. **Errors:** 403 `FORBIDDEN`.
+
+### `GET /api/htx/disease-training-consent` và `PUT /api/htx/disease-training-consent` (GĐ4-B)
+Công tắc cho phép dùng ảnh ca bệnh đã xác nhận để huấn luyện mô hình chè; mặc định tắt. **Vai:** `manager` (cả đọc lẫn ghi). **PUT request:** `{ "enabled": true }` (khoá lạ bị từ chối). **Response (cả hai):** `{ "data": { "enabled": true, "at": "2026-11-28T10:00:00.000Z", "by": "<mã người dùng>" } }`; khi chưa từng bật `at` và `by` là `null`. Mỗi lần ghi đặt `dxos.actor` nên sự kiện audit của `htx_profiles` nêu tên người làm. **Errors:** 400 `VALIDATION_ERROR`; 403 `FORBIDDEN`.
+
+### `GET /api/platform/disease-dataset?since=&htx=&cursor=` (GĐ4-B)
+Bản kê ảnh thực địa để huấn luyện. **Vai:** `platform_admin` (401 khi chưa đăng nhập, 403 với vai khác). `since` là ngày hoặc thời điểm ISO (chỉ lấy ca xác nhận sau mốc đó), `htx` là mã HTX, `cursor` là `next_cursor` của trang trước (đục, không tự tạo); cả ba tuỳ chọn, sai định dạng trả 400. **Response** (không bọc `data`, không lưu đệm: `Cache-Control: no-store`):
+```json
+{ "items": [{ "report_id": "cuid", "label_code": "helopeltis", "htx_code": "TC", "household_key": "<16 ký tự hex>", "confirmed_on": "2026-11-20", "sha256": "<băm sha256 của ảnh gốc>", "url": "<URL GET đã ký, sống 15 phút>" }], "next_cursor": "<chuỗi đục hoặc null>" }
+```
+Chỉ gồm ca `CONFIRMED` có nhãn và có ảnh của HTX đang bật công tắc trên; HTX chưa bao giờ bật cho 0 dòng. Bản kê không có tên, số điện thoại hay mã hộ thật: `household_key` là 16 ký tự đầu (hex thường) của `sha256(htx_code + ":" + household_id)`, chỉ để nhóm ảnh cùng hộ; ảnh gốc chưa xoá EXIF/GPS, bước tải về của `ai-models/tea/train.py` xoá. Sắp theo thời điểm xác nhận cũ trước, mỗi trang tối đa 500 dòng; còn trang sau thì `next_cursor` khác `null` (ổn định cả khi nhiều dòng cùng thời điểm xác nhận), `null` là hết; `since` vẫn dùng được; ảnh không đọc được trong kho bị bỏ qua kèm cảnh báo.
 
 ### `GET /q/[lotCode]` (trang công khai, không phải route API)
 Trang Server Component không cần đăng nhập; mã lô sai ký tự (`/`, `?`, `#`, xuống dòng, hoặc dài hơn 100) hiện "Mã QR không hợp lệ", lô không có hiện "Không tìm thấy dữ liệu". Dựng bốn tầng (Vùng trồng; An toàn cách ly; Mẻ sao chế biến; Chứng nhận) từ dữ liệu truy xuất của lô, chứng nhận đọc trực tiếp lúc dựng trang, tên người (hộ, người ghi nhật ký, thợ sao) ẩn trừ khi `public_show_names` bật, cộng khối "Kiểm chứng trong sổ audit" (bộ nhớ đệm 5 phút). `GET /lot/[lotCode]` chuyển hướng 308 tới đây.

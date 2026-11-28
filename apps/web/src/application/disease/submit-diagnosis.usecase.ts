@@ -62,6 +62,7 @@ export class SubmitDiagnosisUseCase {
       photo_minio_key: uploadResult.minioKey,
       ai_disease_name: diseaseName,
       ai_confidence: aiResult.confidence_score,
+      model_version: aiResult.model_version ?? null,
     })
 
     // 5. Create Officer Notification (Broadcast) for every result: the tea model is not reliable enough to skip one

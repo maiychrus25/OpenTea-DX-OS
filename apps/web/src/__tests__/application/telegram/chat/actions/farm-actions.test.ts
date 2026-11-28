@@ -10,6 +10,7 @@ const mockFakes = {
   parcels: jest.fn(),
   parcelById: jest.fn(),
   guard: jest.fn(),
+  labels: jest.fn(),
   prismaReports: jest.fn(),
   prismaReportOne: jest.fn(),
   prismaCycles: jest.fn(),
@@ -59,6 +60,9 @@ jest.mock('@/infrastructure/db/farm/PrismaParcelRepository', () => ({
   })),
 }))
 jest.mock('@/infrastructure/db/farm/PrismaDiseaseReportRepository', () => ({ PrismaDiseaseReportRepository: jest.fn() }))
+jest.mock('@/infrastructure/db/farm/PrismaDiseaseLabelRepository', () => ({
+  PrismaDiseaseLabelRepository: jest.fn(() => ({ list: (...a: unknown[]) => mockFakes.labels(...a) })),
+}))
 jest.mock('@/infrastructure/db/farm/PrismaCropCycleRepository', () => ({ PrismaCropCycleRepository: jest.fn() }))
 jest.mock('@/infrastructure/db/notification/prisma-notification-repository', () => ({ PrismaNotificationRepository: jest.fn() }))
 jest.mock('@/infrastructure/db/journal/PrismaJournalRepository', () => ({ PrismaJournalRepository: jest.fn() }))
@@ -123,6 +127,10 @@ const parcel = (id: string, status: string) => ({ id, parcel_code: `TC-${id}`, h
 beforeEach(() => {
   for (const fake of Object.values(mockFakes)) fake.mockReset()
   mockFakes.guard.mockResolvedValue(undefined)
+  mockFakes.labels.mockResolvedValue([
+    { code: 'helopeltis', name_vi: 'Bọ xít muỗi' },
+    { code: 'white_spot', name_vi: 'Bệnh đốm trắng (white spot)' },
+  ])
   mockFakes.parcels.mockResolvedValue([parcel('p1', 'HARVESTED'), parcel('p2', 'TENDING'), parcel('p3', 'ACTIVE')])
   mockFakes.parcelById.mockResolvedValue(parcel('p1', 'HARVESTED'))
 })
@@ -139,7 +147,7 @@ describe('the high actions of this track', () => {
 
 describe('disease.review', () => {
   const a = () => action('disease.review')
-  const payload = { report_id: 'r1', decision: 'CONFIRMED' as const, note: 'Phun Regent 800WG' }
+  const payload = { report_id: 'r1', decision: 'CONFIRMED' as const, label_code: 'white_spot', note: 'Phun Regent 800WG' }
 
   it('is for officers, as the route is', () => {
     expect([...a().roles]).toEqual(['officer'])
@@ -160,10 +168,25 @@ describe('disease.review', () => {
 
   it('shows the parcel, the AI disease, the decision and the note', async () => {
     mockFakes.prismaReportOne.mockResolvedValue({ id: 'r1', ai_disease_name: 'Phấn trắng', parcel: { parcel_code: 'TC-A1' } })
-    expect(await a().preview(payload, officer)).toEqual(['Thửa: TC-A1', 'Bệnh (AI): Phấn trắng', 'Quyết định: Xác nhận', 'Ghi chú: Phun Regent 800WG'])
+    expect(await a().preview(payload, officer)).toEqual(['Thửa: TC-A1', 'Bệnh (AI): Phấn trắng', 'Quyết định: Xác nhận', 'Nhãn: Bệnh đốm trắng (white spot)', 'Ghi chú: Phun Regent 800WG'])
   })
 
-  it('confirms with the AI disease name through the use case', async () => {
+  it('asks for the label only when confirming, from the label list', async () => {
+    const step = a().steps.find((x) => x.slot === 'label_code')!
+    expect(step.when?.({ decision: 'CONFIRMED' })).toBe(true)
+    expect(step.when?.({ decision: 'REJECTED' })).toBe(false)
+    expect(await choicesOf(a(), 'label_code')).toEqual([
+      { value: 'helopeltis', label: 'Bọ xít muỗi' },
+      { value: 'white_spot', label: 'Bệnh đốm trắng (white spot)' },
+    ])
+  })
+
+  it('refuses a CONFIRMED payload without a label, and accepts REJECTED without one', () => {
+    expect(a().payloadSchema.safeParse({ ...payload, label_code: undefined }).success).toBe(false)
+    expect(a().payloadSchema.safeParse({ report_id: 'r1', decision: 'REJECTED', note: 'Ảnh mờ' }).success).toBe(true)
+  })
+
+  it('confirms with the chosen label and its name through the use case', async () => {
     mockFakes.prismaReportOne.mockResolvedValue({ id: 'r1', ai_disease_name: 'Phấn trắng', parcel: { parcel_code: 'TC-A1' } })
     expect(await a().execute(payload, officer, deps, NOW)).toBe('Đã xác nhận báo cáo bệnh.')
     expect(mockFakes.review).toHaveBeenCalledWith({
@@ -172,7 +195,8 @@ describe('disease.review', () => {
       htxCode: 'TC',
       status: 'CONFIRMED',
       treatment_recommendation: 'Phun Regent 800WG',
-      confirmed_diagnosis: 'Phấn trắng',
+      confirmed_diagnosis: 'Bệnh đốm trắng (white spot)',
+      confirmed_label_code: 'white_spot',
     })
   })
 

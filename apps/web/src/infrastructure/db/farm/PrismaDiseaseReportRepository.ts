@@ -16,6 +16,7 @@ export class PrismaDiseaseReportRepository implements DiseaseReportPort {
         photo_minio_key: data.photo_minio_key,
         ai_disease_name: data.ai_disease_name,
         ai_confidence: data.ai_confidence,
+        model_version: data.model_version ?? null,
       },
     });
 
@@ -118,7 +119,8 @@ export class PrismaDiseaseReportRepository implements DiseaseReportPort {
     treatment: string,
     officerId: string,
     confirmedDiagnosis: string | null,
-    prescription?: DiseasePrescription
+    prescription?: DiseasePrescription,
+    confirmedLabelCode?: string | null
   ): Promise<{ draftJournalEntryId?: string; prescribedProductName?: string }> {
     return prisma.$transaction(async (tx) => {
       const report = await tx.diseaseReport.update({
@@ -127,6 +129,7 @@ export class PrismaDiseaseReportRepository implements DiseaseReportPort {
           status: status,
           treatment_recommendation: treatment,
           confirmed_diagnosis: confirmedDiagnosis,
+          confirmed_label_code: confirmedLabelCode ?? null,
           confirmed_by_id: officerId,
           confirmed_at: new Date()
         }

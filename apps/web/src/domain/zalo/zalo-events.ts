@@ -41,11 +41,13 @@ const SKIP_LABELS: Record<SkipReason, string> = {
 }
 export const skipReasonLabelVi = (reason: string): string => SKIP_LABELS[reason as SkipReason] ?? 'Tin không được gửi.'
 
-/** Zalo error codes the relay passes through in `error` (verified against Zalo's public ZNS docs by the relay track). */
+/** Zalo error codes the relay passes through as "<code> <description>" (the owner's ZNS reference of 2026-11-28). Match the leading code only. */
 const ERROR_LABELS: [RegExp, string][] = [
-  [/-108|not.*zalo|user not found/i, 'Số điện thoại này không dùng Zalo.'],
-  [/-118|template/i, 'Mẫu tin ZNS không hợp lệ hoặc chưa được duyệt.'],
-  [/-124|quota|limit/i, 'Đã hết hạn mức gửi tin của Zalo.'],
+  [/^-108\b/, 'Số điện thoại của hộ không hợp lệ.'],
+  [/^-118\b/, 'Số điện thoại này không có tài khoản Zalo.'],
+  [/^-(109|111|112|117|131)\b/, 'Mẫu tin ZNS sai hoặc chưa được duyệt.'],
+  [/^-(115|126|211)\b/, 'Hết số dư hoặc hạn mức gửi tin ZNS.'],
+  [/^-(124|216)\b/, 'Token Zalo hết hạn; hệ thống sẽ tự làm mới.'],
   [/consent/i, 'Hộ đã tắt nhận tin Zalo.'],
 ]
 /** The Vietnamese reason for a failed or skipped row: a skip reason, a known Zalo error, or a generic line. */

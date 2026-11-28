@@ -15,6 +15,7 @@ jest.mock('@/application/disease/review-disease-report.usecase', () => ({
   ReviewDiseaseReportUseCase: jest.fn().mockImplementation(() => ({ execute })),
 }))
 jest.mock('@/infrastructure/db/farm/PrismaDiseaseReportRepository', () => ({ PrismaDiseaseReportRepository: jest.fn() }))
+jest.mock('@/infrastructure/db/farm/PrismaDiseaseLabelRepository', () => ({ PrismaDiseaseLabelRepository: jest.fn() }))
 jest.mock('@/infrastructure/db/notification/prisma-notification-repository', () => ({ PrismaNotificationRepository: jest.fn() }))
 jest.mock('@/infrastructure/storage/minio-storage.adapter', () => ({ MinioStorageAdapter: jest.fn() }))
 jest.mock('@/infrastructure/storage/minio-document.adapter', () => ({ MinioDocumentAdapter: jest.fn() }))
@@ -37,6 +38,22 @@ describe('PUT /api/officer/diseases/[id]/review', () => {
 
     expect(res.status).toBe(200)
     expect(execute).toHaveBeenCalledWith(expect.objectContaining({ status: 'CONFIRMED', confirmed_diagnosis: 'Đốm nâu' }))
+  })
+
+  test('passes the confirmed label code to the use case', async () => {
+    const res = await put({ status: 'CONFIRMED', treatment_recommendation: 'Cắt lá', confirmed_diagnosis: 'Bọ xít muỗi', confirmed_label_code: 'helopeltis' })
+
+    expect(res.status).toBe(200)
+    expect(execute).toHaveBeenCalledWith(expect.objectContaining({ confirmed_label_code: 'helopeltis' }))
+  })
+
+  test.each(['LABEL_REQUIRED', 'LABEL_UNKNOWN'])('%s answers 400 VALIDATION_ERROR', async (code) => {
+    execute.mockRejectedValueOnce(new Error(code))
+
+    const res = await put({ status: 'CONFIRMED', treatment_recommendation: 'Cắt lá', confirmed_diagnosis: 'x', confirmed_label_code: 'nope' })
+
+    expect(res.status).toBe(400)
+    expect((await res.json()).error.code).toBe('VALIDATION_ERROR')
   })
 
   test('a REJECTED body without a confirmed diagnosis is still accepted', async () => {

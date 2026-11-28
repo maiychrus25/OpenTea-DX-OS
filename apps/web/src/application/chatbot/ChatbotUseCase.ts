@@ -112,6 +112,7 @@ export class ChatbotUseCase {
 
     // Fetch RAG context
     let ragContextStr = ''
+    let passageSources: string[] = []
     try {
       if (chatType === 'market') {
         const timeWindow = new Date()
@@ -143,7 +144,9 @@ export class ChatbotUseCase {
         if (!this.htxCode) {
           throw new Error('An HTX is required for the technical chatbot documents')
         }
-        ragContextStr += await this.technicalContext(message, this.documentStorage, documentRoot(this.htxCode))
+        const technical = await this.technicalContext(message, this.documentStorage, documentRoot(this.htxCode))
+        ragContextStr += technical.text
+        passageSources = technical.sources
       }
     } catch (e) {
       logger.error("Failed to fetch RAG context", { error: e })
@@ -188,8 +191,9 @@ export class ChatbotUseCase {
             // Remove <think> blocks before extracting sources and saving to DB
             const cleanReply = fullReply.replace(/<think>[\s\S]*?(<\/think>|$)/gi, '').trim()
 
-            // Extract sources from reply (lines starting with "Nguồn:")
-            const sources = ChatbotUseCase.extractSources(cleanReply)
+            // Sources the model wrote ("Nguồn:" lines), else the files of the passages it was given: a small model often skips the line.
+            const written = ChatbotUseCase.extractSources(cleanReply)
+            const sources = written.length > 0 ? written : passageSources
 
             // Send metadata at end
             controller.enqueue(encoder.encode(JSON.stringify({
@@ -232,7 +236,7 @@ export class ChatbotUseCase {
   }
 
   /** The passages that match the question, from the HTX's Resources and Areas, plus a note for each unreadable PDF. */
-  private async technicalContext(question: string, storage: DocumentStoragePort, root: string): Promise<string> {
+  private async technicalContext(question: string, storage: DocumentStoragePort, root: string): Promise<{ text: string; sources: string[] }> {
     const folders = await Promise.all([`${root}Resources/`, `${root}Areas/`].map(folder => this.collectFiles(storage, folder, 0)))
     const files = folders.flat().sort((a, b) => b.uploadDate.getTime() - a.uploadDate.getTime())
     const keys = new Set(files.map(f => f.key))
@@ -262,13 +266,13 @@ export class ChatbotUseCase {
     }))
 
     const passages = selectPassages(question, docs)
-    if (passages.length === 0 && unreadable.length === 0) return ''
+    if (passages.length === 0 && unreadable.length === 0) return { text: '', sources: [] }
     let context = `\n\n--- TÀI LIỆU KỸ THUẬT NỘI BỘ TỪ P.A.R.A (DÙNG ĐỂ TRẢ LỜI): ---\n`
     for (const p of passages) context += `\n[Tài liệu: ${p.name}]\n${p.text}\n`
     for (const name of unreadable.sort().slice(0, MAX_UNREADABLE_LISTED)) {
       context += `\n[Tài liệu: ${name}] không đọc được (PDF scan, không có lớp chữ), không dùng làm căn cứ.\n`
     }
-    return `${context}\n--- KẾT THÚC TÀI LIỆU KỸ THUẬT ---\n`
+    return { text: `${context}\n--- KẾT THÚC TÀI LIỆU KỸ THUẬT ---\n`, sources: Array.from(new Set(passages.map(p => p.name))) }
   }
 
   /** Files under a folder and its subfolders; a folder holding a `.ai-ignore` file is left out with everything below it. */

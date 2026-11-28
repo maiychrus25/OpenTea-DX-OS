@@ -17,14 +17,21 @@ class ZnsCode:
 
 
 # The ONE table of Zalo error codes the relay and the stub rely on (the stub serves them for fail-next).
-# TODO(go-live): these codes MUST be checked against Zalo's public ZNS error table before going live;
-# only -108, -118 and -124 come from the project plan, the rest are best knowledge and unverified.
+# It follows the owner's ZNS reference of 2026-11-28 for business.openapi.zalo.me/message/template.
 ERROR_CODES: dict[int, ZnsCode] = {
-    -100: ZnsCode("Zalo gặp lỗi hệ thống, thử lại sau", permanent=False),
-    -108: ZnsCode("Số điện thoại không hợp lệ hoặc không dùng Zalo", permanent=True),
-    -118: ZnsCode("Mẫu tin ZNS không hợp lệ", permanent=True),
-    -124: ZnsCode("Đã hết hạn mức gửi tin ZNS", permanent=True),
-    -216: ZnsCode("Access token của OA không hợp lệ hoặc đã hết hạn", permanent=False, token_expired=True),
+    -100: ZnsCode("Zalo gặp lỗi hệ thống", permanent=False),
+    -108: ZnsCode("Số điện thoại không hợp lệ", permanent=True),
+    -109: ZnsCode("ID mẫu ZNS không hợp lệ", permanent=True),
+    -111: ZnsCode("Tham số mẫu ZNS không hợp lệ", permanent=True),
+    -112: ZnsCode("Tham số mẫu ZNS không hợp lệ", permanent=True),
+    -115: ZnsCode("Hết số dư hoặc hạn mức gửi ZNS", permanent=True),
+    -117: ZnsCode("OA không có quyền dùng mẫu ZNS này", permanent=True),
+    -118: ZnsCode("Tài khoản Zalo không tồn tại", permanent=True),
+    -124: ZnsCode("Access token không hợp lệ hoặc đã hết hạn", permanent=False, token_expired=True),
+    -126: ZnsCode("Hết số dư hoặc hạn mức gửi ZNS", permanent=True),
+    -131: ZnsCode("Mẫu ZNS chưa được duyệt", permanent=True),
+    -211: ZnsCode("Hết số dư hoặc hạn mức gửi ZNS", permanent=True),
+    -216: ZnsCode("Access token không hợp lệ hoặc đã hết hạn", permanent=False, token_expired=True),
 }
 
 

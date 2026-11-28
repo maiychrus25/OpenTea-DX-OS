@@ -21,6 +21,13 @@ describe('treatment plan after a diagnosis', () => {
     expect(text('Bọ xít muỗi', 'Phun theo hướng dẫn A')).toContain('Phun theo hướng dẫn A')
   })
 
+  it('asks for a new photo, with no officer or medicine step, when the photo is not a tea leaf', () => {
+    const plan = treatmentPlan('Không phải lá chè')
+    expect(plan).toHaveLength(1)
+    expect(plan[0].title).toBe('Chụp lại ảnh lá chè')
+    expect(text('Không phải lá chè')).not.toMatch(/kê thuốc|phun/i)
+  })
+
   it('treats a healthy leaf as needing no medicine', () => {
     expect(treatmentPlan('Lá khoẻ')).toHaveLength(2)
     expect(text('Lá khoẻ')).toContain('Không dùng thuốc')
