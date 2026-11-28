@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button';
 import { Pill } from '@/components/ui/Pill';
 import { Sprout } from 'lucide-react';
 import { ApproveHarvestButton } from '@/components/features/schedule/ApproveHarvestButton';
+import { ZaloConsentControl } from '@/components/features/zalo/ZaloConsentControl';
 import { LOAD_FAILED_MESSAGE } from '@/lib/api/fetch-json'
 import { redirectToLogin } from '@/lib/api/redirect-to-login'
 
@@ -183,6 +184,7 @@ export function HouseholdProfile({ id }: HouseholdProfileProps) {
 
   return (
     <div className="space-y-6">
+      <ZaloConsentControl householdId={id} />
       <Card>
         <div className="p-6">
           <div className="flex flex-col md:flex-row justify-between items-start gap-4">

@@ -5,7 +5,7 @@ import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { AppShell } from '@/components/layout/AppShell'
 import { NoHtxNotice } from '@/components/layout/NoHtxNotice'
-import { Home, Newspaper, MessageCircle, Map as MapIcon, Sprout, Package, Landmark, CheckSquare, Bell, Users, Calendar, Store, Sparkles, FlaskConical, Banknote, Receipt, Boxes, Wallet, Flame, Award, ShoppingCart, FileText } from 'lucide-react'
+import { Home, Newspaper, MessageCircle, Map as MapIcon, Sprout, Package, Landmark, CheckSquare, Bell, Users, Calendar, Store, Sparkles, FlaskConical, Banknote, Receipt, Boxes, Wallet, Flame, Award, ShoppingCart, FileText, MessageSquare } from 'lucide-react'
 
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/repositories/PrismaHtxProfileRepository'
@@ -45,6 +45,7 @@ export default async function ManagerLayout({ children }: { children: React.Reac
     { label: 'Hồ sơ HTX', href: '/manager/profile', icon: <Landmark size={20} />, group: 'Quản trị' },
     { label: 'Bản tin', href: '/manager/bulletin', icon: <Newspaper size={20} />, group: 'Quản trị' },
     { label: 'Thông báo', href: '/manager/notifications', icon: <Bell size={20} />, group: 'Quản trị' },
+    { label: 'Thông báo Zalo', href: '/manager/zalo', icon: <MessageSquare size={20} />, group: 'Quản trị' },
     { label: 'Chatbot', href: '/manager/chat', icon: <MessageCircle size={20} />, group: 'Ứng dụng' },
     { label: 'Đề xuất AI', href: '/manager/ai', icon: <Sparkles size={20} />, badge: openProposals || undefined, group: 'Ứng dụng' },
     { label: 'Kho ứng dụng', href: '/manager/app-store', icon: <Store size={20} />, group: 'Ứng dụng' },

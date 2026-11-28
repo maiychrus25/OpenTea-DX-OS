@@ -12,7 +12,7 @@ interface Props {
   stock: DryStock | null
 }
 
-/** Block 4: dry tea left in finished batches, per grade, all five grades. */
+/** Block 4: dry tea left in finished batches, per grade, all five grades, and the 14-day forecast line. */
 export function DryStockBlock({ stock }: Props) {
   return (
     <BoardBlock title="Tồn chè khô" href="/manager/processing" failedText={stock ? undefined : 'Chưa tải được tồn chè khô.'}>
@@ -25,6 +25,9 @@ export function DryStockBlock({ stock }: Props) {
             </li>
           ))}
         </ul>
+      )}
+      {stock && stock.forecast_dry_kg_14d != null && (
+        <p className={styles.muted}>Dự kiến 14 ngày tới: {kgText(stock.forecast_dry_kg_14d)} kg chè khô</p>
       )}
     </BoardBlock>
   )

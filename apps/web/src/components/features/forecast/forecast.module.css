@@ -1,0 +1,21 @@
+/* SPDX-License-Identifier: MIT */
+/* Copyright (c) 2026 OpenTea Developers */
+
+.pad { padding: 14px 18px; }
+.body { display: flex; flex-direction: column; gap: 14px; padding: 14px 18px 18px; min-width: 0; }
+.totals { margin: 0; font-size: 14.5px; overflow-wrap: anywhere; }
+.muted { margin: 0; color: var(--color-ink-secondary); font-size: 13.5px; }
+.failed { margin: 0; color: var(--color-danger); font-weight: 600; font-size: 13.5px; }
+.tableScroll { overflow-x: auto; max-width: 100%; }
+.table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.table th { padding: 8px 10px; text-align: left; background: var(--color-table-head); color: var(--color-ink-secondary); border-bottom: 1px solid var(--color-border); white-space: nowrap; }
+.table td { padding: 8px 10px; border-bottom: 1px solid var(--color-border-row); overflow-wrap: anywhere; }
+.bar { color: var(--color-primary); letter-spacing: -1px; white-space: nowrap; }
+.parcelList { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.parcel { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 10px 12px; border-radius: 12px; background: var(--color-surface-sunken); font-size: 14px; min-width: 0; }
+.normBadge, .historyBadge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+.normBadge { background: var(--color-warning-subtle); color: var(--color-warning); }
+.historyBadge { background: var(--color-info-subtle); color: var(--color-info); }
+@media (max-width: 480px) {
+  .body { padding: 12px 14px 14px; }
+}

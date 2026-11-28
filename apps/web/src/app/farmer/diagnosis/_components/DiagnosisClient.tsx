@@ -3,6 +3,8 @@
 
 'use client'
 
+import { ListenButton } from '@/components/features/tts/ListenButton'
+import { carePlanSentence } from '@/lib/tts/sentences'
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Pill } from '@/components/ui'
@@ -246,10 +248,13 @@ export function DiagnosisClient({ initialParcels, initialHistory }: DiagnosisCli
                       <span className={styles.advice}><strong>Hướng dẫn CBKT:</strong> {h.treatment_recommendation}</span>
                     )}
                     {h.status !== 'REJECTED' && displayDiseaseName(h) !== UNCERTAIN_DISEASE_NAME && (
-                      <details className={styles.planToggle}>
-                        <summary>Xem lộ trình xử lý</summary>
-                        <TreatmentPlan disease={displayDiseaseName(h)} officerAdvice={h.treatment_recommendation} />
-                      </details>
+                      <>
+                        <details className={styles.planToggle}>
+                          <summary>Xem lộ trình xử lý</summary>
+                          <TreatmentPlan disease={displayDiseaseName(h)} officerAdvice={h.treatment_recommendation} />
+                        </details>
+                        <ListenButton text={carePlanSentence(displayDiseaseName(h), h.treatment_recommendation)} label="Nghe kế hoạch" />
+                      </>
                     )}
                   </span>
                   <Pill tone={diseaseStatusLabel(h.status).tone}>{diseaseStatusLabel(h.status).label}</Pill>

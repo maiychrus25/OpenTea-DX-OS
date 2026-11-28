@@ -3,6 +3,8 @@
 
 'use client'
 
+import { ListenButton } from '@/components/features/tts/ListenButton'
+import { balanceSentence } from '@/lib/tts/sentences'
 import Link from 'next/link'
 import React, { useEffect, useState } from 'react'
 import { Wallet } from 'lucide-react'
@@ -65,6 +67,7 @@ export function FarmerLedger() {
 
       <section className={`${kit.pn} ${styles.balance}`} aria-label="Số dư">
         <p className={styles.balanceLine}>{balanceText(ledger.balance_vnd)}</p>
+        <ListenButton text={balanceSentence(balanceText(ledger.balance_vnd))} label="Nghe số dư" />
         {ledger.households.length > 1 && (
           <ul className={styles.householdBalances} aria-label="Số dư từng hộ">
             {ledger.households.map(h => (
