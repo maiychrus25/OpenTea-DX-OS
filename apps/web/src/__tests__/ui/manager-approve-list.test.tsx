@@ -22,37 +22,24 @@ beforeEach(() => {
   })) as unknown as typeof fetch
 })
 
-it('filters by the figure pressed and approves only waiting journals that are chosen', async () => {
+it('shows waiting journals first and approves the one on the row', async () => {
   render(<ApproveList />)
-  await screen.findByText('P-1')
-  expect(screen.queryByText('P-3')).not.toBeInTheDocument()
+  await screen.findByRole('cell', { name: 'P-1' })
+  expect(screen.queryByRole('cell', { name: 'P-3' })).not.toBeInTheDocument()
   expect(screen.getAllByText('Lò Thị Mai').length).toBeGreaterThan(0)
 
-  fireEvent.click(screen.getByRole('button', { name: 'Xem Quá hạn' }))
-  expect(screen.getByText('P-2')).toBeInTheDocument()
-  expect(screen.queryByText('P-1')).not.toBeInTheDocument()
-  fireEvent.click(screen.getByRole('checkbox', { name: 'Chọn nhật ký 1' }))
-  fireEvent.click(screen.getByRole('button', { name: 'Duyệt (1)' }))
-  await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/journal/batch-approve', expect.objectContaining({ body: JSON.stringify({ entry_ids: ['b'] }) })))
+  fireEvent.click(screen.getAllByRole('button', { name: 'Duyệt' })[0])
+  await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/journal/batch-approve', expect.objectContaining({ body: JSON.stringify({ entry_ids: ['a'] }) })))
 
-  fireEvent.click(await screen.findByRole('button', { name: 'Xem Đã duyệt tháng này' }))
-  expect(screen.getByRole('checkbox', { name: 'Chọn nhật ký 1' })).toBeDisabled()
+  fireEvent.click(await screen.findByRole('button', { name: 'Từ chối (1)' }))
+  expect(screen.getByRole('cell', { name: 'P-4' })).toBeInTheDocument()
 })
 
-it('approves more than fifty journals in batches of fifty', async () => {
-  const many = Array.from({ length: 60 }, (_, i) => entry(`e${i}`, `P-${i}`, 'PENDING_APPROVAL', now))
-  global.fetch = jest.fn(async (url: string, init?: RequestInit) => ({
-    ok: true,
-    status: 200,
-    json: async () => (init?.method === 'POST'
-      ? { data: { approved_count: JSON.parse(String(init.body)).entry_ids.length, failed_ids: [] } }
-      : { data: String(url).includes('households') ? [] : many }),
-  })) as unknown as typeof fetch
+it('sends the reason when a waiting journal is not approved', async () => {
   render(<ApproveList />)
-  await screen.findByText('P-0')
-  for (const box of screen.getAllByRole('checkbox', { name: /^Chọn nhật ký/ })) fireEvent.click(box)
-  fireEvent.click(screen.getByRole('button', { name: 'Duyệt (60)' }))
-  await screen.findByText('Đã duyệt 60 nhật ký thành công.')
-  const sizes = (global.fetch as jest.Mock).mock.calls.filter(([, init]) => init?.method === 'POST').map(([, init]) => JSON.parse(init.body).entry_ids.length)
-  expect(sizes).toEqual([50, 10])
+  await screen.findByRole('cell', { name: 'P-1' })
+  fireEvent.click(screen.getAllByRole('button', { name: 'Từ chối' })[0])
+  fireEvent.change(screen.getByLabelText('Lý do'), { target: { value: 'Thiếu ảnh' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Gửi', hidden: true }))
+  await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/journal/a/review', expect.objectContaining({ body: JSON.stringify({ decision: 'REQUEST_CHANGES', reason: 'Thiếu ảnh' }) })))
 })

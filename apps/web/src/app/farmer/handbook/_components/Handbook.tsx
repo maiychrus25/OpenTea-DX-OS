@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, Camera, ExternalLink, ChevronLeft, ChevronRight, Download, Droplet, FileText, Leaf, Search, ShieldCheck, ShieldPlus, Sprout, Flower2 } from 'lucide-react'
+import { ArrowRight, Camera, ExternalLink, ChevronLeft, ChevronRight, Download, Droplet, FileText, Leaf, Search, ShieldCheck, ShieldPlus, Sprout, Flower2, BookOpen } from 'lucide-react'
 import kit from '@/components/features/farmer-web/kit.module.css'
 import styles from './handbook.module.css'
 import { REFERENCES } from '@/components/features/articles/tea-references'
@@ -63,10 +63,11 @@ export function Handbook() {
 
   return (
     <div className={`${kit.page} ${styles.page}`}>
-      <div className={styles.head}>
-        <div className={styles.headText}>
-          <h1>Cẩm nang canh tác</h1>
-          <p>Kỹ thuật trồng, chăm sóc, phòng trừ sâu bệnh và thu hái chè. Tổng hợp từ tài liệu của cơ quan bảo vệ thực vật và các tạp chí khoa học (nguồn ghi ở từng bài).</p>
+      <div className={kit.hd}>
+        <span className={kit.hico}><BookOpen size={28} aria-hidden="true" /></span>
+        <div className={kit.hdText}>
+          <h1 className={kit.h1}>Cẩm nang canh tác</h1>
+          <p className={kit.sub}>Kỹ thuật trồng, chăm sóc, phòng trừ sâu bệnh và thu hái chè. Tổng hợp từ tài liệu của cơ quan bảo vệ thực vật và các tạp chí khoa học (nguồn ghi ở từng bài).</p>
         </div>
       </div>
 

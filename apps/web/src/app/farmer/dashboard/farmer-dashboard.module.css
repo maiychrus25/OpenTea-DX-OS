@@ -84,19 +84,23 @@
 .table th { font-size: 12px; font-weight: 600; text-transform: none; }
 .page span[class*='tag'] { font-size: 11.5px; font-weight: 600; }
 
+.moneyRow > section > div:first-child > a { flex: none; margin-left: auto; white-space: nowrap; }
+.moneyRow { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; align-items: stretch; }
+
 @media (max-width: 1100px) {
-  .pair, .columns { grid-template-columns: minmax(0, 1fr); }
+  .moneyRow, .pair, .columns { grid-template-columns: minmax(0, 1fr); }
 }
 
-/* Phone: banner, weather, warning, then the parcels; the rest stays reachable below. */
+/* Keep the visual order in sync with the DOM: hero/weather, warning, prices, parcels. */
 @media (max-width: 767px) {
   .page { gap: 12px; }
   .page .pair, .page .columns { display: contents; }
-  .hero { order: 1; }
-  .alert { order: 3; }
-  .parcels { order: 4; }
-  .shortcuts { order: 5; }
-  .recent { order: 6; }
-    .harvest { order: 8; }
+  .hero a, .alertLink { min-height: 44px; }
+  .alertLink { display: inline-flex; align-items: center; flex: none; }
+  .parcel { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .parcel > span[class*='tag'] { grid-column: 2 / -1; justify-self: start; white-space: normal; }
+  .parcel strong, .parcel small, .entry { overflow-wrap: anywhere; }
   .entry { flex-wrap: wrap; }
 }
+
+.listenPicking { display: flex; justify-content: flex-end; padding: 6px 11px 0; }

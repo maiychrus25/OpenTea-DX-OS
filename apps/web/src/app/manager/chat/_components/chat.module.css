@@ -1,0 +1,22 @@
+/* SPDX-License-Identifier: MIT */
+/* SPDX-FileCopyrightText: 2026 OpenTea Developers */
+
+.page { height: calc(100dvh - var(--topbar-height) - 48px); min-height: 560px; }
+.page > [data-aside] { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 12px; flex: 1; width: auto; height: auto; min-height: 0; margin: 0; background: none; }
+.page [data-aside] > section { min-height: 0; background: var(--color-surface-card); border: 1px solid var(--color-border); border-radius: var(--radius-card); }
+.side { display: flex; flex-direction: column; gap: 12px; min-width: 0; overflow-y: auto; }
+.box { padding: 12px 14px; background: var(--color-surface-card); border: 1px solid var(--color-border); border-radius: var(--radius-card); box-shadow: var(--shadow-card); }
+.box h2 { display: flex; align-items: center; gap: 10px; margin: 0 0 6px; font-size: 15px; font-weight: 800; color: var(--color-ink-heading); }
+.box h2 svg { color: var(--color-primary); }
+.box p { margin: 0; font-size: 13px; color: var(--color-ink-secondary); }
+.box ul { margin: 0; padding: 0; list-style: none; }
+.box li { border-top: 1px solid var(--color-border-row); }
+.box a, .box button { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 6px 0; border: 0; background: none; color: var(--color-ink-primary); font: inherit; font-size: 13.5px; text-align: left; text-decoration: none; cursor: pointer; }
+.box a span { display: flex; width: 32px; height: 32px; flex: none; align-items: center; justify-content: center; border-radius: var(--radius-button); background: var(--color-primary-subtle); color: var(--color-primary); }
+.box a svg:last-child { margin-left: auto; }
+
+@media (max-width: 1000px) {
+  .page { height: auto; }
+  .page > [data-aside] { grid-template-columns: minmax(0, 1fr); }
+  .page [data-aside] > section { height: 70dvh; }
+}

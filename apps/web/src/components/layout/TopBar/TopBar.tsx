@@ -3,7 +3,7 @@
 
 import * as React from 'react'
 import styles from './TopBar.module.css'
-import { Home, Menu } from 'lucide-react'
+import { ChevronDown, Home, Menu, UserRound } from 'lucide-react'
 import { NotificationBell } from '@/components/ui'
 import { GlobalSearchInput } from '@/components/ui/GlobalSearch/GlobalSearchInput'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
@@ -16,9 +16,11 @@ export interface TopBarProps {
   notificationSlot?: React.ReactNode
   onMenuClick?: () => void
   pageName?: string
+  /** Named in the head's breadcrumb. */
+  htxName?: string
 }
 
-export const TopBar: React.FC<TopBarProps> = ({ role, roleName, userName, notificationSlot, onMenuClick, pageName }) => {
+export const TopBar: React.FC<TopBarProps> = ({ role, roleName, userName, notificationSlot, onMenuClick, pageName, htxName }) => {
   // Get initials for avatar
   const initials = userName
     .split(' ')
@@ -40,7 +42,8 @@ export const TopBar: React.FC<TopBarProps> = ({ role, roleName, userName, notifi
         </div>
         <nav className={styles.breadcrumb} aria-label="Đường dẫn">
           <Home size={18} aria-hidden="true" />
-          <span>Không gian HTX</span>
+          {role === 'manager' && <span aria-hidden="true">|</span>}
+          <span>{(role === 'manager' && htxName) || 'Không gian HTX'}</span>
           <span aria-hidden="true">/</span>
           <strong aria-current="page">{pageName || roleName}</strong>
         </nav>
@@ -53,8 +56,9 @@ export const TopBar: React.FC<TopBarProps> = ({ role, roleName, userName, notifi
         {/* The platform admin has no HTX, so there is nothing to notify and the notification API would answer 403. */}
         {role !== 'platform_admin' && (notificationSlot ?? <NotificationBell role={role} />)}
         <div className={styles.avatar} aria-label={`Người dùng: ${userName}`}>
-          {initials}
+          {role === 'manager' ? <UserRound size={20} aria-hidden="true" /> : initials}
         </div>
+        {role === 'manager' && <ChevronDown size={16} aria-hidden="true" />}
       </div>
     </header>
   )

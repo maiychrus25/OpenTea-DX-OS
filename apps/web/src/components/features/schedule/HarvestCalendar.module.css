@@ -107,3 +107,49 @@
 @media (max-width: 1100px) {
   .layout { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Farmer layout only. The officer and manager calendar keeps its existing geometry. */
+.farmer .top { justify-content: flex-start; align-items: center; gap: 12px; }
+.farmer .layout { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 14px; align-items: start; }
+.farmer .main { display: contents; }
+.farmer .stats { grid-column: 1 / -1; padding: 14px 0; }
+.farmer .stats > div { min-width: 0; grid-template-columns: minmax(0, 1fr); gap: 4px; }
+.farmer .stats span { display: none; }
+.farmer .stats dt { grid-row: 1; font-size: 12px; overflow-wrap: anywhere; }
+.farmer .stats dd { font-size: 26px; }
+.farmer .calendar { min-width: 0; }
+.farmer .scroll { overflow: visible; }
+.farmer .grid { min-width: 0; }
+.farmer .header { gap: 8px; }
+.farmer .header h2 { font-size: 14px; }
+.farmer .nav, .farmer .todayButton { min-width: 44px; min-height: 44px; }
+.farmer .legend { width: 100%; margin: 4px 0 0; }
+.farmer .week { grid-template-rows: 44px; grid-auto-rows: 44px; row-gap: 0; }
+.farmer .cell { min-width: 0; min-height: 44px; padding: 0; }
+.farmer .date { width: 100%; min-height: 44px; }
+.farmer .bar { position: relative; justify-content: center; gap: 2px; margin: 0 2px; padding: 0 2px; background: transparent; }
+.farmer .bar::before { content: ''; position: absolute; inset: 12px 0; z-index: -1; border-radius: var(--rounded-sm); background: var(--color-surface-sunken); }
+.farmer .bar.ready::before { background: var(--color-success-subtle); }
+.farmer .bar.quarantine::before { background: var(--color-danger-subtle); }
+.farmer .bar.blocked::before { background: var(--color-warning-subtle); }
+.farmer .bar svg { display: none; }
+.farmer .bar span { font-size: 10px; }
+.farmer .items button { min-height: 44px; }
+.farmer .panel h2 { padding-left: 8px; border-left: 4px solid var(--color-primary); }
+.farmer .panel, .farmer .items strong, .farmer .rows dd { overflow-wrap: anywhere; }
+.farmer .items strong, .farmer .items span, .farmer .rows dt, .farmer .rows dd { min-width: 0; }
+.farmer .items svg { flex: none; }
+.farmer .rows dt { flex: 0 0 40%; }
+.farmer button:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: -2px; }
+
+@media (max-width: 1100px) {
+  .farmer .layout { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 767px) {
+  .farmer .stats > div { padding: 0 10px; }
+  .farmer .header { padding: 10px 8px; gap: 6px; }
+  .farmer .todayButton { padding: 0 10px; }
+  .farmer .bar::before { inset: 19px 0; }
+  .farmer .bar span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+}

@@ -8,7 +8,7 @@ import { activitySentence } from '@/lib/tts/sentences'
 import React, { useEffect, useRef, useState } from 'react'
 import styles from '../journal.module.css'
 import kit from '@/components/features/farmer-web/kit.module.css'
-import { ImageIcon, Send } from 'lucide-react'
+import { Droplet, ImageIcon, Leaf, MoreHorizontal, Scissors, Send, SprayCan, Sprout } from 'lucide-react'
 import { fetchJson, LOAD_FAILED_MESSAGE } from '@/lib/api/fetch-json'
 import { ACTIVITY_TYPES, type JournalPrefill } from './journal-prefill'
 import { PesticidePicker, isBelowFloor, type PesticideChange } from '@/components/features/pesticide/PesticidePicker'
@@ -40,6 +40,11 @@ interface FarmerJournalFormProps {
   onCancel: () => void
   /** Values from the chat card's Sửa button; anything invalid is dropped. */
   initial?: JournalPrefill
+}
+
+const ACTIVITY_ICONS: Record<string, typeof Leaf> = {
+  SPRAYING: SprayCan, FERTILIZING: Sprout, IRRIGATION: Droplet,
+  HARVEST: Leaf, SOWING: Sprout, PRUNING: Scissors, OTHER: MoreHorizontal,
 }
 
 export function FarmerJournalForm({ onSuccess, onCancel, initial: chatPrefill, entry }: FarmerJournalFormProps) {
@@ -166,66 +171,87 @@ export function FarmerJournalForm({ onSuccess, onCancel, initial: chatPrefill, e
     <form onSubmit={handleSubmit} className={styles.entryForm} aria-label="Ghi nhật ký">
       {error && <p className={styles.errorText}>{error}</p>}
 
-      <div className={`${styles.two} ${kit.two}`}>
-        {field('Thửa đất', (
-          <select className={`${kit.inp} ${styles.tall}`} value={parcelId} onChange={e => setParcelId(e.target.value)} disabled={parcels.length === 0 || !!entry}>
-            {parcels.length === 0 && <option value="">Chưa có thửa đất được phân công</option>}
-            {parcels.map(p => (
-              <option key={p.id} value={p.id}>{p.parcel_code} — {p.crop_type}</option>
-            ))}
-          </select>
-        ))}
-        {field('Ngày', <input className={`${kit.inp} ${styles.tall}`} type="date" value={entryDate} onChange={e => setEntryDate(e.target.value)} />)}
-      </div>
-
-      <div className={kit.fl}>
-        <span id="activity-label">Hoạt động</span>
-        <div className={styles.filters} role="group" aria-labelledby="activity-label">
-          {ACTIVITY_TYPES.map(t => (
-            <button key={t.value} type="button" className={`${kit.seg} ${styles.tallChip}`} aria-pressed={activityType === t.value} onClick={() => setActivityType(t.value)}>{t.label}</button>
+      <section className={styles.formBlock} aria-labelledby="journal-information">
+        <h2 id="journal-information" className={styles.blockTitle}>Thông tin nhật ký</h2>
+        <div className={`${styles.two} ${kit.two}`}>
+          {field('Thửa đất', (
+            <select className={`${kit.inp} ${styles.tall}`} value={parcelId} onChange={e => setParcelId(e.target.value)} disabled={parcels.length === 0 || !!entry}>
+              {parcels.length === 0 && <option value="">Chưa có thửa đất được phân công</option>}
+              {parcels.map(p => (
+                <option key={p.id} value={p.id}>{p.parcel_code} — {p.crop_type}</option>
+              ))}
+            </select>
           ))}
+          {field('Ngày', <input className={`${kit.inp} ${styles.tall}`} type="date" value={entryDate} onChange={e => setEntryDate(e.target.value)} />)}
         </div>
-      </div>
 
-      <ListenButton text={activitySentence(ACTIVITY_TYPES.find(t => t.value === activityType)?.label ?? activityType, spraying)} label="Nghe hướng dẫn" />
-
-      {hasProductFields(activityType) && (
-        <label className={styles.check}>
-          <input type="checkbox" checked={!hasChemicals} onChange={e => setHasChemicals(!e.target.checked)} />
-          Không sử dụng thuốc / phân bón trong lần ghi này
-        </label>
-      )}
-
-      {chemicals && !spraying && field('Sản phẩm sử dụng', <input className={`${kit.inp} ${styles.tall}`} value={productName} onChange={e => setProductName(e.target.value)} placeholder="VD: Phân NPK 16-16-8" />)}
-      {chemicals && fertilizing && field('Liều lượng', <input className={`${kit.inp} ${styles.tall}`} value={dosage} onChange={e => setDosage(e.target.value)} />)}
-      {harvest && (
-        <>
-          {field('Sản lượng búp tươi (kg)', <input className={`${kit.inp} ${styles.tall}`} type="number" inputMode="decimal" step="any" value={freshLeaf} aria-invalid={!!leafError} onChange={e => setFreshLeaf(e.target.value)} />)}
-          {leafError && <p className={styles.errorText} role="alert">{leafError}</p>}
-        </>
-      )}
-      {sprayingWithProduct && (
-        <>
-          <PesticidePicker value={pesticide} onChange={setPesticide} />
-          <div className={`${styles.two} ${kit.two}`}>
-            {field('Liều lượng', <input className={`${kit.inp} ${styles.tall}`} value={dosage} onChange={e => setDosage(e.target.value)} placeholder="VD: 50ml/bình 16L" />)}
-            {field('Người thực hiện', <input className={`${kit.inp} ${styles.tall}`} value={performer} onChange={e => setPerformer(e.target.value)} placeholder="VD: Nguyễn Văn A" />)}
+        <div className={kit.fl}>
+          <span id="activity-label">Hoạt động</span>
+          <div className={styles.activityChoices} role="group" aria-labelledby="activity-label">
+            {ACTIVITY_TYPES.map(t => {
+              const Icon = ACTIVITY_ICONS[t.value]
+              return (
+                <button key={t.value} type="button" className={styles.activityChoice} aria-pressed={activityType === t.value} onClick={() => setActivityType(t.value)}>
+                  <Icon size={22} aria-hidden="true" />{t.label}
+                </button>
+              )
+            })}
           </div>
-        </>
-      )}
+        </div>
 
-      {field('Ghi chú', <textarea className={`${kit.inp} ${styles.area}`} value={observation} onChange={e => setObservation(e.target.value)} placeholder="Chè đang ra búp đều..." />)}
+        <div className={styles.listenRow}>
+          <ListenButton text={activitySentence(ACTIVITY_TYPES.find(t => t.value === activityType)?.label ?? activityType, spraying)} label="Nghe hướng dẫn" />
+        </div>
+      </section>
 
-      <label className={kit.fl}>
-        Hình ảnh thực tế (tùy chọn)
-        <span className={styles.drop}>
-          <ImageIcon size={22} aria-hidden="true" />
-          {photo ? `Đã chọn: ${photo.name}` : 'Nhấn để chọn ảnh (JPEG, PNG)'}
-          <input type="file" accept="image/jpeg, image/png" className={styles.fileInput} onChange={e => e.target.files && setPhoto(e.target.files[0])} />
-        </span>
-      </label>
+      <div className={styles.formDetails}>
+        {(hasProductFields(activityType) || harvest) && (
+          <section className={styles.formBlock} aria-labelledby="activity-information">
+            <h2 id="activity-information" className={styles.blockTitle}>{ACTIVITY_TYPES.find(t => t.value === activityType)?.label}</h2>
+            {hasProductFields(activityType) && (
+              <label className={styles.check}>
+                <input type="checkbox" checked={!hasChemicals} onChange={e => setHasChemicals(!e.target.checked)} />
+                Không sử dụng thuốc / phân bón trong lần ghi này
+              </label>
+            )}
+
+            {chemicals && !spraying && field('Sản phẩm sử dụng', <input className={`${kit.inp} ${styles.tall}`} value={productName} onChange={e => setProductName(e.target.value)} placeholder="VD: Phân NPK 16-16-8" />)}
+            {chemicals && fertilizing && field('Liều lượng', <input className={`${kit.inp} ${styles.tall}`} value={dosage} onChange={e => setDosage(e.target.value)} />)}
+            {harvest && (
+              <>
+                {field('Sản lượng búp tươi (kg)', <input className={`${kit.inp} ${styles.tall}`} type="number" inputMode="decimal" step="any" value={freshLeaf} aria-invalid={!!leafError} onChange={e => setFreshLeaf(e.target.value)} />)}
+                {leafError && <p className={styles.errorText} role="alert">{leafError}</p>}
+              </>
+            )}
+            {sprayingWithProduct && (
+              <>
+                <PesticidePicker value={pesticide} onChange={setPesticide} />
+                <div className={`${styles.two} ${kit.two}`}>
+                  {field('Liều lượng', <input className={`${kit.inp} ${styles.tall}`} value={dosage} onChange={e => setDosage(e.target.value)} placeholder="VD: 50ml/bình 16L" />)}
+                  {field('Người thực hiện', <input className={`${kit.inp} ${styles.tall}`} value={performer} onChange={e => setPerformer(e.target.value)} placeholder="VD: Nguyễn Văn A" />)}
+                </div>
+              </>
+            )}
+          </section>
+        )}
+
+        <section className={styles.formBlock} aria-labelledby="journal-evidence">
+          <h2 id="journal-evidence" className={styles.blockTitle}>Ghi chú và ảnh</h2>
+          {field('Ghi chú', <textarea className={`${kit.inp} ${styles.area}`} value={observation} onChange={e => setObservation(e.target.value)} placeholder="Chè đang ra búp đều..." />)}
+
+          <label className={kit.fl}>
+            Hình ảnh thực tế (tùy chọn)
+            <span className={styles.drop}>
+              <ImageIcon size={22} aria-hidden="true" />
+              {photo ? `Đã chọn: ${photo.name}` : 'Nhấn để chọn ảnh (JPEG, PNG)'}
+              <input type="file" accept="image/jpeg, image/png" className={styles.fileInput} onChange={e => e.target.files && setPhoto(e.target.files[0])} />
+            </span>
+          </label>
+        </section>
+      </div>
 
       <div className={styles.entryActions}>
+        <p className={styles.sendNote}>Nhật ký sẽ được gửi cán bộ kỹ thuật duyệt.</p>
         <button type="button" className={`${kit.btn2} ${styles.tall}`} onClick={onCancel}>Hủy</button>
         <button type="submit" className={`${kit.btn} ${styles.tall}`} disabled={submitting || uploadingPhoto || !parcelId || belowFloor}>
           <Send size={16} aria-hidden="true" />

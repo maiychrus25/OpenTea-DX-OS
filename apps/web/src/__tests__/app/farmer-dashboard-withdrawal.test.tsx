@@ -64,6 +64,24 @@ test('shows nothing when no safe harvest date is in the future', async () => {
   expect(screen.queryByText(/ngày cách ly/)).not.toBeInTheDocument()
 })
 
+test('the reading order puts weather, warning, prices and parcels first then the recent journal', async () => {
+  db.journalActivity.findMany.mockResolvedValue([safeOn('A3', new Date(NOW.getTime() + 2 * DAY))])
+  render(await FarmerDashboard())
+  const blocks = [
+    screen.getByRole('region', { name: 'Thời tiết hiện tại' }),
+    screen.getByRole('status'),
+    screen.getByRole('region', { name: 'Giá búp hôm nay' }),
+    screen.getByRole('region', { name: 'Tình trạng thửa đất' }),
+    screen.getByRole('region', { name: 'Nhật ký gần đây' }),
+  ]
+  blocks.slice(1).forEach((block, index) => {
+    expect(blocks[index].compareDocumentPosition(block) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+  expect(screen.getByRole('link', { name: 'Ghi nhật ký mới' })).toHaveAttribute('href', '/farmer/journal/new')
+  expect(screen.getByRole('link', { name: 'Xem lịch thu hái' })).toHaveAttribute('href', '/farmer/schedule')
+  expect(screen.getByRole('link', { name: 'Xem dự báo' })).toBeInTheDocument()
+})
+
 test('reads no withdrawal when the farmer has no household', async () => {
   db.household.findFirst.mockResolvedValue(null)
   render(await FarmerDashboard())

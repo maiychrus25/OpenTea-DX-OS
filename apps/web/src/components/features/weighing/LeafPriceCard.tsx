@@ -27,24 +27,24 @@ export function LeafPriceCard() {
 
   return (
     <section className={kit.pn} aria-labelledby="leaf-price-card-title">
-      <div className={kit.ph}><h2 id="leaf-price-card-title">Giá búp hôm nay</h2></div>
+      <div className={`${kit.ph} ${styles.farmerPriceHead}`}>
+        <h2 id="leaf-price-card-title">Giá búp hôm nay</h2>
+        {published.length > 0 && (
+          <ListenButton text={priceSentence(published.map(p => ({ grade_name: p.grade_name, price_vnd_per_kg: p.price_vnd_per_kg ?? 0 })))} label="Nghe giá" />
+        )}
+      </div>
       {error && <p role="alert" className={`${styles.error} ${styles.pad}`}>{error}</p>}
       {!error && !today && <p className={`${kit.muted} ${styles.pad}`}>Đang tải...</p>}
       {today && published.length === 0 && <p className={`${kit.muted} ${styles.pad}`}>HTX chưa công bố giá hôm nay.</p>}
       {published.length > 0 && (
-        <>
-          <div className={styles.pad}>
-            <ListenButton text={priceSentence(published.map(p => ({ grade_name: p.grade_name, price_vnd_per_kg: p.price_vnd_per_kg ?? 0 })))} label="Nghe giá" />
-          </div>
-        <ul className={kit.list}>
+        <ul className={`${kit.list} ${styles.farmerPrices}`}>
           {published.map(p => (
-            <li key={p.grade_id} className={styles.priceRow}>
-              <strong className={styles.grow}>{p.grade_name}</strong>
+            <li key={p.grade_id} className={styles.farmerPrice}>
+              <strong>{p.grade_name}</strong>
               <span>{money(p.price_vnd_per_kg ?? 0)} đ/kg</span>
             </li>
           ))}
         </ul>
-        </>
       )}
     </section>
   )

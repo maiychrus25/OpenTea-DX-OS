@@ -76,7 +76,7 @@ describe('MemberList UI', () => {
       expect(screen.getByText('Nguyễn Văn A')).toBeInTheDocument();
     });
 
-    const inviteButton = screen.getByText('+ Thêm thành viên');
+    const inviteButton = screen.getByText('Thêm thành viên');
     fireEvent.click(inviteButton);
     
     expect(screen.getByText('Thêm thành viên mới')).toBeInTheDocument();

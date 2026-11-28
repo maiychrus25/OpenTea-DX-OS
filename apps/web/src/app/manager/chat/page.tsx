@@ -3,7 +3,7 @@
 
 import { redirect } from 'next/navigation'
 import { auth } from '@/auth'
-import { ChatInterface } from '@/components/ui/chat-interface/chat-interface'
+import { HeadChat } from './_components/HeadChat'
 
 export const metadata = {
   title: 'Chatbot',
@@ -17,7 +17,5 @@ export default async function ManagerChatPage() {
   const role = (session.user as { role?: string }).role
   if (role !== 'manager' && role !== 'officer') redirect('/unauthorized')
 
-  return (
-    <ChatInterface role="manager" />
-  )
+  return <HeadChat />
 }

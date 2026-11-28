@@ -43,7 +43,7 @@ beforeEach(() => {
     const custom = responder(url, method, body)
     if (custom) return custom
     if (url === '/api/partners') return ok({ data: [{ id: 'p1', name: 'Thương lái A' }] })
-    if (url === '/api/sales/receivables') return ok(receivables)
+    if (url === '/api/sales/receivables') return ok({ data: receivables })
     if (url === '/api/sales/sellable-lots') return ok({ data: sellable })
     if (url.startsWith('/api/sales/orders?')) return ok(orderPages.shift() ?? { data: [], next_cursor: null })
     if (url === '/api/sales/orders' && method === 'POST') return { ok: true, status: 201, json: async () => ({ data: order('n1') }) }

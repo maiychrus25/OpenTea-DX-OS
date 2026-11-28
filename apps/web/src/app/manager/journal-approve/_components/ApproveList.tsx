@@ -5,11 +5,12 @@
 'use client'
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { AlertTriangle, Check, CheckCircle2, CheckSquare, Clock, Download, Pencil } from 'lucide-react'
+import { BarChart3, Check, CheckCircle2, CheckSquare, Clock, Droplet, FileText, Image as ImageIcon, Leaf, Scissors, ShoppingBasket, SprayCan, Sprout, UserRound, X, XCircle } from 'lucide-react'
 import { EmptyState, PageHeader, Pill } from '@/components/ui'
 import table from '@/components/features/dashboard/dashboard.module.css'
 import kit from '@/components/features/dashboard/page-kit.module.css'
-import { Stats } from '@/components/features/officer-web/parts'
+import { Pager, StatCards, Tabs, pageOf } from '@/components/features/manager-web/parts'
+import ui from '@/components/features/manager-web/kit.module.css'
 import { fetchJson, LOAD_FAILED_MESSAGE } from '@/lib/api/fetch-json'
 import styles from './approve.module.css'
 
@@ -38,18 +39,36 @@ const ACTIVITY_LABELS: Record<string, string> = {
   OTHER: 'Khác',
 }
 
+const ACTIVITY_ICONS: Record<string, React.ReactNode> = {
+  SOWING: <Sprout size={16} />,
+  FERTILIZING: <Leaf size={16} />,
+  SPRAYING: <SprayCan size={16} />,
+  IRRIGATION: <Droplet size={16} />,
+  HARVEST: <ShoppingBasket size={16} />,
+  PRUNING: <Scissors size={16} />,
+  OTHER: <BarChart3 size={16} />,
+}
+
 const STATUS = {
   PENDING_APPROVAL: { label: 'Chờ duyệt', tone: 'amber' },
   APPROVED: { label: 'Đã duyệt', tone: 'green' },
   REQUEST_CHANGES: { label: 'Yêu cầu sửa', tone: 'blue' },
-  REJECTED: { label: 'Từ chối', tone: 'neutral' },
-  OVERDUE: { label: 'Quá hạn', tone: 'red' },
+  REJECTED: { label: 'Từ chối', tone: 'red' },
 } as const
 
-/** A journal still waiting this long after it was sent is overdue. */
-const OVERDUE_MS = 2 * 24 * 60 * 60 * 1000
+type View = 'PENDING' | 'APPROVED' | 'REJECTED' | 'ALL'
 
-type View = 'PENDING' | 'OVERDUE' | 'APPROVED' | 'CHANGES'
+const VIEWS: Record<View, (e: JournalEntry) => boolean> = {
+  PENDING: (e) => e.status === 'PENDING_APPROVAL',
+  APPROVED: (e) => e.status === 'APPROVED',
+  // Sent back for changes is also "not approved".
+  REJECTED: (e) => e.status === 'REJECTED' || e.status === 'REQUEST_CHANGES',
+  ALL: () => true,
+}
+
+const VIEW_LABELS: Record<View, string> = { PENDING: 'Chờ duyệt', APPROVED: 'Đã duyệt', REJECTED: 'Từ chối', ALL: 'Tất cả' }
+
+const PERIODS = [{ days: 1, label: 'Hôm nay' }, { days: 7, label: '7 ngày qua' }, { days: 30, label: '30 ngày qua' }]
 
 const day = (value: string) => new Date(value).toLocaleDateString('vi-VN')
 
@@ -63,52 +82,25 @@ function formatDetail(detail: string | null | undefined, notes: string | null): 
   return text
 }
 
-const isOverdue = (e: JournalEntry) => e.status === 'PENDING_APPROVAL' && Date.now() - new Date(e.created_at ?? e.entry_date).getTime() > OVERDUE_MS
-
-function approvedThisMonth(e: JournalEntry) {
-  if (e.status !== 'APPROVED' || !e.approved_at) return false
-  const when = new Date(e.approved_at)
-  const now = new Date()
-  return when.getFullYear() === now.getFullYear() && when.getMonth() === now.getMonth()
-}
-
-const VIEWS: Record<View, (e: JournalEntry) => boolean> = {
-  PENDING: (e) => e.status === 'PENDING_APPROVAL',
-  OVERDUE: isOverdue,
-  APPROVED: approvedThisMonth,
-  CHANGES: (e) => e.status === 'REQUEST_CHANGES',
-}
-
-function downloadCsv(rows: string[][]) {
-  // A leading quote keeps a cell that starts like a formula from being run by a spreadsheet.
-  const cell = (value: string) => `"${(/^[=+\-@]/.test(value) ? `'${value}` : value).replace(/"/g, '""')}"`
-  const blob = new Blob([`﻿${rows.map((row) => row.map(cell).join(',')).join('\r\n')}`], { type: 'text/csv;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = 'nhat-ky.csv'
-  link.click()
-  URL.revokeObjectURL(url)
-}
-
-/** The most entries one batch-approve request takes. */
-const BATCH_LIMIT = 50
-
 export function ApproveList() {
   const [entries, setEntries] = useState<JournalEntry[]>([])
   const [households, setHouseholds] = useState<Record<string, string>>({})
-  const [selected, setSelected] = useState<Set<string>>(new Set())
   const [view, setView] = useState<View>('PENDING')
+  const [search, setSearch] = useState('')
+  const [period, setPeriod] = useState(0)
+  const [parcel, setParcel] = useState('')
   const [activity, setActivity] = useState('')
-  const [household, setHousehold] = useState('')
-  const [from, setFrom] = useState('')
-  const [to, setTo] = useState('')
+  const [page, setPage] = useState(1)
   const [opened, setOpened] = useState<JournalEntry | null>(null)
+  const [rejecting, setRejecting] = useState<JournalEntry | null>(null)
+  const [reason, setReason] = useState('')
+  const [decision, setDecision] = useState<'REQUEST_CHANGES' | 'REJECTED'>('REQUEST_CHANGES')
   const [loading, setLoading] = useState(true)
   const [loadFailed, setLoadFailed] = useState(false)
-  const [approving, setApproving] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const dialog = useRef<HTMLDialogElement>(null)
+  const rejectDialog = useRef<HTMLDialogElement>(null)
 
   const fetchEntries = useCallback(() => {
     setLoading(true)
@@ -131,188 +123,143 @@ export function ApproveList() {
     if (opened) dialog.current?.showModal?.()
   }, [opened])
 
+  useEffect(() => {
+    if (rejecting) rejectDialog.current?.showModal?.()
+  }, [rejecting])
+
   const nameOf = (e: JournalEntry) => (e.household_id && households[e.household_id]) || e.performed_by
-  const shown = entries.filter(
-    (e) =>
-      VIEWS[view](e) &&
-      (!activity || e.activity_type === activity) &&
-      (!household || e.household_id === household) &&
-      (!from || e.entry_date.slice(0, 10) >= from) &&
-      (!to || e.entry_date.slice(0, 10) <= to)
-  )
-  const selectable = shown.filter(VIEWS.PENDING)
-  const chosen = selectable.filter((e) => selected.has(e.id))
-
-  const toggle = (id: string) =>
-    setSelected((previous) => {
-      const next = new Set(previous)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-
-  async function handleApprove() {
-    if (chosen.length === 0) return
-    setApproving(true)
-    setMessage(null)
-    let approved = 0
-    let failed = 0
-    try {
-      const ids = chosen.map((e) => e.id)
-      for (let at = 0; at < ids.length; at += BATCH_LIMIT) {
-        const res = await fetch('/api/journal/batch-approve', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ entry_ids: ids.slice(at, at + BATCH_LIMIT) }),
-        })
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}))
-          throw new Error(err?.error?.message || 'Lỗi duyệt nhật ký')
-        }
-        const { approved_count, failed_ids } = (await res.json()).data
-        approved += approved_count
-        failed += failed_ids.length
-      }
-      setMessage({ type: 'success', text: `Đã duyệt ${approved} nhật ký thành công.${failed > 0 ? ` ${failed} thất bại.` : ''}` })
-      setSelected(new Set())
-      fetchEntries()
-    } catch (err: unknown) {
-      const reason = err instanceof Error ? err.message : 'Lỗi không xác định'
-      setMessage({ type: 'error', text: approved > 0 ? `Đã duyệt ${approved} nhật ký, phần còn lại chưa duyệt: ${reason}` : reason })
-      // Earlier batches stay approved.
-      if (approved > 0) { setSelected(new Set()); fetchEntries() }
-    } finally {
-      setApproving(false)
-    }
+  const contentOf = (e: JournalEntry) => {
+    const product = e.activities?.[0]?.product_name
+    return [formatDetail(e.activities?.[0]?.activity_detail, e.notes), product].filter(Boolean).join(' · ')
   }
-
-  const statusOf = (e: JournalEntry) => (isOverdue(e) ? STATUS.OVERDUE : STATUS[e.status as keyof typeof STATUS] ?? STATUS.PENDING_APPROVAL)
   const material = (e: JournalEntry) => e.activities?.[0]?.product_name || '—'
   const withdrawal = (e: JournalEntry) => (e.activities?.[0]?.withdrawal_days ? `${e.activities[0].withdrawal_days} ngày` : 'Không')
 
-  const figure = (key: View, label: string, icon: React.ReactNode) => ({
-    label,
-    value: entries.filter(VIEWS[key]).length,
-    icon,
-    active: view === key,
-    onSelect: () => { setView(key); setSelected(new Set()) },
-  })
+  const needle = search.trim().toLocaleLowerCase('vi')
+  const oldest = period ? Date.now() - period * 24 * 60 * 60 * 1000 : 0
+  const parcels = Array.from(new Set(entries.map((e) => e.parcel_code).filter(Boolean))) as string[]
+  const shown = entries.filter(
+    (e) =>
+      VIEWS[view](e) &&
+      (!needle || [e.parcel_code, nameOf(e), contentOf(e), e.notes].some((text) => text?.toLocaleLowerCase('vi').includes(needle))) &&
+      (!oldest || new Date(e.entry_date).getTime() >= oldest) &&
+      (!parcel || e.parcel_code === parcel) &&
+      (!activity || e.activity_type === activity)
+  )
+  const paged = pageOf(shown, page, 5)
+  const count = (key: View) => entries.filter(VIEWS[key]).length
+
+  async function send(url: string, payload: object, done: string) {
+    setSaving(true)
+    setMessage(null)
+    try {
+      const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json?.error?.message || 'Không gửi được. Hãy thử lại.')
+      if (json?.data?.failed_ids?.length) throw new Error('Nhật ký này không duyệt được. Hãy tải lại trang.')
+      setMessage({ type: 'success', text: done })
+      fetchEntries()
+    } catch (err: unknown) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Lỗi không xác định' })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const approve = (e: JournalEntry) => send('/api/journal/batch-approve', { entry_ids: [e.id] }, 'Đã duyệt nhật ký.')
+
+  async function handleReject(event: React.FormEvent) {
+    event.preventDefault()
+    if (!rejecting || !reason.trim()) return
+    const target = rejecting
+    setRejecting(null)
+    await send(`/api/journal/${target.id}/review`, { decision, reason: reason.trim() }, decision === 'REJECTED' ? 'Đã từ chối nhật ký.' : 'Đã gửi yêu cầu sửa.')
+    setReason('')
+  }
+
+  const statusOf = (e: JournalEntry) => STATUS[e.status as keyof typeof STATUS] ?? STATUS.PENDING_APPROVAL
+  const filter = <T,>(set: (value: T) => void) => (value: T) => { set(value); setPage(1) }
 
   return (
     <div className={kit.page}>
-      <PageHeader
-        icon={<CheckSquare size={28} />}
-        title="Duyệt nhật ký"
-        description="Nhật ký canh tác đang chờ Trưởng HTX phê duyệt"
-        actions={
-          <>
-            <button
-              type="button"
-              className={kit.secondary}
-              disabled={shown.length === 0}
-              onClick={() => downloadCsv([
-                ['Thửa', 'Nông hộ', 'Hoạt động', 'Vật tư', 'Cách ly', 'Ngày', 'Trạng thái'],
-                ...shown.map((e) => [e.parcel_code ?? '', nameOf(e), ACTIVITY_LABELS[e.activity_type] ?? e.activity_type, material(e), withdrawal(e), day(e.entry_date), statusOf(e).label]),
-              ])}
-            >
-              <Download size={16} aria-hidden="true" /> Xuất CSV
-            </button>
-            <button type="button" className={kit.primary} disabled={chosen.length === 0 || approving} onClick={handleApprove}>
-              {approving ? 'Đang duyệt...' : (
-                <>
-                  <Check size={16} aria-hidden="true" />
-                  Duyệt ({chosen.length})
-                </>
-              )}
-            </button>
-          </>
-        }
-      />
+      <PageHeader icon={<CheckSquare size={28} />} title="Duyệt nhật ký" description="Kiểm tra và phê duyệt nhật ký canh tác của xã viên." />
 
       {message && <p className={message.type === 'success' ? kit.success : kit.error} role="status">{message.text}</p>}
 
       {!loading && !loadFailed && (
-        <Stats items={[
-          figure('PENDING', 'Chờ duyệt', <Clock />),
-          figure('OVERDUE', 'Quá hạn', <AlertTriangle />),
-          figure('APPROVED', 'Đã duyệt tháng này', <CheckCircle2 />),
-          figure('CHANGES', 'Yêu cầu sửa', <Pencil />),
-        ]} />
+        <>
+          <StatCards items={[
+            { label: 'Tổng nhật ký', value: count('ALL').toLocaleString('vi-VN'), icon: <FileText size={26} /> },
+            { label: 'Chờ duyệt', value: count('PENDING').toLocaleString('vi-VN'), icon: <Clock size={26} />, tone: 'amber' },
+            { label: 'Đã duyệt', value: count('APPROVED').toLocaleString('vi-VN'), icon: <CheckCircle2 size={26} /> },
+            { label: 'Từ chối', value: count('REJECTED').toLocaleString('vi-VN'), icon: <XCircle size={26} />, tone: 'red' },
+          ]} />
+
+          <div className={ui.bar}>
+            <Tabs<View> label="Trạng thái" value={view} onChange={filter(setView)} items={(Object.keys(VIEW_LABELS) as View[]).map((key) => ({ key, label: `${VIEW_LABELS[key]} (${count(key)})` }))} />
+          </div>
+
+          <div className={ui.bar}>
+            <input type="search" className={`${ui.control} ${ui.grow}`} aria-label="Tìm nhật ký" placeholder="Tìm theo mã nương, xã viên, nội dung..." value={search} onChange={(e) => filter(setSearch)(e.target.value)} />
+            <select className={ui.control} aria-label="Thời gian" value={period} onChange={(e) => filter(setPeriod)(Number(e.target.value))}>
+              <option value={0}>Thời gian: Tất cả</option>
+              {PERIODS.map((p) => <option key={p.days} value={p.days}>{p.label}</option>)}
+            </select>
+            <select className={ui.control} aria-label="Nương" value={parcel} onChange={(e) => filter(setParcel)(e.target.value)}>
+              <option value="">Nương: Tất cả</option>
+              {parcels.map((code) => <option key={code} value={code}>{code}</option>)}
+            </select>
+            <select className={ui.control} aria-label="Loại công việc" value={activity} onChange={(e) => filter(setActivity)(e.target.value)}>
+              <option value="">Loại công việc: Tất cả</option>
+              {Object.entries(ACTIVITY_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </select>
+          </div>
+        </>
       )}
 
       <div className={kit.card}>
-        {!loading && !loadFailed && entries.length > 0 && (
-          <div className={styles.filters}>
-            <label>Hoạt động
-              <select value={activity} onChange={(e) => setActivity(e.target.value)}>
-                <option value="">Tất cả</option>
-                {Object.entries(ACTIVITY_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-              </select>
-            </label>
-            <label>Nông hộ
-              <select value={household} onChange={(e) => setHousehold(e.target.value)}>
-                <option value="">Tất cả nông hộ</option>
-                {Object.entries(households).map(([id, name]) => <option key={id} value={id}>{name}</option>)}
-              </select>
-            </label>
-            <label>Từ ngày<input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></label>
-            <label>Đến ngày<input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></label>
-          </div>
-        )}
-
         {loading ? (
           <div className={kit.state}>Đang tải...</div>
         ) : loadFailed ? (
           <div className={kit.state}>{LOAD_FAILED_MESSAGE}</div>
         ) : shown.length === 0 ? (
-          <EmptyState icon={<CheckCircle2 size={28} />} title={view === 'PENDING' ? 'Không có nhật ký nào đang chờ duyệt!' : 'Không có nhật ký nào trong mục này.'} />
+          <EmptyState icon={<CheckCircle2 size={28} />} title={view === 'PENDING' && !needle ? 'Không có nhật ký nào đang chờ duyệt!' : 'Không có nhật ký nào trong mục này.'} />
         ) : (
           <>
             <div className={table.tableWrap}>
-              <table className={table.table}>
+              <table className={`${table.table} ${styles.list}`}>
                 <thead>
-                  <tr>
-                    <th className={kit.checkCell}>
-                      <input
-                        type="checkbox"
-                        aria-label={`Chọn tất cả (${selectable.length})`}
-                        disabled={selectable.length === 0}
-                        checked={selectable.length > 0 && chosen.length === selectable.length}
-                        onChange={() => setSelected(chosen.length === selectable.length ? new Set() : new Set(selectable.map((e) => e.id)))}
-                      />
-                    </th>
-                    <th>STT</th>
-                    <th>Thửa</th>
-                    <th>Nông hộ</th>
-                    <th>Hoạt động</th>
-                    <th>Vật tư</th>
-                    <th>Cách ly</th>
-                    <th>Ngày</th>
-                    <th>Trạng thái</th>
-                    <th>Thao tác</th>
-                  </tr>
+                  <tr><th>#</th><th>Ngày ghi</th><th>Xã viên</th><th>Nương</th><th>Công việc</th><th>Nội dung thực hiện</th><th>Tệp đính kèm</th><th>Trạng thái</th><th>Thao tác</th></tr>
                 </thead>
                 <tbody>
-                  {shown.map((e, index) => (
+                  {paged.rows.map((e, index) => (
                     <tr key={e.id}>
-                      <td className={kit.checkCell}>
-                        <input type="checkbox" aria-label={`Chọn nhật ký ${index + 1}`} disabled={!VIEWS.PENDING(e)} checked={selected.has(e.id)} onChange={() => toggle(e.id)} />
-                      </td>
-                      <td>{index + 1}</td>
-                      <td>{e.parcel_code ?? '—'}</td>
-                      <td>{nameOf(e)}</td>
-                      <td>{ACTIVITY_LABELS[e.activity_type] || e.activity_type}</td>
-                      <td>{material(e)}</td>
-                      <td>{withdrawal(e)}</td>
+                      <td>{paged.start + index + 1}</td>
                       <td>{day(e.entry_date)}</td>
+                      <td><span className={styles.who}><i aria-hidden="true"><UserRound size={16} /></i><strong>{nameOf(e)}</strong></span></td>
+                      <td>{e.parcel_code ?? '—'}</td>
+                      <td><span className={styles.who}><i aria-hidden="true">{ACTIVITY_ICONS[e.activity_type] ?? ACTIVITY_ICONS.OTHER}</i><strong>{ACTIVITY_LABELS[e.activity_type] || e.activity_type}</strong></span></td>
+                      <td className={styles.content}><button type="button" onClick={() => setOpened(e)} title="Xem chi tiết">{contentOf(e)}</button></td>
+                      <td>{e.photo_url ? <button type="button" className={ui.small} onClick={() => setOpened(e)}><ImageIcon size={14} aria-hidden="true" />1 ảnh</button> : '—'}</td>
                       <td><Pill tone={statusOf(e).tone}>{statusOf(e).label}</Pill></td>
-                      <td><button type="button" className={kit.linkButton} onClick={() => setOpened(e)}>Xem</button></td>
+                      <td>
+                        <div className={ui.rowActions}>
+                          {VIEWS.PENDING(e) ? (
+                            <>
+                              <button type="button" className={`${ui.small} ${ui.solid}`} disabled={saving} onClick={() => approve(e)}><Check size={14} aria-hidden="true" />Duyệt</button>
+                              <button type="button" className={ui.small} disabled={saving} onClick={() => { setReason(''); setDecision('REQUEST_CHANGES'); setRejecting(e) }}><X size={14} aria-hidden="true" />Từ chối</button>
+                            </>
+                          ) : (
+                            <button type="button" className={ui.small} onClick={() => setOpened(e)}>Xem</button>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            <div className={kit.footer}>Đã chọn {chosen.length} · Hiển thị {shown.length} nhật ký</div>
+            <Pager current={paged.current} pages={paged.pages} start={paged.start} shown={paged.rows.length} total={shown.length} unit="nhật ký" onPage={setPage} />
           </>
         )}
       </div>
@@ -333,6 +280,27 @@ export function ApproveList() {
           {/* eslint-disable-next-line @next/next/no-img-element -- a presigned storage URL */}
           {opened.photo_url && <img src={opened.photo_url} alt="Ảnh hiện trường" />}
           <button type="button" className={kit.secondary} onClick={() => setOpened(null)}>Đóng</button>
+        </dialog>
+      )}
+
+      {rejecting && (
+        <dialog ref={rejectDialog} className={styles.dialog} aria-labelledby="journal-reject" onClose={() => setRejecting(null)}>
+          <h2 id="journal-reject">Không duyệt nhật ký thửa {rejecting.parcel_code ?? '—'}</h2>
+          <form onSubmit={handleReject} className={styles.rejectForm}>
+            <label>Cách xử lý
+              <select value={decision} onChange={(e) => setDecision(e.target.value as 'REQUEST_CHANGES' | 'REJECTED')}>
+                <option value="REQUEST_CHANGES">Yêu cầu nông hộ sửa lại</option>
+                <option value="REJECTED">Từ chối hẳn</option>
+              </select>
+            </label>
+            <label>Lý do
+              <textarea required maxLength={500} rows={3} value={reason} onChange={(e) => setReason(e.target.value)} />
+            </label>
+            <div className={ui.rowActions}>
+              <button type="submit" className={kit.primary} disabled={saving || !reason.trim()}>Gửi</button>
+              <button type="button" className={kit.secondary} onClick={() => setRejecting(null)}>Huỷ</button>
+            </div>
+          </form>
         </dialog>
       )}
     </div>

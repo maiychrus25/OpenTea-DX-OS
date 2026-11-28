@@ -1,9 +1,10 @@
-// Copyright (c) 2026 OpenTea Developers
-// Licensed under the MIT License. See LICENSE file in the project root for full license information.
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 OpenTea Developers
 
-import { auth } from '@/auth'
+import React from 'react'
 import { redirect } from 'next/navigation'
-import { NotificationInbox } from '@/components/features/notification/NotificationInbox'
+import { auth } from '@/auth'
+import { HeadNotifications } from './_components/HeadNotifications'
 
 export const metadata = {
   title: 'Thông báo',
@@ -15,5 +16,5 @@ export default async function ManagerNotificationsPage() {
   if (!session) redirect('/login')
   if (session.user.role !== 'manager') redirect('/unauthorized')
 
-  return <NotificationInbox role="manager" />
+  return <HeadNotifications />
 }

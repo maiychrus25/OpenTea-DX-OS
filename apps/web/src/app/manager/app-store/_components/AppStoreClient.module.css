@@ -313,3 +313,19 @@
   outline: 2px solid var(--color-border-focus);
   outline-offset: 2px;
 }
+
+/* The cooperative head's design: tabs as buttons, four cards to a row, a wide install button. */
+.tabs { gap: 6px; border-bottom: 0; }
+.tab { border: 1px solid var(--color-border-input); border-radius: var(--radius-button); background: var(--color-surface-card); }
+.tab[aria-selected='true'] { border-color: var(--color-primary); background: var(--color-primary); color: var(--color-primary-foreground); }
+.toolbar { flex-direction: row; flex-wrap: wrap; align-items: center; }
+.searchLabel { margin-left: auto; flex: 0 1 340px; }
+.filter { border-radius: var(--radius-button); }
+.filter[aria-pressed='true'] { background: var(--color-primary); color: var(--color-primary-foreground); }
+.grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 15.5rem), 1fr)); gap: 12px; }
+.cardHead { flex-wrap: wrap; justify-content: flex-start; }
+.cardHead .icon { width: 56px; height: 56px; }
+.cardHead .name { flex-basis: 100%; order: 3; font-size: 17px; font-weight: 800; }
+.cardHead .version { margin-left: auto; }
+.category { align-self: flex-start; padding: 1px 12px; border-radius: var(--radius-pill); background: var(--color-primary-subtle); color: var(--color-primary); font-size: 12px; font-weight: 700; }
+.footer .install { flex: 1 1 100%; justify-content: center; }

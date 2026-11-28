@@ -111,7 +111,7 @@ describe('AppStoreClient', () => {
   })
 
   test.each([
-    ['available', 'Chưa cài', ['Cài']],
+    ['available', 'Chưa cài', ['Cài đặt']],
     ['installing', 'Đang cài…', []],
     ['enabled', 'Đã cài', ['Gỡ']],
     ['removing', 'Đang gỡ…', []],

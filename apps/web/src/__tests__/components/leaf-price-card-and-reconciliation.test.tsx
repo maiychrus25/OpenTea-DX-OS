@@ -22,6 +22,7 @@ describe('farmer price card', () => {
     expect(await screen.findByText('13.000 đ/kg')).toBeInTheDocument()
     expect(screen.getByText('Loại 1')).toBeInTheDocument()
     expect(screen.queryByText('Loại 2')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Nghe giá' })).toBeInTheDocument()
   })
 
   test('says the cooperative has not published today when no grade has a price', async () => {

@@ -4,5 +4,5 @@
 import { PesticideCatalogue } from '@/components/features/pesticide/PesticideCatalogue'
 
 export default function PesticidesPage() {
-  return <PesticideCatalogue />
+  return <PesticideCatalogue designed />
 }

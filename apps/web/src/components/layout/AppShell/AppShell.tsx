@@ -101,6 +101,7 @@ export const AppShell: React.FC<AppShellProps> = ({
             roleName={getRoleLabel(role)} 
             userName={userName} 
             pageName={pageName}
+            htxName={htxName}
             onMenuClick={!hideSidebar ? () => setSidebarOpen(true) : undefined}
           />
           <div className={styles.pageContent}>
@@ -108,7 +109,10 @@ export const AppShell: React.FC<AppShellProps> = ({
           </div>
         </main>
 
-        {role === 'farmer' && <BottomNav navItems={navItems} />}
+        {role === 'farmer' && <BottomNav navItems={
+          ['/farmer/dashboard', '/farmer/journal', '/farmer/diagnosis', '/farmer/ledger']
+            .flatMap(href => navItems.filter(item => item.href === href && !item.hidden))
+        } />}
       </div>
       <Toaster position="top-right" richColors />
     </div>

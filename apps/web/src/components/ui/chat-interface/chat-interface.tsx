@@ -15,9 +15,11 @@ interface ChatInterfaceProps {
   chatType?: ChatType
   /** Why this role cannot ask yet; the composer is then off. */
   closedNote?: string
+  /** A panel beside the conversation, with the past conversations it can open. */
+  aside?: (history: { sessions: { session_id: string; title: string }[]; open: (id: string) => void }) => React.ReactNode
 }
 
-export function ChatInterface({ role, chatType: requestedType, closedNote }: ChatInterfaceProps) {
+export function ChatInterface({ role, chatType: requestedType, closedNote, aside }: ChatInterfaceProps) {
   const chatType = requestedType || (role === 'manager' ? 'market' : 'technical')
   const chat = useChat(chatType)
   const [inputValue, setInputValue] = useState('')
@@ -63,7 +65,7 @@ export function ChatInterface({ role, chatType: requestedType, closedNote }: Cha
     }
   }
   return (
-    <div className={styles.chatLayout} data-chat-workspace>
+    <div className={styles.chatLayout} data-chat-workspace={aside ? undefined : true} data-aside={aside ? true : undefined}>
       <dialog ref={drawerRef} className={styles.historyDrawer} aria-label="Lịch sử trò chuyện"
         onClick={event => { if (event.target === event.currentTarget) drawerRef.current?.close() }}>
         <div className={styles.drawerContent}>
@@ -121,6 +123,7 @@ export function ChatInterface({ role, chatType: requestedType, closedNote }: Cha
           </div>
         </div>
       </section>
+      {aside?.({ sessions: chat.sessions, open: onSelect })}
     </div>
   )
 }

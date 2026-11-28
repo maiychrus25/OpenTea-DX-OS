@@ -4,7 +4,7 @@
 import React from 'react'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { AlertTriangle, ArrowRight, BookOpen, Calendar, Camera, ChevronRight, Droplet, FileText, History, Leaf, PenLine, Scissors, SprayCan, Sprout, Store } from 'lucide-react'
+import { AlertTriangle, ArrowRight, Calendar, ChevronRight, Droplet, FileText, Leaf, PenLine, Scissors, SprayCan, Sprout, Store } from 'lucide-react'
 
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { PrismaInstalledAppRepository } from '@/infrastructure/db/repositories/prisma-installed-app-repository'
@@ -12,7 +12,10 @@ import { auth } from '@/auth'
 import { requireTenant } from '@/lib/api/tenant'
 import { EmptyState } from '@/components/ui'
 import { WeatherHero } from '@/components/features/farmer-web/WeatherHero'
+import { ListenButton } from '@/components/features/tts/ListenButton'
+import { pickingSentence } from '@/lib/tts/sentences'
 import { LeafPriceCard } from '@/components/features/weighing/LeafPriceCard'
+import { FarmerMoneyCard } from '@/components/features/ledger/FarmerMoneyCard'
 import { activeWithdrawals } from '@/domain/journal/active-withdrawals'
 import { weatherCodeToCondition } from '@/infrastructure/external/open-meteo-adapter'
 
@@ -56,10 +59,6 @@ const PARCEL_TONE: Record<string, string> = {
 
 /** The cooperative's own app; its card shows only where the app is installed and enabled. */
 const SUPPLY_APP = 'farm-supply'
-
-const SHORTCUTS = [
-  { href: '/farmer/handbook', icon: BookOpen, tone: 'soft', title: 'Cẩm nang canh tác', detail: 'Việc theo mùa và cách phòng trị bệnh cho cây chè' },
-]
 
 function dayMonth(date: Date): string {
   return date.toLocaleDateString('en-GB', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit' })
@@ -186,9 +185,6 @@ export default async function FarmerDashboard() {
   const supplies = await new PrismaInstalledAppRepository()
     .isEnabledFor(SUPPLY_APP, session.user.htxCode ?? '')
     .catch(() => false)
-  const shortcuts = supplies
-    ? [...SHORTCUTS, { href: `/farmer/apps/${SUPPLY_APP}`, icon: Store, tone: 'amber', title: 'Vật tư mua chung', detail: 'Đăng ký mua chung phân bón, thuốc BVTV' }]
-    : SHORTCUTS
 
   const parcels = [...(household?.parcels ?? [])].sort((a, b) => String(a.parcel_code).localeCompare(String(b.parcel_code)))
   const totalHa = parcels.reduce((sum, p) => sum + p.area_ha, 0)
@@ -204,22 +200,11 @@ export default async function FarmerDashboard() {
           subtitle="Chúc bạn một ngày làm việc hiệu quả!"
           actions={[
             { href: '/farmer/journal/new', label: 'Ghi nhật ký mới', icon: <PenLine size={16} aria-hidden="true" /> },
-            { href: '/farmer/journal', label: 'Xem lịch sử', icon: <History size={16} aria-hidden="true" /> },
-            { href: '/farmer/diagnosis', label: 'Chẩn đoán bệnh', icon: <Camera size={16} aria-hidden="true" /> },
+            { href: '/farmer/schedule', label: 'Xem lịch thu hái', icon: <Calendar size={16} aria-hidden="true" /> },
           ]}
           place={htx?.address ?? ''}
           cached={weather && condition ? { temperature: weather.temperature_c, condition, humidity: weather.humidity_pct, rainMm: weather.precipitation_mm ?? 0 } : null}
         />
-      </div>
-
-      <div className={styles.shortcuts}>
-        {shortcuts.map(({ href, icon: Icon, tone, title, detail }) => (
-          <Link key={href} href={href} className={`${kit.pn} ${styles.shortcut}`}>
-            <span className={`${kit.ico} ${kit[tone]}`}><Icon size={20} aria-hidden="true" /></span>
-            <span className={kit.grow}><strong>{title}</strong><small>{detail}</small></span>
-            <ChevronRight size={18} aria-hidden="true" />
-          </Link>
-        ))}
       </div>
 
       {withdrawals.length > 0 && (
@@ -247,7 +232,10 @@ export default async function FarmerDashboard() {
         </div>
       )}
 
-      <LeafPriceCard />
+      <div className={styles.moneyRow}>
+        <LeafPriceCard />
+        <FarmerMoneyCard />
+      </div>
 
       <div className={styles.columns}>
         <section className={`${kit.pn} ${styles.parcels}`} aria-label="Tình trạng thửa đất">
@@ -258,6 +246,18 @@ export default async function FarmerDashboard() {
             </span>
             <Link href="/farmer/schedule">Xem lịch <ArrowRight size={14} aria-hidden="true" /></Link>
           </div>
+          {parcels.length > 0 && (
+            <div className={styles.listenPicking}>
+              <ListenButton label="Nghe ngày hái" text={pickingSentence(parcels.map(parcel => {
+                const wait = withdrawals.find(w => w.parcel_code === parcel.parcel_code)
+                const planned = harvests.find(cycle => cycle.parcel_id === parcel.id)?.estimated_harvest_date
+                // A planned day inside the withdrawal period cannot be used, so the safe day is read instead.
+                const blocked = !!wait && (!planned || wait.safe > planned)
+                const day = blocked ? wait!.safe : planned
+                return { parcel_code: parcel.parcel_code, date: day ? fullDay(day) : null, withdrawal: blocked }
+              }))} />
+            </div>
+          )}
           {parcels.length === 0 ? (
             <EmptyState icon={<Sprout />} title="Bạn chưa có thửa đất nào được phân công." />
           ) : (
@@ -309,42 +309,13 @@ export default async function FarmerDashboard() {
         </section>
       </div>
 
-      <section className={`${kit.pn} ${styles.harvest}`} aria-label="Lịch thu hái sắp tới">
-        <div className={kit.ph}><h2>Lịch thu hái sắp tới</h2><Link href="/farmer/schedule">Xem lịch <ArrowRight size={14} aria-hidden="true" /></Link></div>
-        {harvests.length === 0 ? (
-          <p className={styles.empty}>Chưa có lịch thu hái sắp tới.</p>
-        ) : (
-          <div className={styles.tableScroll}>
-            <table className={styles.table}>
-              <thead>
-                <tr><th>Lứa</th><th>Thửa chè</th><th>Giống chè</th><th>Diện tích</th><th>Ngày dự kiến</th><th>Ghi chú</th></tr>
-              </thead>
-              <tbody>
-                {harvests.slice(0, 3).map((cycle, index) => {
-                  const parcel = parcels.find(p => p.id === cycle.parcel_id)
-                  const when = cycle.estimated_harvest_date!
-                  const blocked = withdrawals.find(w => w.parcel_code === parcel?.parcel_code)
-                  const yieldKg = parcel?.estimated_yield_per_ha ? Math.round(parcel.estimated_yield_per_ha * parcel.area_ha) : null
-                  const note = [
-                    blocked ? (blocked.safe > when ? `Còn cách ly đến ${fullDay(blocked.safe)}` : 'Hết cách ly trước ngày hái') : null,
-                    yieldKg ? `Dự kiến ~${yieldKg.toLocaleString('vi-VN')} kg` : null,
-                  ].filter(Boolean).join(' · ')
-                  return (
-                    <tr key={cycle.id}>
-                      <td>{cycle.season || `Lứa ${index + 1}`}</td>
-                      <td>{parcel?.parcel_code}</td>
-                      <td>{parcel?.crop_type}</td>
-                      <td>{parcel ? `${hectares(parcel.area_ha)} ha` : ''}</td>
-                      <td>{fullDay(when)}</td>
-                      <td>{note || '—'}</td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+      {supplies && (
+        <Link href={`/farmer/apps/${SUPPLY_APP}`} className={`${kit.pn} ${styles.shortcut}`}>
+          <span className={`${kit.ico} ${kit.amber}`}><Store size={20} aria-hidden="true" /></span>
+          <span className={kit.grow}><strong>Vật tư mua chung</strong><small>Đăng ký mua chung phân bón, thuốc BVTV</small></span>
+          <ChevronRight size={18} aria-hidden="true" />
+        </Link>
+      )}
     </main>
   )
 }

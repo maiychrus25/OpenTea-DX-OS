@@ -15,3 +15,8 @@
 @media (max-width: 639px) {
   .form { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Reading: label and value on one ruled row; the boxes appear only while editing. */
+.view { display: flex; flex-direction: column; gap: 0; }
+.view > * { display: grid; grid-template-columns: minmax(110px, 170px) minmax(0, 1fr); align-items: center; gap: 12px; padding: 4px 0; border-bottom: 1px solid var(--color-border-row); }
+.view .value { min-height: 0; padding: 4px 0; border: 0; background: none; }

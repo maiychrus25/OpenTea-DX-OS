@@ -3,7 +3,7 @@
 
 import React from 'react'
 import { redirect } from 'next/navigation'
-import { Camera, KeyRound, Lock, Pencil, Smartphone } from 'lucide-react'
+import { Camera, KeyRound, Lock, Smartphone, UserRound } from 'lucide-react'
 import { auth } from '@/auth'
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { TelegramLinkCard } from '@/components/features/telegram/TelegramLinkCard'
@@ -57,9 +57,12 @@ export default async function FarmerProfilePage() {
 
   return (
     <div className={`${kit.page} ${styles.page}`}>
-      <div className={styles.head}>
-        <h1>Tài khoản</h1>
-        <p>Thông tin cá nhân, thửa chè và bảo mật tài khoản</p>
+      <div className={kit.hd}>
+        <span className={kit.hico}><UserRound size={28} aria-hidden="true" /></span>
+        <div className={kit.hdText}>
+          <h1 className={kit.h1}>Tài khoản</h1>
+          <p className={kit.sub}>Thông tin cá nhân, thửa chè và bảo mật tài khoản</p>
+        </div>
       </div>
 
       <section className={`${kit.pn} ${styles.identity}`} aria-label="Tài khoản cá nhân">
@@ -79,10 +82,10 @@ export default async function FarmerProfilePage() {
         </dl>
       </section>
 
+      <div className={styles.pair}>
       <section className={kit.pn} aria-label="Thông tin cá nhân">
         <div className={styles.title}>
-          <h2>Thông tin cá nhân</h2>
-          <button type="button" className={styles.edit} disabled title="Chưa hỗ trợ sửa thông tin"><Pencil size={14} aria-hidden="true" />Chỉnh sửa</button>
+          <h2 className={styles.barred}>Thông tin cá nhân</h2>
         </div>
         <div className={styles.fields}>
           {field('Họ và tên', household?.name ?? name)}
@@ -92,16 +95,12 @@ export default async function FarmerProfilePage() {
           {field('Mã hộ', 'Chưa cấp', true)}
           {field('Ngày tham gia', joined, true)}
         </div>
-        <div className={styles.actions}>
-          <p className={styles.note}>Chưa hỗ trợ tự sửa thông tin. Cần thay đổi, vui lòng liên hệ cán bộ HTX.</p>
-          <button type="button" className={kit.btn2} disabled>Huỷ</button>
-          <button type="button" className={kit.btn} disabled title="Chưa hỗ trợ sửa thông tin">Lưu thay đổi</button>
-        </div>
+        <p className={styles.note}>Chưa hỗ trợ tự sửa thông tin. Cần thay đổi, vui lòng liên hệ cán bộ HTX.</p>
       </section>
 
       <section className={kit.pn} aria-label="Thửa chè của tôi">
         <div className={styles.title}>
-          <h2>Thửa chè của tôi <small>{parcels.length} thửa · {number(hectares)} ha</small></h2>
+          <h2 className={styles.barred}>Thửa chè của tôi <small>{parcels.length} thửa · {number(hectares)} ha</small></h2>
         </div>
         {parcels.length === 0 ? (
           <p className={styles.note}>Bạn chưa có thửa đất nào được phân công.</p>
@@ -128,6 +127,9 @@ export default async function FarmerProfilePage() {
         <p className={styles.note}>Muốn thêm hoặc sửa thửa, vui lòng liên hệ cán bộ HTX.</p>
       </section>
 
+      </div>
+
+      <div className={styles.pair}>
       <section className={kit.pn} aria-label="Bảo mật">
         <div className={styles.title}><h2 className={styles.barred}>Bảo mật</h2></div>
         <ul className={styles.options}>
@@ -144,9 +146,11 @@ export default async function FarmerProfilePage() {
         </ul>
       </section>
 
-      <TelegramLinkCard role="farmer" />
-
-      {household && <FarmerZaloOptOut householdId={household.id} />}
+      <div className={styles.links}>
+        <TelegramLinkCard role="farmer" />
+        {household && <FarmerZaloOptOut householdId={household.id} />}
+      </div>
+      </div>
 
       <section className={styles.foot} aria-label="Hỗ trợ và đăng xuất">
         <SignOutButton />

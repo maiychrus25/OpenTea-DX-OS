@@ -29,3 +29,14 @@ export function carePlanSentence(disease: string, officerAdvice: string | null |
 export function balanceSentence(balanceLine: string): string {
   return `Sổ tiền của bạn: ${balanceLine}.`
 }
+
+/** The picking date of each parcel; `withdrawal` means the date is the earliest safe day, not the planned one. */
+export function pickingSentence(parcels: { parcel_code: string; date: string | null; withdrawal: boolean }[]): string {
+  if (parcels.length === 0) return 'Bạn chưa có thửa chè nào.'
+  return parcels.map(p => {
+    if (!p.date) return `Thửa ${p.parcel_code} chưa có lịch hái.`
+    return p.withdrawal
+      ? `Thửa ${p.parcel_code} đang cách ly, được hái sớm nhất ngày ${p.date}.`
+      : `Thửa ${p.parcel_code} dự kiến hái ngày ${p.date}.`
+  }).join(' ')
+}

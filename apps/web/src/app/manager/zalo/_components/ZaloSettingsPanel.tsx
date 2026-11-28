@@ -5,8 +5,10 @@
 
 import React, { useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { AlertTriangle, ArrowRight, MessageCircle, Save } from 'lucide-react'
+import { PageHeader } from '@/components/ui/PageHeader'
 import kit from '@/components/features/dashboard/page-kit.module.css'
-import styles from '@/components/features/zalo/zalo.module.css'
+import styles from './zalo-head.module.css'
 import {
   ZALO_EVENT_KINDS,
   ZALO_KIND_LABELS,
@@ -17,6 +19,8 @@ import {
 import { JSON_HEADERS, zaloCall } from '@/lib/zalo/zalo-api'
 
 const SETTINGS_URL = '/api/zalo/settings'
+/** The save button sits in the page header, outside the form it submits. */
+const FORM_ID = 'zalo-settings-form'
 
 export function ZaloSettingsPanel() {
   const [settings, setSettings] = useState<ZaloSettings | null>(null)
@@ -73,79 +77,102 @@ export function ZaloSettingsPanel() {
     }
   }
 
-  if (failed) return <section className={kit.card}><p role="alert" className={kit.error}>Không tải được cài đặt Zalo.</p></section>
-  if (!settings) return <section className={kit.card}><p className={kit.state}>Đang tải...</p></section>
+  const header = (
+    <PageHeader
+      icon={<MessageCircle size={28} />}
+      title="Thông báo Zalo"
+      description="Bật hoặc tắt việc gửi tin Zalo cho các hộ, và xem tin đã gửi."
+      actions={<button type="submit" form={FORM_ID} className={kit.primary} disabled={busy || !settings}><Save size={16} aria-hidden="true" />Lưu cài đặt</button>}
+    />
+  )
 
-  const missingTemplates = settings.kinds_without_template.map((k) => ZALO_KIND_LABELS[k]).join(', ')
+  if (failed) return <>{header}<section className={kit.card}><p role="alert" className={kit.error}>Không tải được cài đặt Zalo.</p></section></>
+  if (!settings) return <>{header}<section className={kit.card}><p className={kit.state}>Đang tải...</p></section></>
+
+  const noTemplate = settings.kinds_without_template
+  const missingTemplates = noTemplate.map((k) => ZALO_KIND_LABELS[k]).join(', ')
+  const used = settings.monthly_quota > 0 ? Math.min(100, Math.round((settings.sent_this_month / settings.monthly_quota) * 100)) : 0
 
   return (
-    <section className={kit.card} aria-labelledby="zalo-settings-title">
-      <div className={styles.body}>
-        <h2 id="zalo-settings-title" className={styles.title}>Cài đặt gửi tin</h2>
-        <form className={styles.form} onSubmit={save}>
-          <label className={styles.check}>
-            <input type="checkbox" checked={settings.enabled} onChange={(e) => setSettings({ ...settings, enabled: e.target.checked })} />
-            Bật gửi tin Zalo cho HTX
-          </label>
+    <>
+      {header}
+      <form id={FORM_ID} className={styles.columns} onSubmit={save}>
+        <section className={styles.card} aria-labelledby="zalo-settings-title">
+          <h2 id="zalo-settings-title" className={styles.title}>Cài đặt gửi tin</h2>
+
+          <div className={styles.master}>
+            <span className={styles.logo} aria-hidden="true"><MessageCircle size={24} /></span>
+            <span className={styles.masterText}>
+              <label htmlFor="zalo-enabled">Bật gửi tin Zalo cho HTX</label>
+              <small>{settings.enabled ? 'Đang bật' : 'Đang tắt'}</small>
+            </span>
+            <input id="zalo-enabled" type="checkbox" role="switch" aria-checked={settings.enabled} className={styles.switch} checked={settings.enabled} onChange={(e) => setSettings({ ...settings, enabled: e.target.checked })} />
+          </div>
+
           <fieldset className={styles.fieldset}>
             <legend>Loại tin được gửi</legend>
-            {ZALO_EVENT_KINDS.map((kind) => (
-              <label key={kind} className={styles.check}>
-                <input type="checkbox" checked={settings.kinds.includes(kind)} onChange={(e) => toggleKind(kind, e.target.checked)} />
-                {ZALO_KIND_LABELS[kind]}
-              </label>
-            ))}
-          </fieldset>
-          <fieldset className={styles.fieldset}>
-            <legend>Giờ im lặng</legend>
-            <div className={styles.filters}>
-              <label className={styles.field}>
-                Bắt đầu im lặng
-                <input
-                  className={styles.input}
-                  type="number"
-                  min={12}
-                  max={23}
-                  step={1}
-                  value={settings.quiet_start_hour}
-                  onChange={(e) => setSettings({ ...settings, quiet_start_hour: Number(e.target.value) })}
-                />
-              </label>
-              <label className={styles.field}>
-                Kết thúc im lặng
-                <input
-                  className={styles.input}
-                  type="number"
-                  min={1}
-                  max={11}
-                  step={1}
-                  value={settings.quiet_end_hour}
-                  onChange={(e) => setSettings({ ...settings, quiet_end_hour: Number(e.target.value) })}
-                />
-              </label>
+            <div className={styles.kinds}>
+              {ZALO_EVENT_KINDS.map((kind) => (
+                <div key={kind} className={styles.kind}>
+                  <label>
+                    <input type="checkbox" checked={settings.kinds.includes(kind)} onChange={(e) => toggleKind(kind, e.target.checked)} />
+                    {ZALO_KIND_LABELS[kind]}
+                  </label>
+                  {noTemplate.includes(kind) && <span className={styles.tag}>Chưa có mẫu ZNS</span>}
+                </div>
+              ))}
             </div>
           </fieldset>
-          <label className={styles.field}>
-            Hạn mức tin mỗi tháng
-            <input
-              className={styles.input}
-              type="number"
-              min={0}
-              max={10000}
-              step={1}
-              value={settings.monthly_quota}
-              onChange={(e) => setSettings({ ...settings, monthly_quota: Number(e.target.value) })}
-            />
-          </label>
-          <p className={styles.meta}>Đã dùng {settings.sent_this_month}/{settings.monthly_quota} tin tháng này.</p>
+
+          <fieldset className={styles.fieldset}>
+            <legend>Giờ im lặng</legend>
+            <div className={styles.quiet}>
+              <div className={styles.field}>
+                <label htmlFor="zalo-quiet-start">Bắt đầu im lặng</label>
+                <span className={styles.unit}>
+                  <input id="zalo-quiet-start" type="number" min={12} max={23} step={1} value={settings.quiet_start_hour} onChange={(e) => setSettings({ ...settings, quiet_start_hour: Number(e.target.value) })} />
+                  giờ
+                </span>
+              </div>
+              <ArrowRight size={18} aria-hidden="true" className={styles.arrow} />
+              <div className={styles.field}>
+                <label htmlFor="zalo-quiet-end">Kết thúc im lặng</label>
+                <span className={styles.unit}>
+                  <input id="zalo-quiet-end" type="number" min={1} max={11} step={1} value={settings.quiet_end_hour} onChange={(e) => setSettings({ ...settings, quiet_end_hour: Number(e.target.value) })} />
+                  giờ
+                </span>
+              </div>
+              <p className={styles.hint}>Không gửi tin từ {settings.quiet_start_hour} giờ đến {settings.quiet_end_hour} giờ sáng hôm sau.</p>
+            </div>
+          </fieldset>
+        </section>
+
+        <div className={styles.side}>
+          <section className={styles.card}>
+            <h2 className={styles.title}>Hạn mức tin mỗi tháng</h2>
+            <div className={styles.field}>
+              <label htmlFor="zalo-quota">Hạn mức tin mỗi tháng</label>
+              <span className={styles.unit}>
+                <input id="zalo-quota" type="number" min={0} max={10000} step={1} value={settings.monthly_quota} onChange={(e) => setSettings({ ...settings, monthly_quota: Number(e.target.value) })} />
+                tin
+              </span>
+            </div>
+            <progress className={styles.progress} value={used} max={100} aria-label="Tin đã dùng trong tháng" />
+            <p className={styles.used}>Đã dùng {settings.sent_this_month}/{settings.monthly_quota} tin tháng này.</p>
+          </section>
+
           {missingTemplates && (
-            <p role="note" className={styles.meta}>Chưa có mẫu ZNS: {missingTemplates} (tin loại này sẽ bị bỏ qua).</p>
+            <section className={styles.warning} aria-labelledby="zalo-missing-title">
+              <h2 id="zalo-missing-title"><AlertTriangle size={20} aria-hidden="true" />Chưa có mẫu ZNS</h2>
+              <p>Các loại tin sau sẽ bị bỏ qua:</p>
+              <ul>
+                {noTemplate.map((k) => <li key={k}>{ZALO_KIND_LABELS[k]}</li>)}
+              </ul>
+              <p role="note">Chưa có mẫu ZNS: {missingTemplates} (tin loại này sẽ bị bỏ qua).</p>
+            </section>
           )}
-          <div className={styles.actions}>
-            <button type="submit" className={kit.primary} disabled={busy}>Lưu cài đặt</button>
-          </div>
-        </form>
-      </div>
-    </section>
+        </div>
+      </form>
+    </>
   )
 }

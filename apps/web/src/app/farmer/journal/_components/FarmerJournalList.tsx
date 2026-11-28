@@ -19,7 +19,7 @@ interface JournalEntry {
   performed_by: string
   status: string
   notes: string | null
-  activities: { activity_detail: string; product_name: string | null; dosage?: string; performer?: string; withdrawal_days?: number; pesticide_product_id?: string | null }[]
+  activities: { activity_detail: string; product_name: string | null; dosage?: string; performer?: string; withdrawal_days?: number; pesticide_product_id?: string | null; fresh_leaf_kg?: number | null }[]
   history?: { date: string, action: string, note?: string }[]
   created_at?: string | null
   approved_at?: string | null
@@ -174,6 +174,7 @@ export function FarmerJournalList() {
     ['Ngày thực hiện', day(selectedEntry.entry_date)],
     ...(selectedEntry.parcel_code ? [['Thửa chè', selectedEntry.parcel_code] as [string, React.ReactNode]] : []),
     ['Sản phẩm', selectedEntry.activities?.[0]?.product_name || 'Không sử dụng'],
+    ...(selectedEntry.activities?.[0]?.fresh_leaf_kg != null ? [['Sản lượng búp tươi', `${selectedEntry.activities[0].fresh_leaf_kg.toLocaleString('vi-VN')} kg`] as [string, React.ReactNode]] : []),
     ...(selectedEntry.activities?.[0]?.dosage ? [['Liều lượng', selectedEntry.activities[0].dosage] as [string, React.ReactNode]] : []),
     ...(selectedEntry.activities?.[0]?.performer ? [['Người thực hiện', selectedEntry.activities[0].performer] as [string, React.ReactNode]] : []),
     ...(selectedEntry.activities?.[0]?.withdrawal_days != null ? [['Thời gian cách ly (PHI)', `${selectedEntry.activities[0].withdrawal_days} ngày`] as [string, React.ReactNode]] : []),
@@ -278,30 +279,33 @@ export function FarmerJournalList() {
           </div>
 
           <div className={styles.layout}>
-            <div className={styles.entries}>
-              {shown.length === 0 && <div className={styles.empty}>Không có nhật ký nào khớp bộ lọc.</div>}
-              {GROUPS.map(group => {
-                const items = shown.filter(e => groupOf(e.entry_date) === group.key)
-                if (items.length === 0) return null
-                if (group.key !== 'older') {
+            <section className={`${kit.pn} ${styles.entries}`} aria-label="Danh sách nhật ký">
+              <div className={kit.ph}><h2>Danh sách nhật ký</h2></div>
+              <div className={styles.entryList}>
+                {shown.length === 0 && <div className={styles.empty}>Không có nhật ký nào khớp bộ lọc.</div>}
+                {GROUPS.map(group => {
+                  const items = shown.filter(e => groupOf(e.entry_date) === group.key)
+                  if (items.length === 0) return null
+                  if (group.key !== 'older') {
+                    return (
+                      <React.Fragment key={group.key}>
+                        <h2 className={styles.groupHead}>{group.label}</h2>
+                        {items.map(card)}
+                      </React.Fragment>
+                    )
+                  }
                   return (
                     <React.Fragment key={group.key}>
-                      <h2 className={styles.groupHead}>{group.label}</h2>
-                      {items.map(card)}
+                      <button type="button" className={styles.groupHead} aria-expanded={showOlder} onClick={() => setOlderOpen(!showOlder)}>
+                        {showOlder ? <ChevronDown size={18} aria-hidden="true" /> : <ChevronRight size={18} aria-hidden="true" />}
+                        {group.label} ({items.length})
+                      </button>
+                      {showOlder && items.map(card)}
                     </React.Fragment>
                   )
-                }
-                return (
-                  <React.Fragment key={group.key}>
-                    <button type="button" className={styles.groupHead} aria-expanded={showOlder} onClick={() => setOlderOpen(!showOlder)}>
-                      {showOlder ? <ChevronDown size={18} aria-hidden="true" /> : <ChevronRight size={18} aria-hidden="true" />}
-                      {group.label} ({items.length})
-                    </button>
-                    {showOlder && items.map(card)}
-                  </React.Fragment>
-                )
-              })}
-            </div>
+                })}
+              </div>
+            </section>
 
             {selectedEntry && (
               <section className={`${kit.pn} ${styles.detail}`} aria-label="Chi tiết nhật ký">

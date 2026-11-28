@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react'
 import useSWR from 'swr'
-import { AlertTriangle, Ban, Check, ChevronLeft, ChevronRight, CircleAlert, CircleCheck, Leaf, Plus } from 'lucide-react'
+import { AlertTriangle, Ban, Check, ChevronLeft, ChevronRight, CircleAlert, CircleCheck, Leaf, Plus, Calendar } from 'lucide-react'
 import kit from '@/components/features/dashboard/page-kit.module.css'
 import farmer from '@/components/features/farmer-web/kit.module.css'
 import styles from './HarvestCalendar.module.css'
@@ -32,16 +32,26 @@ const ACTIVITY: Record<string, string> = {
 
 const fullDay = (value: number | string) => new Date(value).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
-export function HarvestCalendar({ userRole }: { userRole: 'MANAGER' | 'OFFICER' | 'FARMER' }) {
-  const [month, setMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1))
-  const [selectedDay, setSelectedDay] = useState(() => dayStart(new Date()))
+interface Props {
+  userRole: 'MANAGER' | 'OFFICER' | 'FARMER'
+  /** Inside a page that has its own title: the heading and its button are left out. */
+  embedded?: boolean
+  /** The day to open on. */
+  initialDay?: number
+  /** Open the add dialog straight away. */
+  initialAdd?: boolean
+}
+
+export function HarvestCalendar({ userRole, embedded = false, initialDay, initialAdd = false }: Props) {
+  const [month, setMonth] = useState(() => { const at = new Date(initialDay ?? Date.now()); return new Date(at.getFullYear(), at.getMonth(), 1) })
+  const [selectedDay, setSelectedDay] = useState(() => initialDay ?? dayStart(new Date()))
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
   const [selectedEvent, setSelectedEvent] = useState<HarvestEvent | null>(null)
   const [newDateStr, setNewDateStr] = useState('')
 
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [isAddModalOpen, setIsAddModalOpen] = useState(initialAdd)
   const [selectedUnscheduledCycleId, setSelectedUnscheduledCycleId] = useState('')
-  const [newAddDateStr, setNewAddDateStr] = useState('')
+  const [newAddDateStr, setNewAddDateStr] = useState(() => (initialAdd && initialDay ? new Date(initialDay).toLocaleDateString('en-CA') : ''))
 
   const isManager = userRole === 'MANAGER'
   const weeks = weeksOf(month.getFullYear(), month.getMonth())
@@ -134,14 +144,15 @@ export function HarvestCalendar({ userRole }: { userRole: 'MANAGER' | 'OFFICER' 
   }
 
   return (
-    <div className={`${kit.page} ${styles.page}`}>
-      <div className={styles.top}>
+    <div className={`${kit.page} ${styles.page} ${userRole === 'FARMER' ? styles.farmer : ''}`}>
+      {!embedded && <div className={styles.top}>
+        {userRole === 'FARMER' && <span className={kit.hico}><Calendar size={28} aria-hidden="true" /></span>}
         <div>
           <h1>Lịch thu hái</h1>
           <p>Theo dõi ngày hái của từng thửa, tránh thu hái trong thời gian cách ly.</p>
         </div>
         {isManager && <Button onClick={() => setIsAddModalOpen(true)}><Plus size={16} aria-hidden="true" />Thêm lứa hái</Button>}
-      </div>
+      </div>}
 
       <div className={styles.layout}>
         <div className={styles.main}>
@@ -171,10 +182,16 @@ export function HarvestCalendar({ userRole }: { userRole: 'MANAGER' | 'OFFICER' 
             <div className={styles.scroll}>
               <div className={styles.grid}>
                 <div className={styles.weekdays}>
-                  {['Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy', 'Chủ Nhật'].map(day => <span key={day}>{day}</span>)}
+                  {['Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy', 'Chủ Nhật'].map((day, index) => (
+                    <span key={day} aria-label={day}>{userRole === 'FARMER' ? ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'][index] : day}</span>
+                  ))}
                 </div>
                 {weeks.map(week => {
                   const bars = weekBars(week, spans)
+                  // Farmer cells show short markers for each day; other roles keep their spanning bars.
+                  const visibleBars = userRole === 'FARMER'
+                    ? bars.flatMap(bar => Array.from({ length: bar.width }, (_, offset) => ({ ...bar, column: bar.column + offset, width: 1 })))
+                    : bars
                   const rows = Math.max(0, ...bars.map(bar => bar.row)) + 1
                   return (
                   <div key={week[0]} className={styles.week}>
@@ -188,15 +205,16 @@ export function HarvestCalendar({ userRole }: { userRole: 'MANAGER' | 'OFFICER' 
                         </div>
                       )
                     })}
-                    {bars.map(({ span, column, width, row }) => {
+                    {visibleBars.map(({ span, column, width, row }) => {
                       const Icon = KIND[span.kind].icon
                       return (
-                        <button key={span.key} type="button" className={`${styles.bar} ${styles[span.kind]}`}
+                        <button key={`${span.key}-${column}`} type="button" className={`${styles.bar} ${styles[span.kind]}`}
                           style={{ gridColumn: `${column} / span ${width}`, gridRow: row + 1 }}
                           title={`${span.event.parcelName} · ${KIND[span.kind].label}`}
-                          onClick={() => choose(Math.max(span.from, week[0]), span.key)}>
+                          aria-label={userRole === 'FARMER' ? span.event.parcelName ?? undefined : undefined}
+                          onClick={() => choose(userRole === 'FARMER' ? week[column - 1] : Math.max(span.from, week[0]), span.key)}>
                           <Icon size={12} aria-hidden="true" />
-                          <span>{span.event.parcelName}</span>
+                          <span>{userRole === 'FARMER' ? KIND[span.kind].label : span.event.parcelName}</span>
                         </button>
                       )
                     })}

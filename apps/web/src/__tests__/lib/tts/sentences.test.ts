@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
-import { activitySentence, balanceSentence, carePlanSentence, priceSentence } from '@/lib/tts/sentences'
+import { activitySentence, balanceSentence, carePlanSentence, pickingSentence, priceSentence } from '@/lib/tts/sentences'
 
 test('the price sentence lists each grade in Vietnamese words', () => {
   expect(priceSentence([{ grade_name: 'Loại 1', price_vnd_per_kg: 13000 }, { grade_name: 'Loại 2', price_vnd_per_kg: 9000 }]))
@@ -21,4 +21,13 @@ test('a care plan without the officer advice says there is none yet', () => {
 
 test('the balance sentence reads the balance line only, with no digits beyond it', () => {
   expect(balanceSentence('HTX đang nợ bạn 250.000 đ')).toBe('Sổ tiền của bạn: HTX đang nợ bạn 250.000 đ.')
+})
+
+test('the picking sentence says per parcel whether the date is planned, blocked by withdrawal or missing', () => {
+  expect(pickingSentence([
+    { parcel_code: 'A1', date: '03/12/2026', withdrawal: true },
+    { parcel_code: 'A2', date: '01/12/2026', withdrawal: false },
+    { parcel_code: 'A3', date: null, withdrawal: false },
+  ])).toBe('Thửa A1 đang cách ly, được hái sớm nhất ngày 03/12/2026. Thửa A2 dự kiến hái ngày 01/12/2026. Thửa A3 chưa có lịch hái.')
+  expect(pickingSentence([])).toBe('Bạn chưa có thửa chè nào.')
 })

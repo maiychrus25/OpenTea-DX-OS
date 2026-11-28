@@ -9,11 +9,11 @@ import { TodayTickets } from './TodayTickets'
 import styles from './weighing.module.css'
 
 /** The weighing form, with today's tickets beside it on wide screens and under it on phones. */
-export function WeighingStation() {
+export function WeighingStation({ printBase }: { printBase?: string } = {}) {
   const [revision, setRevision] = useState(0)
   return (
     <div className={styles.station}>
-      <WeighingForm onSaved={() => setRevision(r => r + 1)} />
+      <WeighingForm printBase={printBase} onSaved={() => setRevision(r => r + 1)} />
       <TodayTickets revision={revision} />
     </div>
   )

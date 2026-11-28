@@ -1,7 +1,7 @@
 // Copyright (c) 2026 OpenTea Developers
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
-import { render, screen, within } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { redirect } from 'next/navigation'
 
@@ -13,7 +13,7 @@ import type { DirectorBoard } from '@/domain/board/views'
 
 import ManagerDashboard from '../page'
 
-const mockIsEnabledFor = jest.fn()
+jest.mock('../_components/ManagerHero', () => ({ ManagerHero: ({ greeting }: { greeting: string }) => <h1>{greeting}</h1> }))
 
 jest.mock('@/auth', () => ({ auth: jest.fn() }))
 
@@ -28,17 +28,11 @@ jest.mock('@/lib/api/tenant', () => ({
 }))
 
 jest.mock('@/infrastructure/db/prisma.client', () => ({
-  prisma: {
-    journalEntry: { findMany: jest.fn().mockResolvedValue([]) },
-  },
+  prisma: { journalEntry: { count: jest.fn().mockResolvedValue(8) } },
 }))
 
 jest.mock('@/infrastructure/db/repositories/PrismaHtxProfileRepository', () => ({
   PrismaHtxProfileRepository: jest.fn(),
-}))
-
-jest.mock('@/infrastructure/db/repositories/prisma-installed-app-repository', () => ({
-  PrismaInstalledAppRepository: jest.fn().mockImplementation(() => ({ isEnabledFor: mockIsEnabledFor })),
 }))
 
 jest.mock('@/application/useCases/GetHtxProfileUseCase', () => ({
@@ -50,14 +44,6 @@ jest.mock('@/application/useCases/GetHtxProfileUseCase', () => ({
 // TODO(integration): the board comes from DirectorBoardUseCase; these tests mock the local data step.
 jest.mock('@/lib/board/director-board-data', () => ({ loadDirectorBoard: jest.fn() }))
 
-jest.mock('@/components/features/dashboard/NoticesAndWeather', () => ({
-  NoticesAndWeather: () => null,
-  RainAlert: () => null,
-}))
-
-jest.mock('@/components/features/dashboard/PendingJournals', () => ({
-  PendingJournals: () => null,
-}))
 
 const board: DirectorBoard = {
   today: '2026-11-28',
@@ -74,7 +60,6 @@ const managerSession = { user: { role: 'manager', name: 'Anh Hùng' } }
 describe('ManagerDashboard', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockIsEnabledFor.mockResolvedValue(false)
     ;(loadDirectorBoard as jest.Mock).mockResolvedValue(board)
   })
 
@@ -103,44 +88,29 @@ describe('ManagerDashboard', () => {
     expect(loadDirectorBoard).not.toHaveBeenCalled()
   })
 
-  it('renders the six blocks from the board for this HTX and the head', async () => {
+  it('shows the design sections with this HTX figures and marks the examples', async () => {
     ;(auth as jest.Mock).mockResolvedValueOnce(managerSession)
     render(await ManagerDashboard())
 
     expect(loadDirectorBoard).toHaveBeenCalledWith('dummy', expect.any(Date), 'manager')
-    const grid = screen.getByTestId('director-board')
-    expect(within(grid).getAllByRole('heading', { level: 2 })).toHaveLength(6)
-    expect(within(screen.getByRole('region', { name: 'Búp thu hôm nay' })).getByText('95,0 kg')).toBeInTheDocument()
-    expect(screen.getByRole('region', { name: 'Có gì đỏ' })).toBeInTheDocument()
+    for (const name of ['Sản lượng thu hái theo tuần', 'Công việc cần xử lý', 'Thao tác nhanh', 'Cảnh báo & nhắc việc', 'Bản tin HTX']) {
+      expect(screen.getByRole('heading', { name })).toBeInTheDocument()
+    }
+    expect(screen.getByText('8 nhật ký chờ duyệt')).toBeInTheDocument()
+    expect(screen.getAllByText('Mẫu').length).toBeGreaterThan(0)
   })
 
-  it('shows the analysis link only when the analysis app is enabled for the HTX', async () => {
+  it('puts the board alerts before the example warnings', async () => {
     ;(auth as jest.Mock).mockResolvedValueOnce(managerSession)
-    mockIsEnabledFor.mockResolvedValueOnce(true)
-    const { unmount } = render(await ManagerDashboard())
-    expect(screen.getByRole('link', { name: /Phân tích chi tiết/ })).toHaveAttribute('href', '/manager/apps/htx-dashboard')
-    expect(mockIsEnabledFor).toHaveBeenCalledWith('htx-dashboard', 'TC')
-    unmount()
-
-    ;(auth as jest.Mock).mockResolvedValueOnce(managerSession)
+    ;(loadDirectorBoard as jest.Mock).mockResolvedValueOnce({ ...board, alerts: [{ kind: 'SETTLEMENT_DRAFT', count: 1, message: 'Kỳ quyết toán còn nháp', href: '/manager/settlements' }] })
     render(await ManagerDashboard())
-    expect(screen.queryByRole('link', { name: /Phân tích chi tiết/ })).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Giá chè thế giới/ })).toHaveAttribute('href', '/manager/bulletin')
+    expect(screen.getByRole('link', { name: /Kỳ quyết toán còn nháp/ })).toHaveAttribute('href', '/manager/settlements')
   })
 
-  it('the old market panel and the parcel table are gone', async () => {
+  it('keeps the page when a source cannot be read', async () => {
     ;(auth as jest.Mock).mockResolvedValueOnce(managerSession)
+    ;(loadDirectorBoard as jest.Mock).mockRejectedValueOnce(new Error('down'))
     render(await ManagerDashboard())
-    expect(screen.queryByText('Chỉ số giá nông sản')).not.toBeInTheDocument()
-    expect(screen.queryByText('Tình trạng thửa đất')).not.toBeInTheDocument()
-  })
-
-  it('a block that failed to load shows its own state and the others still show', async () => {
-    ;(auth as jest.Mock).mockResolvedValueOnce(managerSession)
-    ;(loadDirectorBoard as jest.Mock).mockResolvedValueOnce({ ...board, leaf: null })
-    render(await ManagerDashboard())
-    expect(screen.getByText('Chưa tải được số liệu thu mua hôm nay.')).toBeInTheDocument()
-    expect(screen.getByRole('region', { name: 'Giá thu mua hôm nay' })).toBeInTheDocument()
-    expect(screen.getByText('Loại 1')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Công việc cần xử lý' })).toBeInTheDocument()
   })
 })

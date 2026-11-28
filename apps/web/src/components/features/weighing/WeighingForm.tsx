@@ -41,9 +41,11 @@ function LightLabel({ light }: { light: Light | undefined }) {
 
 interface Props {
   onSaved: () => void
+  /** The area whose print page opens after saving. */
+  printBase?: string
 }
 
-export function WeighingForm({ onSaved }: Props) {
+export function WeighingForm({ onSaved, printBase = '/accountant/weighing' }: Props) {
   const [formKey, setFormKey] = useState(0)
   const [prices, setPrices] = useState<LeafPriceRow[]>([])
   const [household, setHousehold] = useState<HouseholdHit | null>(null)
@@ -125,7 +127,7 @@ export function WeighingForm({ onSaved }: Props) {
         setError(body?.error?.message || 'Không lưu được phiếu. Vui lòng thử lại.')
         return
       }
-      window.open(`/accountant/weighing/${(body.data as LeafTicket).id}/print`, '_blank')
+      window.open(`${printBase}/${(body.data as LeafTicket).id}/print`, '_blank')
       reset()
       onSaved()
     } catch {

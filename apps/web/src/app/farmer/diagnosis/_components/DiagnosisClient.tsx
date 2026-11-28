@@ -8,7 +8,7 @@ import { carePlanSentence } from '@/lib/tts/sentences'
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Pill } from '@/components/ui'
-import { WifiOff, RefreshCw, AlertTriangle, BookOpen, ImageIcon, Camera } from 'lucide-react'
+import { WifiOff, RefreshCw, AlertTriangle, BookOpen, ImageIcon, Camera, ScanLine } from 'lucide-react'
 import { TreatmentPlan } from '@/components/features/disease/TreatmentPlan'
 import kit from '@/components/features/farmer-web/kit.module.css'
 import styles from '../diagnosis.module.css'
@@ -130,17 +130,13 @@ export function DiagnosisClient({ initialParcels, initialHistory }: DiagnosisCli
 
   return (
     <div className={kit.page}>
-      <div className={styles.top}>
-        <div>
-          <h1>Chẩn đoán sâu bệnh</h1>
-          <p>Theo dõi bệnh trên nương chè và gửi ảnh để AI nhận diện, cán bộ kỹ thuật phê duyệt cách xử lý.</p>
+      <div className={kit.hd}>
+        <span className={kit.hico}><ScanLine size={28} aria-hidden="true" /></span>
+        <div className={kit.hdText}>
+          <h1 className={kit.h1}>Chẩn đoán sâu bệnh</h1>
+          <p className={kit.sub}>Chụp hoặc chọn ảnh lá chè để AI nhận diện; kết quả được gửi cho cán bộ kỹ thuật.</p>
         </div>
-        <a href="#tu-chup" className={kit.btn2}><Camera size={15} aria-hidden="true" />Tự chụp ảnh kiểm tra</a>
       </div>
-
-
-      <h2 id="tu-chup" className={styles.section}>Chẩn đoán bệnh tự động</h2>
-      <p className={styles.sectionNote}>Tải ảnh lá bệnh để AI nhận diện. Kết quả được lưu và báo cho cán bộ kỹ thuật.</p>
 
       {!isOnline && (
         <div className={styles.offlineBanner}>
@@ -158,7 +154,7 @@ export function DiagnosisClient({ initialParcels, initialHistory }: DiagnosisCli
       <div className={kit.cols}>
         <div className={`${kit.stack} ${styles.mainColumn}`}>
           <section className={kit.pn} aria-label="Ảnh lá chè">
-            <div className={kit.ph}><h2>Ảnh lá chè</h2></div>
+            <div className={kit.ph}><h2>Chẩn đoán bằng ảnh</h2></div>
             <div className={styles.panelBody}>
               <label className={kit.fl}>
                 Chọn thửa đất
@@ -170,6 +166,8 @@ export function DiagnosisClient({ initialParcels, initialHistory }: DiagnosisCli
               </label>
 
               <input type="file" id="fileInput" accept="image/jpeg, image/png" className={styles.fileInput} onChange={handleFileSelect} />
+              {/* On a phone `capture` opens the camera; elsewhere it is an ordinary file dialog. */}
+              <input type="file" id="cameraInput" accept="image/jpeg, image/png" capture="environment" aria-label="Chụp ảnh lá chè" className={styles.fileInput} onChange={handleFileSelect} />
               <label htmlFor="fileInput" className={styles.preview}>
                 {preview ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -185,7 +183,11 @@ export function DiagnosisClient({ initialParcels, initialHistory }: DiagnosisCli
               {errorMsg && <div className={styles.errorBox}>{errorMsg}</div>}
               {successMsg && <div className={styles.successBox}>{successMsg}</div>}
 
+              <span className={styles.hint}>Ảnh JPEG hoặc PNG, tối đa 5 MB. Chụp một lá rõ nét, đủ sáng.</span>
               <div className={styles.actions}>
+                <label htmlFor="cameraInput" className={`${kit.btn} ${styles.pick}`}>
+                  <Camera size={16} aria-hidden="true" />Chụp ảnh
+                </label>
                 <label htmlFor="fileInput" className={`${kit.btn2} ${styles.pick}`}>
                   <ImageIcon size={16} aria-hidden="true" />
                   {selectedFile ? 'Chọn ảnh khác' : 'Chọn ảnh'}
@@ -198,7 +200,6 @@ export function DiagnosisClient({ initialParcels, initialHistory }: DiagnosisCli
                   </button>
                 )}
               </div>
-              <span className={styles.hint}>Ảnh JPEG hoặc PNG, tối đa 5 MB. Chụp một lá rõ nét, đủ sáng.</span>
             </div>
           </section>
 

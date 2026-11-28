@@ -45,36 +45,22 @@ export function FarmerJournalNewClient({ initial }: { initial?: JournalPrefill }
         <Link href="/farmer/journal" className={kit.btn2}><ChevronLeft size={16} aria-hidden="true" />Về nhật ký</Link>
       </div>
 
-      <div className={kit.cols}>
-        <div className={`${kit.pn} ${styles.formCard}`}>
-          <FarmerJournalForm
-            initial={initial}
-            onSuccess={() => router.push('/farmer/journal')}
-            onCancel={() => router.push('/farmer/journal')}
-          />
-        </div>
+      {waiting.length > 0 && (
+        <section className={styles.waiting} aria-label="Thửa đang cách ly">
+          <TriangleAlert size={18} aria-hidden="true" />
+          <strong>Thửa đang cách ly:</strong>
+          {waiting.map(item => (
+            <span key={item.parcelName}><b className={kit.mono}>{item.parcelName}</b> đến {new Date(item.safeHarvestDate!).toLocaleDateString('vi-VN')}</span>
+          ))}
+        </section>
+      )}
 
-        <div className={`${kit.stack} ${styles.guide}`}>
-          <section className={kit.pn} aria-label="Sau khi gửi">
-            <div className={kit.ph}><h2>Sau khi gửi</h2></div>
-            <ol className={styles.steps}>
-              <li>Nhật ký ở trạng thái <strong>Chờ duyệt</strong>.</li>
-              <li>Cán bộ kỹ thuật duyệt hoặc yêu cầu sửa.</li>
-              <li>Có thể <strong>rút lại</strong> khi chưa được duyệt.</li>
-            </ol>
-          </section>
-          {waiting.length > 0 && (
-            <section className={kit.pn} aria-label="Thửa đang cách ly">
-              <div className={kit.ph}><h2>Thửa đang cách ly</h2></div>
-              {waiting.map(item => (
-                <div key={item.parcelName} className={kit.row}>
-                  <span className={`${kit.ico} ${kit.amber}`}><TriangleAlert size={18} aria-hidden="true" /></span>
-                  <span><strong className={kit.mono}>{item.parcelName}</strong> cách ly đến {new Date(item.safeHarvestDate!).toLocaleDateString('vi-VN')}</span>
-                </div>
-              ))}
-            </section>
-          )}
-        </div>
+      <div className={styles.formCard}>
+        <FarmerJournalForm
+          initial={initial}
+          onSuccess={() => router.push('/farmer/journal')}
+          onCancel={() => router.push('/farmer/journal')}
+        />
       </div>
     </div>
   )

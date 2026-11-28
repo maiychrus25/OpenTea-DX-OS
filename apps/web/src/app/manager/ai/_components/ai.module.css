@@ -1,0 +1,17 @@
+/* SPDX-License-Identifier: MIT */
+/* SPDX-FileCopyrightText: 2026 OpenTea Developers */
+
+.columns { display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.card { min-width: 0; padding: 14px 16px; background: var(--color-surface-card); border: 1px solid var(--color-border); border-radius: var(--radius-card); box-shadow: var(--shadow-card); }
+.card h2 { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; font-size: 16px; font-weight: 800; color: var(--color-ink-heading); }
+.card h2 svg { color: var(--color-primary); }
+.card p { margin: 0; font-size: 13.5px; color: var(--color-ink-secondary); }
+.card ul { margin: 0; padding: 0; list-style: none; }
+.card li { border-top: 1px solid var(--color-border-row); }
+.card a { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 0; color: var(--color-ink-primary); text-decoration: none; }
+.card a span { display: flex; flex-direction: column; min-width: 0; font-size: 13.5px; }
+.card small { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; color: var(--color-ink-secondary); }
+
+@media (max-width: 1100px) {
+  .columns { grid-template-columns: minmax(0, 1fr); }
+}
