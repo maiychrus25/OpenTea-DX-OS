@@ -10,6 +10,8 @@ export interface DiseaseReportData {
   photo_minio_key: string;
   ai_disease_name: string;
   ai_confidence: number;
+  /** Version of the model that made the prediction; null when it has none. */
+  model_version?: string | null;
 }
 
 export interface DiseaseReportPort {
@@ -24,14 +26,15 @@ export interface DiseaseReportPort {
   findHistoryByFarmer(farmerId: string): Promise<DiagnosisHistoryItem[]>;
   findPendingReports(): Promise<OfficerPendingReportItem[]>;
   findById(id: string): Promise<DiseaseReportDetails | null>;
-  /** `confirmedDiagnosis` is the officer's disease name; null when the report is rejected. */
+  /** `confirmedDiagnosis` is the officer's disease name and `confirmedLabelCode` his pick from disease_labels; both null when rejected. */
   updateStatus(
     id: string,
     status: string,
     treatment: string,
     officerId: string,
     confirmedDiagnosis: string | null,
-    prescription?: DiseasePrescription
+    prescription?: DiseasePrescription,
+    confirmedLabelCode?: string | null
   ): Promise<{ draftJournalEntryId?: string; prescribedProductName?: string } | void>;
 }
 

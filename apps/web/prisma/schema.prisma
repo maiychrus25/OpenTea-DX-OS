@@ -386,11 +386,36 @@ model DiseaseReport {
   confirmed_at             DateTime?
   treatment_notes          String? // officer-internal only, never shown to farmer
   treatment_recommendation String? // farmer-visible treatment advice
+  confirmed_label_code     String? // the officer's pick from disease_labels; the free-text confirmed_diagnosis stays
+  confirmed_label          DiseaseLabel?       @relation(fields: [confirmed_label_code], references: [code])
+  model_version            String? // AI model version that made the prediction; null for the general model
   status                   DiseaseReportStatus @default(PENDING)
   created_at               DateTime            @default(now())
   updated_at               DateTime            @updatedAt
 
+  @@index([confirmed_label_code])
   @@map("disease_reports")
+}
+
+enum DiseaseLabelGroup {
+  PEST
+  DISEASE
+  HEALTHY
+  OTHER
+}
+
+/// The one list of class codes and Vietnamese names: officers pick from it, the tea model is trained on it.
+model DiseaseLabel {
+  code            String            @id
+  name_vi         String
+  scientific_name String?
+  group           DiseaseLabelGroup
+  is_target       Boolean           @default(false)
+  sort_order      Int
+
+  reports DiseaseReport[]
+
+  @@map("disease_labels")
 }
 
 // â”€â”€â”€ Market & Economic Data (n8n writes, Next.js reads) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

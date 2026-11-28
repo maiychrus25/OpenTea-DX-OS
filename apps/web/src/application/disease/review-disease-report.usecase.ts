@@ -1,6 +1,7 @@
 // Copyright (c) 2026 OpenTea Developers
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
+import { DiseaseLabelPort } from '@/domain/disease/ports/disease-label.port';
 import { DiseaseReportPort } from '@/domain/disease/ports/disease-report.port';
 import { NotificationPort } from '@/domain/ports/notification-port';
 import { StoragePort } from '@/domain/disease/ports/storage.port';
@@ -18,6 +19,8 @@ export interface ReviewDiseaseReportCommand {
   treatment_recommendation: string;
   /** The officer's disease name; required and non-empty when CONFIRMED, ignored when REJECTED. */
   confirmed_diagnosis: string;
+  /** A code of disease_labels; required when CONFIRMED, ignored when REJECTED. */
+  confirmed_label_code?: string;
   /** Only with CONFIRMED: a catalogue product to spray; creates a DRAFT spraying for the farmer. */
   prescription?: { pesticideProductId: string; dosage?: string };
   htxProfileId?: string;
@@ -30,7 +33,8 @@ export class ReviewDiseaseReportUseCase {
     private notificationPort: NotificationPort,
     private storagePort: StoragePort,
     private documentStoragePort: DocumentStoragePort,
-    private pesticides?: PesticidePort
+    private pesticides?: PesticidePort,
+    private labels?: Pick<DiseaseLabelPort, 'exists'>
   ) {}
 
   async execute(command: ReviewDiseaseReportCommand): Promise<{ draftJournalEntryId?: string }> {
@@ -53,6 +57,14 @@ export class ReviewDiseaseReportUseCase {
       throw new Error('DIAGNOSIS_REQUIRED');
     }
 
+    let confirmedLabelCode: string | null = null;
+    if (command.status === 'CONFIRMED') {
+      confirmedLabelCode = (command.confirmed_label_code ?? '').trim();
+      if (!confirmedLabelCode) throw new Error('LABEL_REQUIRED');
+      // Without a label port the code cannot be checked, so it is refused rather than stored.
+      if (!(await this.labels?.exists(confirmedLabelCode))) throw new Error('LABEL_UNKNOWN');
+    }
+
     let prescription: DiseasePrescription | undefined;
     if (command.prescription) {
       if (command.status !== 'CONFIRMED') throw new Error('PRESCRIPTION_REQUIRES_CONFIRMED');
@@ -69,9 +81,9 @@ export class ReviewDiseaseReportUseCase {
     }
 
     const result =
-      (prescription
-        ? await this.diseaseReportPort.updateStatus(command.reportId, command.status, command.treatment_recommendation, command.officerId, confirmedDiagnosis, prescription)
-        : await this.diseaseReportPort.updateStatus(command.reportId, command.status, command.treatment_recommendation, command.officerId, confirmedDiagnosis)) ?? {};
+      (await this.diseaseReportPort.updateStatus(
+        command.reportId, command.status, command.treatment_recommendation, command.officerId, confirmedDiagnosis, prescription, confirmedLabelCode
+      )) ?? {};
 
     const title = command.status === 'CONFIRMED' ? 'Báo cáo bệnh đã duyệt' : 'Báo cáo bệnh bị từ chối';
     let body = `Báo cáo bệnh ${confirmedDiagnosis ?? report.ai_disease_name} tại thửa ${report.parcel_code} đã được cán bộ phản hồi.`;
@@ -82,8 +94,8 @@ export class ReviewDiseaseReportUseCase {
         body += ` Cán bộ kê đơn ${result.prescribedProductName ?? ''}. Khi phun xong, mở nhật ký nháp và bấm Đã phun.`;
       }
 
-      // User request: Transfer confirmed report to PARA (agrimarket-private)
-      try {
+      // Transfer the confirmed report to PARA (agrimarket-private). A failure never blocks the review: warn, retry once.
+      const copyToPara = async () => {
         // 1. Upload a markdown report document
         const reportContent = `# Báo cáo bệnh hại (Đã duyệt)
 - Thửa đất: ${report.parcel_code}
@@ -108,8 +120,14 @@ export class ReviewDiseaseReportUseCase {
             'image/jpeg'
           );
         }
-      } catch (err) {
-        console.error('Failed to transfer report to PARA', err);
+      };
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          await copyToPara();
+          break;
+        } catch (err) {
+          console.warn(`Failed to transfer report ${report.id} to PARA (attempt ${attempt} of 2)`, err);
+        }
       }
     }
 

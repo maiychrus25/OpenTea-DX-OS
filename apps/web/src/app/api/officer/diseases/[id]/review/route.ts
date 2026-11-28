@@ -11,6 +11,7 @@ import { PrismaNotificationRepository } from '@/infrastructure/db/notification/p
 import { ReviewDiseaseReportUseCase } from '@/application/disease/review-disease-report.usecase';
 import { MinioStorageAdapter } from '@/infrastructure/storage/minio-storage.adapter';
 import { MinioDocumentAdapter } from '@/infrastructure/storage/minio-document.adapter';
+import { PrismaDiseaseLabelRepository } from '@/infrastructure/db/farm/PrismaDiseaseLabelRepository';
 import { PrismaPesticideRepository } from '@/infrastructure/db/pesticide/PrismaPesticideRepository';
 import { z } from 'zod';
 
@@ -18,6 +19,7 @@ const reviewSchema = z.object({
   status: z.enum(['CONFIRMED', 'REJECTED']),
   treatment_recommendation: z.string().optional(),
   confirmed_diagnosis: z.string().trim().max(200, 'Tên bệnh tối đa 200 ký tự.').optional(),
+  confirmed_label_code: z.string().trim().max(64).optional(),
   prescription: z.object({
     pesticide_product_id: z.string().min(1).max(100),
     dosage: z.string().trim().max(100).optional()
@@ -45,7 +47,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       );
     }
 
-    const { status, treatment_recommendation, confirmed_diagnosis, prescription } = parsed.data;
+    const { status, treatment_recommendation, confirmed_diagnosis, confirmed_label_code, prescription } = parsed.data;
 
     const tenant = await requireTenant();
     await new TenantGuard(tenant).diseaseReport(params.id);
@@ -55,7 +57,8 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       new PrismaNotificationRepository(),
       new MinioStorageAdapter(),
       new MinioDocumentAdapter(),
-      new PrismaPesticideRepository()
+      new PrismaPesticideRepository(),
+      new PrismaDiseaseLabelRepository()
     );
 
     const result = await useCase.execute({
@@ -65,6 +68,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       status,
       treatment_recommendation: treatment_recommendation || '',
       confirmed_diagnosis: confirmed_diagnosis ?? '',
+      confirmed_label_code,
       prescription: prescription ? { pesticideProductId: prescription.pesticide_product_id, dosage: prescription.dosage } : undefined,
       htxProfileId: tenant.htxProfileId,
       officerName: session.user.name ?? undefined
@@ -97,6 +101,12 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     }
     if (error.message === 'DIAGNOSIS_REQUIRED') {
       return NextResponse.json({ error: { code: 'VALIDATION_ERROR', message: 'Vui lòng nhập tên bệnh đã xác nhận trước khi duyệt.' } }, { status: 400 });
+    }
+    if (error.message === 'LABEL_REQUIRED') {
+      return NextResponse.json({ error: { code: 'VALIDATION_ERROR', message: 'Vui lòng chọn nhãn bệnh/sâu trước khi duyệt.' } }, { status: 400 });
+    }
+    if (error.message === 'LABEL_UNKNOWN') {
+      return NextResponse.json({ error: { code: 'VALIDATION_ERROR', message: 'Nhãn bệnh/sâu không có trong danh sách.' } }, { status: 400 });
     }
 
     return NextResponse.json(
