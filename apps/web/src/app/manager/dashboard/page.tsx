@@ -32,6 +32,15 @@ import boardStyles from '@/components/features/board/board.module.css'
 const kgText = (value: number | undefined) => (value === undefined ? '—' : `${value.toLocaleString('vi-VN', { maximumFractionDigits: 1 })} kg`)
 const revenue = (report: SeasonReport | null) => (report?.sales ? Number(report.sales.wholesale_vnd) + Number(report.sales.retail_vnd) : undefined)
 
+/** One figure that cannot be read leaves a dash or drops its line, never the whole page. */
+async function orElse<T>(read: () => PromiseLike<T>, fallback: T): Promise<T> {
+  try {
+    return await read()
+  } catch {
+    return fallback
+  }
+}
+
 /** From 1 January to today, against the same days of last year. */
 function yearFigures(now: SeasonReport | null, before: SeasonReport | null): StatCard[] {
   const note = (change: number | null) => (change === null ? 'Từ đầu năm' : 'so cùng kỳ')
@@ -138,7 +147,7 @@ export default async function ManagerDashboard() {
     board = loaded
     analysisEnabled = enabled
 
-    // The figures above the board; each one that fails leaves a dash or drops its line, never the page.
+    // The figures above the board.
     const now = new Date()
     const today = vnDay(now)
     const year = Number(today.slice(0, 4))
@@ -146,16 +155,16 @@ export default async function ManagerDashboard() {
     const household = { household: { htx_profile_id: profileId } }
     const soon = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
     const [thisYear, lastYear, tickets, waiting, due, unscheduled, drafts] = await Promise.all([
-      loadSeasonReport(profileId, `${year}-01-01`, today, htxName, now).catch(() => null),
-      loadSeasonReport(profileId, `${year - 1}-01-01`, `${year - 1}-${lastDay}`, htxName, now).catch(() => null),
-      prisma.freshLeafTicket.findMany({
+      orElse(() => loadSeasonReport(profileId, `${year}-01-01`, today, htxName, now), null),
+      orElse(() => loadSeasonReport(profileId, `${year - 1}-01-01`, `${year - 1}-${lastDay}`, htxName, now), null),
+      orElse(() => prisma.freshLeafTicket.findMany({
         where: { htx_profile_id: profileId, status: 'VALID', weighed_at: { gte: weeksStart(now, 8) } },
         select: { weighed_at: true, net_kg: true },
-      }).catch(() => []),
-      prisma.journalEntry.count({ where: { parcel: household, status: 'PENDING_APPROVAL' } }).catch(() => 0),
-      prisma.parcelCropCycle.count({ where: { parcel: household, harvested_at: null, estimated_harvest_date: { lte: soon } } }).catch(() => 0),
-      prisma.parcelCropCycle.count({ where: { parcel: household, harvested_at: null, estimated_harvest_date: null } }).catch(() => 0),
-      prisma.settlementPeriod.count({ where: { htx_profile_id: profileId, status: 'DRAFT' } }).catch(() => 0),
+      }), []),
+      orElse(() => prisma.journalEntry.count({ where: { parcel: household, status: 'PENDING_APPROVAL' } }), 0),
+      orElse(() => prisma.parcelCropCycle.count({ where: { parcel: household, harvested_at: null, estimated_harvest_date: { lte: soon } } }), 0),
+      orElse(() => prisma.parcelCropCycle.count({ where: { parcel: household, harvested_at: null, estimated_harvest_date: null } }), 0),
+      orElse(() => prisma.settlementPeriod.count({ where: { htx_profile_id: profileId, status: 'DRAFT' } }), 0),
     ])
     figures = yearFigures(thisYear, lastYear)
     weeks = weeklyKg(tickets.map(t => ({ weighed_at: t.weighed_at, net_kg: Number(t.net_kg) })), now)

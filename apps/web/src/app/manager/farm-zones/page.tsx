@@ -6,13 +6,13 @@ import { Sprout } from 'lucide-react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import kit from '@/components/features/dashboard/page-kit.module.css'
 
-const FarmZoneReadOnly = dynamic(() => import('./_components/FarmZoneReadOnly'), { ssr: false })
+const ManagerZones = dynamic(() => import('./_components/ManagerZones'), { ssr: false })
 
 export default function Page() {
   return (
     <div className={kit.page}>
-      <PageHeader icon={<Sprout size={28} />} title="Vùng trồng" description="Bản đồ và danh sách thửa canh tác của HTX (chỉ xem)" />
-      <FarmZoneReadOnly />
+      <PageHeader icon={<Sprout size={28} />} title="Vùng trồng" description="Diện tích, vị trí và trạng thái các nương chè của HTX (chỉ xem)." />
+      <ManagerZones />
     </div>
   )
 }

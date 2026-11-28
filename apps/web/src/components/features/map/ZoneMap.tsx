@@ -14,6 +14,8 @@ import { addMapBaseLayers } from './map-layers'
 
 interface ZoneMapProps {
   parcels: ParcelSummary[]
+  /** A parcel to move the map to. */
+  focusId?: string | null
 }
 
 // Khóa vùng kéo bản đồ (Giới hạn trong lãnh thổ đất liền/gần bờ Việt Nam)
@@ -22,7 +24,7 @@ const VIETNAM_BOUNDS: L.LatLngBoundsLiteral = [
   [23.5, 109.5] // Đông Bắc
 ]
 
-export default function ZoneMap({ parcels }: ZoneMapProps) {
+export default function ZoneMap({ parcels, focusId }: ZoneMapProps) {
   const [isMounted, setIsMounted] = useState(false)
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
@@ -185,6 +187,18 @@ export default function ZoneMap({ parcels }: ZoneMapProps) {
       console.error('Error rendering ZoneMap polygons:', e)
     }
   }, [parcels, isMounted])
+
+  // Declared after the layers effect so that it wins over the fit to all parcels.
+  useEffect(() => {
+    const parcel = parcels.find(p => p.id === focusId)
+    if (!parcel || !mapRef.current) return
+    if (parcel.polygon_geojson) {
+      const bounds = L.geoJSON(parcel.polygon_geojson as any).getBounds()
+      if (bounds.isValid()) mapRef.current.fitBounds(bounds, { maxZoom: 18, padding: [24, 24] })
+    } else if (parcel.centroid_lat && parcel.centroid_lng) {
+      mapRef.current.setView([parcel.centroid_lat, parcel.centroid_lng], 17)
+    }
+  }, [focusId, parcels, isMounted])
 
   if (!isMounted) return <div className={styles.mapFrame} />
 
