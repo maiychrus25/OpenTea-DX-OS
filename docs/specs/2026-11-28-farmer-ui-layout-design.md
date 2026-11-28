@@ -11,11 +11,13 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 Trình bày lại các màn hình nông hộ theo bộ thiết kế 15 màn hình (PDF `OpenTea_DX-OS_15_giao_dien_HiFi`), trên bản 1.22.0 đang phát triển.
 
-## 2. Nguyên tắc: mã là chuẩn về chức năng, thiết kế là chuẩn về bố cục
+## 2. Nguyên tắc: bám bộ thiết kế về bố cục, giữ mã làm chuẩn về nghiệp vụ
 
-Bộ thiết kế được dựng từ mô tả, không có ảnh hiện trạng, nên có chỗ khác web thật. Chỉ lấy **bố cục**. Không đổi API, dữ liệu, quyền, luồng nghiệp vụ, màu hay phông.
+Bộ thiết kế là chuẩn trình bày, làm sát từng trang. Bộ thiết kế được dựng từ mô tả, không có ảnh hiện trạng, nên không đổi API, dữ liệu, quyền, luồng nghiệp vụ, màu hay phông theo nó.
 
-Giữ nguyên mọi thứ đang có dù thiết kế không vẽ: nút "Nghe", thẻ Cẩm nang và bảng lịch thu hái ở Tổng quan, các nút trên ảnh bìa, dự báo thời tiết, đồng ý hoặc tắt tin Zalo, kết nối Telegram, đổi vai, ghi khi mất mạng.
+Theo bộ thiết kế, trang Tổng quan bỏ thẻ Cẩm nang và bảng "Lịch thu hái sắp tới" (đã có trong menu); ảnh bìa còn hai nút Ghi nhật ký và Xem lịch thu hái. Thẻ ứng dụng "Vật tư mua chung" vẫn hiện khi đã cài. Sổ tiền bỏ ba thẻ chuyển, hiện cả ba khối cùng lúc.
+
+Vẫn giữ: nút "Nghe", dự báo thời tiết, đồng ý hoặc tắt tin Zalo, kết nối Telegram, đổi vai, ghi khi mất mạng.
 
 Không làm theo thiết kế ở các chỗ sau:
 
