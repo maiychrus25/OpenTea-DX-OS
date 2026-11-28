@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 -->
 # Đặc tả thiết kế — GĐ4: AI trên dữ liệu thật, Nhận diện 5 sâu bệnh chè, Cổng Zalo OA/ZNS
 
-> **Trạng thái:** Đã duyệt (2026-11-28). Chủ dự án chốt cả mười mục §7 (xem §8). GĐ4-A và GĐ4-C làm song song, phát hành chung v1.22.0; GĐ4-B làm sau, phát hành v1.23.0. Nhánh `feat/phase4-intelligence-zalo`, tách từ `main` sau GĐ3 (`70248ddc`).
+> **Trạng thái:** Đã duyệt (2026-11-28). Chủ dự án chốt cả mười mục §7 (xem §8). GĐ4-A và GĐ4-C đã làm xong trên nhánh `feat/phase4-intelligence-zalo`, phát hành chung v1.22.0 (khác biệt so với đặc tả ở §9). Bộ cẩm nang (§3.5) đi riêng ở PR #108. GĐ4-B làm sau, phát hành v1.23.0.
 > **Căn cứ:**
 > - [product-roadmap.md](../product-roadmap.md): §3 `[I]` và `[H]`, §5 GĐ4 mục 1–3, rào chắn Poka-yoke 5 (an toàn và tiền luôn có người duyệt);
 > - DEV-015 trong [deviation-register.md](../deviation-register.md);
@@ -274,3 +274,29 @@ Bốn chỉnh sửa kỹ thuật của chủ dự án cho kế hoạch:
 - `dxos-zalo` được nối vào Makefile và đứng chờ khoẻ mạnh khi chưa có token OA;
 - cập nhật trạng thái DEV-008, DEV-010…DEV-015.
 
+
+## 9. Ghi chú sau phát hành (GĐ4-A và GĐ4-C, v1.22.0)
+
+Những chỗ code khác thân đặc tả ở trên. Quy tắc đang áp dụng ghi ở [rules-and-limits.md](../rules-and-limits.md) mục 3.31–3.35.
+
+**GĐ4-A**
+- **Lời R1** gọi hộ bằng mã các thửa của hộ và gọi thuốc là "vật tư thuốc", vì agent không đọc tên hộ hay tên vật tư. Bằng chứng kèm phiếu ứng.
+- **Báo lại R2** theo bậc, mỗi bậc là thêm `realert_extra` (20%) **của ngưỡng**, không phải của tổng đã báo lần trước. Agent đọc lại đề xuất cross-check của chính nó để biết bậc đã báo. Lứa có hơn 48 phiếu chỉ đưa 48 phiếu lớn nhất vào bằng chứng, nhưng tổng vẫn tính mọi phiếu.
+- **Tầm nhìn của agent:** R1 xét phiếu ứng trong 60 ngày gần nhất, R2 xét phiếu cân trong 45 ngày gần nhất.
+- **Ngưỡng** sửa qua route riêng `PUT /api/agent/settings/cross-check` (Trưởng HTX), vì `PUT /api/agent/settings` đã khoá từ GĐ1.
+- **Dự báo:** "lứa đã đóng" là lứa có `harvested_at` và có ít nhất một phiếu cân `VALID`. Hợp đồng của bảng điều hành đổi: `dry_stock` thành `{ grades, forecast_dry_kg_14d }`.
+- **RAG:**
+  - chưa có từ điển đồng nghĩa thuật ngữ chè;
+  - không có bộ đệm chỉ mục theo HTX: mỗi câu hỏi chấm lại 30 tệp mới nhất;
+  - chữ của PDF được trích ở lần chatbot đọc đầu tiên, không có móc lúc tải lên;
+  - PDF lớn hơn 15 MB cũng bị coi là không đọc được.
+- **`unpdf`** pin ở 1.6.2, vì từ 1.9 cần Node 22 trong khi ảnh web chạy Node 20.
+- **Giới hạn TTS** tính trong từng tiến trình web.
+
+**GĐ4-C**
+- **HTX tắt Zalo thì không ghi dòng outbox nào** (§5.5 ghi là dòng `skipped`). Loại tin tắt, chưa đồng ý, không có mẫu và hết hạn mức vẫn ghi `skipped`. Có thêm ba lý do: `BAD_TEMPLATE`, `INVALID_PHONE`, `CONSENT_REVOKED`.
+- **Sự kiện ghi sau khi giao dịch gốc commit**, không ghi trong cùng giao dịch (§5.2). Ghi tin lỗi không làm hỏng phiếu, giá hay quyết toán; khoá chống lặp giữ cho lần gọi lặp không ra tin thứ hai.
+- **Quét hết cách ly** chạy mỗi lần relay gọi `tick` (5 phút một lần) thay cho việc chạy một lần lúc 06:00. Khoá theo thửa và ngày nên mỗi ngày chỉ có một tin; giờ im lặng cho tin này đi từ 05:00.
+- **Token OA** lưu mã hoá AES-256-GCM trong `platform.zalo_credentials`, khoá từ `DXOS_ZALO_TOKEN_KEY`, không lưu trong volume bí mật (§5.3). Volume `dxos-zalo-env` chỉ giữ thông tin client Keycloak của relay. Relay làm mới token bằng `ZALO_APP_ID` và `ZALO_APP_SECRET`.
+- **Trang `/manager/households/[id]`** là trang mới tối giản, chỉ có ô ghi đồng ý nhận tin. Trưởng HTX vào trang này từ số thửa trong danh sách thành viên.
+- **Bảng mã lỗi ZNS** trong `zns_api.py` chưa đối chiếu với tài liệu Zalo; phải kiểm trước khi chạy thật.
