@@ -10,9 +10,7 @@ export interface DirectorBoard {
   leaf: LeafToday | null
   prices: PricesToday | null
   payable: MemberPayable | null
-  dry_stock: DryStockByGrade[] | null
-  /** Dry tea expected in the next 14 days, from the forecast (phase 4 A3); null when it failed to load. */
-  forecast_dry_kg_14d?: number | null
+  dry_stock: DryStock | null
   /** Trader receivables (S8); null when the block failed to load. */
   receivables: BoardReceivables | null
   alerts: BoardAlert[] | null
@@ -45,6 +43,13 @@ export interface MemberPayable {
   unsettled_leaf_vnd: string
   unsettled_advances_vnd: string
   total_vnd: string
+}
+
+/** Dry tea stock and the dry kg the next 14 days of harvest should give (phase 4 spec §3.3). */
+export interface DryStock {
+  grades: DryStockByGrade[]
+  /** Null when the forecast failed to load; the stock itself still shows. */
+  forecast_dry_kg_14d: number | null
 }
 
 /** All five grades, in `DRY_TEA_GRADES` order, zero included. */

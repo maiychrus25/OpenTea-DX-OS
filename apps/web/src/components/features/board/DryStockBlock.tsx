@@ -3,24 +3,22 @@
 
 import React from 'react'
 import { DRY_TEA_GRADE_LABELS } from '@/domain/processing/grades'
-import type { DryStockByGrade } from '@/domain/board/views'
+import type { DryStock } from '@/domain/board/views'
 import { BoardBlock } from './BoardBlock'
 import { kgText } from './format'
 import styles from './board.module.css'
 
 interface Props {
-  stock: DryStockByGrade[] | null
-  /** Dry tea expected in the next 14 days; null hides the summary line. */
-  forecast_dry_kg_14d?: number | null
+  stock: DryStock | null
 }
 
-/** Block 4: dry tea left in finished batches, per grade, all five grades. */
-export function DryStockBlock({ stock, forecast_dry_kg_14d }: Props) {
+/** Block 4: dry tea left in finished batches, per grade, all five grades, and the 14-day forecast line. */
+export function DryStockBlock({ stock }: Props) {
   return (
     <BoardBlock title="Tồn chè khô" href="/manager/processing" failedText={stock ? undefined : 'Chưa tải được tồn chè khô.'}>
       {stock && (
         <ul className={styles.list}>
-          {stock.map(row => (
+          {stock.grades.map(row => (
             <li key={row.grade} className={styles.row}>
               <span>{DRY_TEA_GRADE_LABELS[row.grade]}</span>
               <strong>{kgText(row.kg)} kg</strong>
@@ -28,8 +26,8 @@ export function DryStockBlock({ stock, forecast_dry_kg_14d }: Props) {
           ))}
         </ul>
       )}
-      {stock && forecast_dry_kg_14d != null && (
-        <p className={styles.muted}>Dự báo 14 ngày tới: {kgText(forecast_dry_kg_14d)} kg chè khô</p>
+      {stock && stock.forecast_dry_kg_14d != null && (
+        <p className={styles.muted}>Dự kiến 14 ngày tới: {kgText(stock.forecast_dry_kg_14d)} kg chè khô</p>
       )}
     </BoardBlock>
   )
