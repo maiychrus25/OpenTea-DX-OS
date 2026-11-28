@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react'
 import useSWR from 'swr'
-import { AlertTriangle, Ban, Check, ChevronLeft, ChevronRight, CircleAlert, CircleCheck, Leaf, Plus } from 'lucide-react'
+import { AlertTriangle, Ban, Check, ChevronLeft, ChevronRight, CircleAlert, CircleCheck, Leaf, Plus, Calendar } from 'lucide-react'
 import kit from '@/components/features/dashboard/page-kit.module.css'
 import farmer from '@/components/features/farmer-web/kit.module.css'
 import styles from './HarvestCalendar.module.css'
@@ -136,6 +136,7 @@ export function HarvestCalendar({ userRole }: { userRole: 'MANAGER' | 'OFFICER' 
   return (
     <div className={`${kit.page} ${styles.page} ${userRole === 'FARMER' ? styles.farmer : ''}`}>
       <div className={styles.top}>
+        {userRole === 'FARMER' && <span className={kit.hico}><Calendar size={28} aria-hidden="true" /></span>}
         <div>
           <h1>Lịch thu hái</h1>
           <p>Theo dõi ngày hái của từng thửa, tránh thu hái trong thời gian cách ly.</p>

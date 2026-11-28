@@ -109,6 +109,7 @@
 }
 
 /* Farmer layout only. The officer and manager calendar keeps its existing geometry. */
+.farmer .top { justify-content: flex-start; align-items: center; gap: 12px; }
 .farmer .layout { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 14px; align-items: start; }
 .farmer .main { display: contents; }
 .farmer .stats { grid-column: 1 / -1; padding: 14px 0; }
