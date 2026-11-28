@@ -46,6 +46,7 @@ MAX_QUANTITY = Decimal(10000)
 log = logging.getLogger("farm_supply")
 # The root path (PREFIX) is set on the server, `uvicorn --root-path /apps/farm-supply`: FastAPI deprecated its own.
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
+appkit.require_gateway(app)  # only requests that came through APISIX; /healthz stays open
 templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
 
 

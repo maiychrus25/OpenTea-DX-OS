@@ -14,6 +14,8 @@ PACKAGES=(
   miniapps/tea-tour/tea_tour
   miniapps/custom-books/custom_books
   miniapps/htx-dashboard/htx_dashboard
+  # The builder's replay fixture: its kit gate compares these bytes with platform/appkit.
+  platform/builder/replay/fertiliser-stock/fertiliser_stock
 )
 # source file : path inside the package
 FILES=(

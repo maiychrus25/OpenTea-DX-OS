@@ -4,8 +4,11 @@
 """Python helpers shared by the mini-apps: paging, safe query parameters, Vietnamese formats, CSV, chart widths."""
 import base64
 import csv
+import hmac
 import io
 import json
+import logging
+import os
 import re
 import unicodedata
 from dataclasses import dataclass
@@ -14,7 +17,8 @@ from decimal import ROUND_HALF_UP, Decimal
 from typing import Iterable, Sequence
 from zoneinfo import ZoneInfo
 
-from starlette.responses import Response
+from starlette.responses import PlainTextResponse, Response
+from starlette.routing import get_route_path
 
 PAGE_SIZE = 25
 VN_TZ = ZoneInfo("Asia/Ho_Chi_Minh")
@@ -24,6 +28,45 @@ ROLES = ("farmer", "officer", "manager", "agent")
 ACTOR_CLIENT = "dxos-apps-actor"  # the web's executor: only its token may carry the X-DXOS-Acting-* headers
 ACTING_ROLES = ("manager", "officer")
 _ACTING_HTX = re.compile(r"[A-Za-z0-9_-]{1,20}")
+
+
+GATEWAY_HEADER = b"x-dxos-app-gateway"
+GATEWAY_SECRET_ENV = "DXOS_APP_GATEWAY_SECRET"
+_missing_logged = False
+
+
+class _GatewayGuard:
+    """Refuse (403) every request that did not come through APISIX, which sets X-Dxos-App-Gateway to this app's secret.
+
+    Only GET /healthz stays open, for the Docker healthcheck. Without the env var every other request is refused.
+    """
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http" and not self._allowed(scope):
+            return await PlainTextResponse("Forbidden", status_code=403)(scope, receive, send)
+        await self.app(scope, receive, send)
+
+    @staticmethod
+    def _allowed(scope) -> bool:
+        global _missing_logged
+        if scope["method"] == "GET" and get_route_path(scope) == "/healthz":
+            return True
+        secret = os.environ.get(GATEWAY_SECRET_ENV, "")
+        if not secret:
+            if not _missing_logged:
+                _missing_logged = True
+                logging.getLogger("appkit").error("%s is not set: refusing every request except /healthz", GATEWAY_SECRET_ENV)
+            return False
+        given = next((v for k, v in scope["headers"] if k == GATEWAY_HEADER), b"")
+        return hmac.compare_digest(given, secret.encode())
+
+
+def require_gateway(app) -> None:
+    """Install the guard on a FastAPI/Starlette app, before its routes are used (call it right after creating the app)."""
+    app.add_middleware(_GatewayGuard)
 
 
 @dataclass(frozen=True)

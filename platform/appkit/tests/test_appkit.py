@@ -123,3 +123,77 @@ def test_read_claims_acting_headers_must_be_valid():
     assert appkit.read_claims(actor, {}) is None  # the service account alone is nobody
     other = _bearer(**USER, azp="dxos-web")
     assert appkit.read_claims(other, ACTING).sub == "kc-user"
+
+
+def _guarded_app():
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
+    appkit.require_gateway(app)
+
+    @app.get("/healthz")
+    def healthz():
+        return "ok"
+
+    @app.get("/secret")
+    def secret():
+        return "data"
+
+    @app.post("/public/order")
+    def order():
+        return "made"
+
+    return TestClient(app, raise_server_exceptions=False)
+
+
+def test_gateway_guard_refuses_a_missing_or_wrong_header(monkeypatch):
+    monkeypatch.setenv("DXOS_APP_GATEWAY_SECRET", "s3cret")
+    client = _guarded_app()
+    assert client.get("/secret").status_code == 403
+    assert client.post("/public/order").status_code == 403
+    assert client.get("/secret", headers={"X-Dxos-App-Gateway": "wrong"}).status_code == 403
+    assert client.get("/secret", headers={"X-Dxos-App-Gateway": ""}).status_code == 403
+    assert client.get("/nope").status_code == 403  # an unknown path leaks nothing either
+
+
+def test_gateway_guard_passes_the_right_header_on_every_method(monkeypatch):
+    monkeypatch.setenv("DXOS_APP_GATEWAY_SECRET", "s3cret")
+    client = _guarded_app()
+    ok = {"x-dxos-app-gateway": "s3cret"}
+    assert client.get("/secret", headers=ok).text == '"data"'
+    assert client.post("/public/order", headers=ok).status_code == 200
+
+
+def test_gateway_guard_keeps_healthz_open_and_nothing_else(monkeypatch):
+    monkeypatch.setenv("DXOS_APP_GATEWAY_SECRET", "s3cret")
+    client = _guarded_app()
+    assert client.get("/healthz").status_code == 200
+    assert client.get("/healthz/x").status_code == 403
+    assert client.post("/healthz").status_code == 403  # open for the Docker check (GET) only
+
+
+def test_gateway_guard_fails_closed_without_the_secret_and_logs_once(monkeypatch, caplog):
+    monkeypatch.delenv("DXOS_APP_GATEWAY_SECRET", raising=False)
+    monkeypatch.setattr(appkit, "_missing_logged", False)
+    client = _guarded_app()
+    with caplog.at_level("ERROR"):
+        assert client.get("/secret").status_code == 403
+        assert client.get("/secret", headers={"X-Dxos-App-Gateway": ""}).status_code == 403
+        assert client.get("/healthz").status_code == 200
+    assert [r.getMessage().count("DXOS_APP_GATEWAY_SECRET") for r in caplog.records] == [1]
+    assert "s3cret" not in caplog.text
+
+
+def test_gateway_guard_sees_the_health_path_under_a_root_path(monkeypatch):
+    # uvicorn --root-path puts the prefix in front of path; the Docker check still asks for plain /healthz.
+    monkeypatch.setenv("DXOS_APP_GATEWAY_SECRET", "s3cret")
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    app = FastAPI()
+    appkit.require_gateway(app)
+    app.get("/healthz")(lambda: "ok")
+    client = TestClient(app, root_path="/apps/x")
+    assert client.get("/healthz").status_code == 200
+    assert client.get("/").status_code == 403

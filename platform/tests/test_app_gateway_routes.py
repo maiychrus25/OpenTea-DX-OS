@@ -20,7 +20,7 @@ MANIFEST = {
               "actions": [{"path": "/agent/actions/promotion-create"}, {"path": "/agent/actions/promotion-end"}]},
 }
 BASE = (REPO / "platform/gateway/apisix.yaml").read_text(encoding="utf-8")
-ROUTES = {r["id"]: r for r in yaml.safe_load(render_gateway(BASE, {"shop": app_routes(MANIFEST)}))["routes"]}
+ROUTES = {r["id"]: r for r in yaml.safe_load(render_gateway(BASE, {"shop": app_routes(MANIFEST, "secret-1")}))["routes"]}
 APP = {i: r for i, r in ROUTES.items() if i.startswith("app-shop-")}
 
 
@@ -35,7 +35,7 @@ def test_suggestions_route_takes_the_agent_token_only_and_keeps_the_prefix_rewri
     assert oidc["claim_schema"] == ROUTES["internal-agent"]["plugins"]["openid-connect"]["claim_schema"]
     assert oidc["claim_schema"]["properties"]["realm_access"]["properties"]["roles"]["contains"] == {"enum": ["agent"]}
     assert route["plugins"]["proxy-rewrite"]["regex_uri"] == ["^/apps/shop(/.*)?$", "$1"]
-    assert route["plugins"]["proxy-rewrite"]["headers"] == {"remove": ACTING}
+    assert route["plugins"]["proxy-rewrite"]["headers"] == {"set": {"X-Dxos-App-Gateway": "secret-1"}, "remove": ACTING}
 
 
 def test_actor_routes_take_only_the_apps_actor_and_keep_the_acting_headers():
@@ -46,7 +46,8 @@ def test_actor_routes_take_only_the_apps_actor_and_keep_the_acting_headers():
         assert route["methods"] == ["POST"]
         assert schema["properties"]["azp"] == {"enum": ["dxos-apps-actor"]}
         assert "realm_access" not in schema["properties"]
-        assert "headers" not in route["plugins"]["proxy-rewrite"]
+        # The acting headers must reach the app, so there is no remove list; only the gateway secret is set.
+        assert route["plugins"]["proxy-rewrite"]["headers"] == {"set": {"X-Dxos-App-Gateway": "secret-1"}}
         assert route["plugins"]["proxy-rewrite"]["regex_uri"] == ["^/apps/shop(/.*)?$", "$1"]
 
 

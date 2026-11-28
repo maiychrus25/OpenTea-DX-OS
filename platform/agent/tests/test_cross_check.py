@@ -227,3 +227,75 @@ def test_r2_a_busy_flush_still_alerts_with_the_largest_tickets_as_evidence():
     assert set(kept) == {f"t{index:02d}" for index in range(12, 60)}  # the 48 largest
     assert item.reason_vi.endswith("(60 phiếu; bằng chứng gồm 48 phiếu lớn nhất)")
 
+
+
+def test_timestamp_filters_match_hasuras_column_types():
+    """entry_date and weighed_at are Postgres timestamp (UTC, no zone): a timestamptz variable is refused by Hasura."""
+    from datetime import datetime, timezone
+
+    from dxos_agent.agents import cross_check
+
+    calls = []
+
+    class Gateway:
+        def graphql(self, query, variables=None):
+            calls.append((query, variables or {}))
+            return {"data": {}}
+
+    cross_check.run_cross_check(Gateway(), datetime(2026, 11, 29, 2, 0, tzinfo=timezone.utc))
+    by_op = {q.split("(")[0].split()[-1].split("{")[0]: (q, v) for q, v in calls}
+    for op in (cross_check.SPRAYINGS_OPERATION, cross_check.TICKETS_OPERATION):
+        query, variables = by_op[op]
+        assert "$since: timestamp!" in query and "timestamptz" not in query
+    # Vietnam midnight of the first day looked at, written in UTC: 60 and 45 days before 29/11/2026.
+    assert by_op[cross_check.SPRAYINGS_OPERATION][1] == {"since": "2026-09-29T17:00:00Z"}
+    assert by_op[cross_check.TICKETS_OPERATION][1] == {"since": "2026-10-14T17:00:00Z"}
+
+
+def test_every_field_the_cross_check_agent_reads_is_open_to_the_agent_role():
+    """Hasura refuses a field the agent role cannot see; a mocked gateway never would, so check the metadata."""
+    import re
+    from pathlib import Path
+
+    from dxos_agent.agents import cross_check
+
+    tables = Path(__file__).resolve().parents[3] / "platform" / "hasura" / "metadata" / "databases" / "default" / "tables"
+
+    def agent_columns(file):
+        # The metadata files are plain block YAML; read the agent role's column list without a YAML dependency.
+        text = (tables / file).read_text(encoding="utf-8")
+        block = text.split("- role: agent", 1)[1].split("columns:", 1)[1]
+        columns = []
+        for line in block.splitlines()[1:]:
+            item = re.match(r"\s+- ([a-z_]+)\s*$", line)
+            if not item:
+                break
+            columns.append(item.group(1))
+        assert columns, file
+        return set(columns)
+
+    queries = {
+        "input_advances": (cross_check.ADVANCES_QUERY, "public_input_advances.yaml"),
+        "input_items": (cross_check.ITEMS_QUERY, "public_input_items.yaml"),
+        "fresh_leaf_tickets": (cross_check.TICKETS_QUERY, "public_fresh_leaf_tickets.yaml"),
+        "platform_agent_proposals": (cross_check.ALERTED_QUERY, "platform_agent_proposals.yaml"),
+    }
+    keywords = {"where", "order_by", "limit", "offset", "asc", "desc", "true", "false"}
+    for root, (query, file) in queries.items():
+        rest = query.split(root, 1)[1].strip()
+        args = ""
+        if rest.startswith("("):
+            depth, end = 0, 0
+            for i, ch in enumerate(rest):
+                depth += ch == "("
+                depth -= ch == ")"
+                if depth == 0:
+                    end = i
+                    break
+            args, rest = rest[1:end], rest[end + 1:]
+        filtered = {w for w in re.findall(r"\b([a-z][a-z_]*)\s*:", args) if w not in keywords}
+        selection = rest[rest.index("{") + 1: rest.rindex("}")]
+        selected = {w for w in re.findall(r"\b([a-z][a-z_]*)\b", selection)} - keywords
+        allowed = agent_columns(file)
+        assert filtered <= allowed, (root, "filter", filtered - allowed)
+        assert selected <= allowed, (root, "select", selected - allowed)

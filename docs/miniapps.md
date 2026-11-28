@@ -156,7 +156,9 @@ Trên route cần đăng nhập, app nhận `Authorization: Bearer <access token
 
 **Ranh giới tin cậy:**
 - App **không** kiểm chữ ký token, chỉ giải mã nó. Với request của người dùng, APISIX đã kiểm token trước khi chuyển tới app.
-- **Nhưng gateway không phải đường duy nhất tới app:** mọi app đã cài dùng chung mạng `dxos-apps-net` (§7), nên một app khác gọi thẳng được `app-<id>:<port>` với token tự tạo (HTX và vai trò tuỳ ý) và đọc hoặc sửa dữ liệu của app này. Vì vậy **chỉ cài app tin cậy**, như code lõi. Cách ly thật cho từng app (kiểm JWT, hoặc mỗi app một mạng riêng) để sang v1.9.
+- **App chỉ tin request đi qua gateway (từ v1.24.0).** Mọi app đã cài vẫn dùng chung mạng `dxos-apps-net` (§7) và gọi thẳng được `app-<id>:<port>`, nên mỗi app có một bí mật riêng: `dxos-cli` tạo 32 byte ngẫu nhiên (base64url) và ghi vào tệp env của app (`docker/runtime/<project>/apps/<id>.env`, mode 0600, khoá `DXOS_APP_GATEWAY_SECRET`, có cho mọi app, không chỉ app có database). Mọi route của app trong APISIX (công khai, cần đăng nhập, agent và actor) đặt header `X-Dxos-App-Gateway` bằng bí mật đó. App trả 403 cho request thiếu hoặc sai header (so sánh thời gian không đổi); chỉ `GET /healthz` mở, cho kiểm tra sức khoẻ của Docker. Thiếu biến môi trường thì app từ chối mọi thứ trừ `/healthz` và ghi log một lần. Nhờ vậy một app khác không giả được request tới app này, kể cả với token tự tạo hay route công khai. Mini-app viết bằng appkit chỉ cần gọi `appkit.require_gateway(app)` ngay sau khi tạo `FastAPI`; app không dùng appkit (như `hello`) tự kiểm header, xem `miniapps/hello/app.py`.
+- **Còn lại:** bí mật nằm trong tệp env và trong tệp route của gateway, nên ai đọc được chúng (người có quyền trên máy chủ) vẫn giả được request. App độc hại vẫn đọc được dữ liệu mà chính nó được cấp (schema riêng, token của người dùng khi người dùng mở app đó), nên vẫn **chỉ cài app tin cậy**. `hub-mobile` (đã đóng băng) chưa có kiểm tra này.
+- **Nâng cấp từ bản trước:** `make platform-up` (qua `gateway-sync`) tạo bí mật cho app đã cài, thêm header vào route, thêm `env_file` vào tệp compose của app và tạo cờ `<id>.recreate`; bước cuối của `platform-up` tạo lại container có cờ để app đọc bí mật mới.
 - Claim từ gateway là dữ liệu đã kiểm, nhưng app vẫn đọc cẩn thận: claim lạ hoặc thiếu thì coi như không có vai trò, không được làm app lỗi. Xem `read_claims` trong `miniapps/tea-tour/tea_tour/claims.py` và `claims` trong `miniapps/hello/app.py`.
 - App vẫn tự kiểm vai trò cho từng trang (phòng thủ nhiều lớp). `tea-tour` trả 403 khi vai trò không khớp.
 - **Mọi truy vấn lọc theo `htx_code` lấy từ token**, không bao giờ theo giá trị từ URL hay form.
@@ -337,7 +339,7 @@ Hệ quả cho người viết app:
 - Image phải có `python` (cho health check) và mọi tệp phải đọc được bởi uid 10001.
 - Cài thư viện **lúc build**; lúc chạy không có mạng ra ngoài.
 - App chỉ gọi được gateway (`apisix:9081`), Postgres (`postgres:5432`) và các app khác đã cài, không gọi được dịch vụ lõi nào khác.
-- Trong lõi, chỉ gateway gửi request tới app. Các app khác cùng mạng cũng gọi thẳng được app (§3), nên chỉ cài app tin cậy.
+- Trong lõi, chỉ gateway gửi request tới app. Các app khác cùng mạng gọi thẳng được cổng của app nhưng bị từ chối vì thiếu bí mật gateway của app đó (§3); vẫn chỉ cài app tin cậy.
 
 **App do AI xây (M13, đặc tả §12.7).**
 - `app.yaml` có `generated: true` và id `gen-<tên>` (3 đến 30 ký tự `a-z`, `0-9`, `-`; kèm tiền tố `gen-`, id vẫn phải khớp mẫu id chung, tối đa 31 ký tự). `./dxos validate` từ chối `generated: true` với id khác dạng đó, id `gen-…` thiếu `generated: true`, và khối `agent.actions` của app `generated` (H2).

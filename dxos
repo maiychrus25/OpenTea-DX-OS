@@ -17,7 +17,7 @@ ID_RE='^[a-z][a-z0-9-]{1,30}$'  # same as "id" in platform/apps/manifest.schema.
 HTX_RE='^[A-Z0-9_-]{1,20}$'
 
 usage() {
-  echo "Dùng: ./dxos install <dir> | upgrade <dir> | remove <id> [--purge] | list | validate <dir>... | worker | builder [--once] | agent <enable|disable> <HTX> | staff <enable|disable> <HTX> | telegram <enable|disable> | zalo <enable|disable> | apps actor enable | para seed <HTX> [--dry-run]" >&2
+  echo "Dùng: ./dxos install <dir> | upgrade <dir> | remove <id> [--purge] | list | validate <dir>... | worker | builder [--once] | agent <enable|disable> <HTX> | staff <enable|disable> <HTX> | telegram <enable|disable> | zalo <enable|disable> | apps actor enable | para seed <HTX> [--dry-run] | demo accounts [--reset-otp] [--password <mật khẩu>] [tên...]" >&2
   exit 2
 }
 
@@ -667,6 +667,83 @@ print(f"Kế hoạch: {len(plan)} tệp" if dry else f"Xong: chép {sent}, bỏ 
 PY
 }
 
+# The five stage-demo accounts of cooperative TC (docker/keycloak/realm-agrimarket.json). `demo accounts` touches only these names, so it
+# can never edit a real person's account. The ids of officer_tc and farmer_tc are fixed in the realm because the seed links the farmer's household to them.
+DEMO_USERS="platform_admin manager_tc accountant_tc officer_tc farmer_tc"
+demo_spec() {  # <username>: role|htx_code|fixed id|first name|last name
+  case "$1" in
+    platform_admin) echo "platform_admin|||Quản trị|Nền tảng" ;;
+    manager_tc) echo "manager|TC||Quản lý|HTX Tân Cương" ;;
+    accountant_tc) echo "accountant|TC||Kế toán|Tân Cương" ;;
+    officer_tc) echo "officer|TC|6f2c9a10-1b3d-4e5f-8a01-0000000000a2|Cán bộ kỹ thuật|Tân Cương" ;;
+    farmer_tc) echo "farmer|TC|6f2c9a10-1b3d-4e5f-8a01-0000000000a1|Hoàng Văn|Tâm" ;;
+  esac
+}
+
+# Makes the demo accounts usable on a live Keycloak that the one-time realm import left different: creates a missing user, ensures its realm
+# role and htx_code, clears requiredActions (a stuck CONFIGURE_TOTP), and with --reset-otp removes OTP credentials. A password is set only
+# with --password; it goes to Keycloak on stdin, never in the argv of docker. Prints each change. The owner runs it; nothing calls it.
+demo_accounts() {  # [--reset-otp] [--password <password>] [<username>...]
+  local reset_otp=0 password="" users=() u role htx fixed_id first last
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --reset-otp) reset_otp=1 ;;
+      --password) [ $# -ge 2 ] && [ -n "$2" ] || usage; password="$2"; shift ;;
+      -*) usage ;;
+      *) users+=("$1") ;;
+    esac
+    shift
+  done
+  [ ${#users[@]} -gt 0 ] || users=($DEMO_USERS)
+  # Checked before Keycloak is touched, so a wrong name changes nothing at all.
+  for u in "${users[@]}"; do
+    [[ " $DEMO_USERS " == *" $u "* ]] || { echo "Tên '$u' không thuộc năm tài khoản demo ($DEMO_USERS); lệnh này không sửa tài khoản khác" >&2; exit 1; }
+  done
+  for u in "${users[@]}"; do
+    IFS='|' read -r role htx fixed_id first last <<<"$(demo_spec "$u")"
+    printf '%s\n' "$password" | kc_exec '
+    set -eu
+    K=/opt/keycloak/bin/kcadm.sh
+    U="$1"; ROLE="$2"; HTX="$3"; FIXED_ID="$4"; FIRST="$5"; LAST="$6"; RESET_OTP="$7"
+    IFS= read -r PW || PW=
+    CH=0
+    "$K" config credentials --server http://localhost:8080 --realm master --user "$KEYCLOAK_ADMIN" --password "$KEYCLOAK_ADMIN_PASSWORD" >/dev/null
+    find_id() { "$K" get users -r agrimarket -q exact=true -q "username=$U" --fields id --format csv --noquotes | head -n 1; }
+    ID="$(find_id)"
+    if [ -z "$ID" ]; then
+      set -- -s "username=$U" -s enabled=true -s emailVerified=true -s "email=$U@agrimarket.local" -s "firstName=$FIRST" -s "lastName=$LAST"
+      [ -z "$FIXED_ID" ] || set -- "$@" -s "id=$FIXED_ID"
+      [ -z "$HTX" ] || set -- "$@" -s "attributes.htx_code=[\"$HTX\"]"
+      "$K" create users -r agrimarket "$@" >/dev/null
+      ID="$(find_id)"
+      echo "$U: đã tạo tài khoản (chưa có mật khẩu nếu không dùng --password)"; CH=1
+    fi
+    if ! "$K" get-roles -r agrimarket --uusername "$U" --fields name --format csv --noquotes | grep -qx "$ROLE"; then
+      "$K" add-roles -r agrimarket --uusername "$U" --rolename "$ROLE" >/dev/null
+      echo "$U: đã thêm vai $ROLE"; CH=1
+    fi
+    if [ -n "$HTX" ] && ! "$K" get "users/$ID" -r agrimarket | grep -Eq "\"htx_code\" *: *\[ *\"$HTX\" *\]"; then
+      "$K" update "users/$ID" -r agrimarket -s "attributes.htx_code=[\"$HTX\"]" >/dev/null
+      echo "$U: đã đặt htx_code=$HTX"; CH=1
+    fi
+    if ! "$K" get "users/$ID" -r agrimarket --fields requiredActions | grep -Eq "\"requiredActions\" *: *\[ *\]"; then
+      "$K" update "users/$ID" -r agrimarket -s "requiredActions=[]" >/dev/null
+      echo "$U: đã xoá requiredActions"; CH=1
+    fi
+    if [ "$RESET_OTP" = 1 ]; then
+      "$K" get "users/$ID/credentials" -r agrimarket --fields id,type --format csv --noquotes | while IFS=, read -r CID TYPE; do
+        if [ "$TYPE" = otp ]; then "$K" delete "users/$ID/credentials/$CID" -r agrimarket >/dev/null; echo "$U: đã xoá một thiết bị OTP"; fi
+      done
+    fi
+    if [ -n "$PW" ]; then
+      "$K" set-password -r agrimarket --username "$U" --new-password "$PW"
+      echo "$U: đã đặt lại mật khẩu"; CH=1
+    fi
+    [ "$CH" = 1 ] || echo "$U: đã đúng, không đổi gì"
+  ' "$u" "$role" "$htx" "$fixed_id" "$first" "$last" "$reset_otp"
+  done
+}
+
 [ $# -ge 1 ] || usage
 cmd="$1"; shift
 case "$cmd" in
@@ -727,6 +804,9 @@ case "$cmd" in
   apps)
     [ $# -eq 2 ] && [ "$1" = actor ] && [ "$2" = enable ] || usage
     cd "$ROOT"; apps_actor_enable ;;
+  demo)
+    [ $# -ge 1 ] && [ "$1" = accounts ] || usage
+    shift; cd "$ROOT"; demo_accounts "$@" ;;
   para)
     [ $# -ge 2 ] && [ $# -le 3 ] && [ "$1" = seed ] || usage
     cd "$ROOT"; para_seed "$2" "${3:-}" ;;

@@ -66,3 +66,21 @@ def bearer(sub="kc-manager-tc", htx="TC", roles=("manager",), name="Quản trị
     claims = {"sub": sub, "name": name, "htx_code": htx, "realm_access": {"roles": list(roles)}}
     payload = base64.urlsafe_b64encode(json.dumps(claims).encode()).decode().rstrip("=")
     return {"Authorization": f"Bearer h.{payload}.s"}
+
+
+GATEWAY_SECRET = "test-gateway-secret"
+
+
+@pytest.fixture(autouse=True)
+def through_the_gateway(monkeypatch):
+    """The tests act as APISIX: the app gets its secret, and every TestClient sends it (a test may drop it)."""
+    from fastapi.testclient import TestClient
+
+    monkeypatch.setenv("DXOS_APP_GATEWAY_SECRET", GATEWAY_SECRET)
+    original = TestClient.__init__
+
+    def init(self, *args, **kwargs):
+        original(self, *args, **kwargs)
+        self.headers["X-Dxos-App-Gateway"] = GATEWAY_SECRET
+
+    monkeypatch.setattr(TestClient, "__init__", init)

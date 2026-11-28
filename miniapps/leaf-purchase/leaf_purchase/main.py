@@ -42,6 +42,7 @@ DB_SLOTS = threading.BoundedSemaphore(DB_MAX_CONNECTIONS)
 log = logging.getLogger("leaf_purchase")
 # The root path (PREFIX) is set on the server, `uvicorn --root-path /apps/leaf-purchase`: FastAPI deprecated its own.
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
+appkit.require_gateway(app)  # only requests that came through APISIX; /healthz stays open
 templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
 
 

@@ -4,7 +4,7 @@
 
 > [!IMPORTANT]
 > **Nguồn sự thật thực thi:** `apps/web/prisma/schema.prisma` (schema `public`) và `platform/postgres/init/*.sql` (các schema `audit`, `telemetry`, `platform`), cộng với các schema `app_<id>` của Mini-app Tầng 3.
-> Tài liệu này còn ghi nhận một số sai lệch lịch sử so với Prisma thực tế (ví dụ: người dùng quản lý qua Keycloak thay vì bảng `users`; `journal_entries` hiện chưa có `parcel_crop_cycle_id` và `partners.htx_profile_id` đã thêm ở GĐ0 (migration `20261128100000_partners_tenant`, DEV-007 đã sửa) — xem `DEV-010` trong [deviation-register.md](./deviation-register.md) và lộ trình hợp nhất trong [product-roadmap.md](./product-roadmap.md)).
+> Từ v1.24.0 các bảng `public` dưới đây khớp từng cột với `schema.prisma` (tên bảng theo `@@map`, tên cột theo tên trường, kiểu theo Postgres mà Prisma sinh); `python3 scripts/check-schema-doc.py` kiểm tên bảng và cột trong CI. **Người dùng nằm ở Keycloak, không có bảng `users`**: các cột `*_by_id`, `recipient_id`, `user_id`, `keycloak_user_id` giữ Keycloak ID dạng chuỗi và không có khoá ngoại. Các sai lệch còn lại so với thiết kế gốc xem `DEV-010` trong [deviation-register.md](./deviation-register.md) và lộ trình hợp nhất trong [product-roadmap.md](./product-roadmap.md).
 
 > **Rule:** n8n is the ONLY writer to `market_data`, `weather_cache`, `bulletins`, `fx_rates` tables.
 > All other core `public` tables are written by Next.js API routes via Prisma (and protected by `audit.events` hash-chain triggers).
@@ -19,9 +19,9 @@ erDiagram
     HTXProfile ||--o{ Partner : "manages"
     Household ||--o{ Parcel : "owns"
     Parcel ||--o{ ParcelCropCycle : "has"
-    ParcelCropCycle ||--o{ JournalEntry : "records"
+    ParcelCropCycle ||--o{ JournalEntry : "flush"
     JournalEntry ||--o{ JournalActivity : "contains"
-    JournalEntry }o--|| User : "recorded_by"
+    Parcel ||--o{ JournalEntry : "logs"
     JournalActivity }o--o| PesticideProduct : "uses"
     HTXProfile ||--o{ HtxPesticideLabel : "labels"
     PesticideProduct ||--o{ HtxPesticideLabel : "has"
@@ -53,11 +53,12 @@ erDiagram
     Household ||--o{ MemberLedgerEntry : "ledger"
     Lot ||--o{ LotParcel : "includes"
     LotParcel }o--|| Parcel : "from"
-    Lot ||--o{ DiseaseReport : "may_have"
-    User ||--o{ Notification : "receives"
-    User ||--o{ DiseaseReport : "submits"
+    HTXProfile ||--o{ Notification : "broadcasts"
+    Household ||--o{ Notification : "receives"
+    Parcel ||--o{ DiseaseReport : "reported_on"
+    Household ||--o{ DiseaseReport : "submits"
+    DiseaseLabel ||--o{ DiseaseReport : "labels"
     Parcel ||--o{ WeatherCache : "has_weather"
-    Bulletin }o--|| MarketData : "synthesized_from"
 ```
 
 ---
@@ -65,212 +66,180 @@ erDiagram
 ## Tables
 
 ### `htx_profiles`
-HTX (Hợp tác xã) master profile. Multi-tenant isolation key (`htx_code`, hỗ trợ nhiều HTX trên cùng một triển khai SaaS hoặc cụm Liên minh Tỉnh).
+HTX (Hợp tác xã) master profile. Khoá cô lập đa tenant (`htx_code`, hỗ trợ nhiều HTX trên cùng một triển khai SaaS hoặc cụm Liên minh Tỉnh).
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
-| id | UUID | PK, default gen_random_uuid() | |
-| htx_code | VARCHAR(20) | UNIQUE, NOT NULL | Mã HTX (dùng cho Lot code) |
-| name | VARCHAR(200) | NOT NULL | Tên HTX |
-| province | VARCHAR(100) | NOT NULL | Tỉnh/Thành phố |
-| district | VARCHAR(100) | NOT NULL | Quận/Huyện |
-| commune | VARCHAR(100) | NOT NULL | Xã/Phường |
-| address_detail | TEXT | | Địa chỉ chi tiết |
-| primary_crop | VARCHAR(100) | NOT NULL | Cây trồng chính |
-| total_area_ha | DECIMAL(10,2) | | Tổng diện tích (ha) — auto-calc from parcels |
-| member_count | INT | | Số thành viên — auto-calc from households |
-| certification | VARCHAR(50) | | VietGAP / GlobalGAP / Organic |
-| logo_minio_key | VARCHAR(500) | | MinIO object key cho logo |
+| id | TEXT | PK |  |
+| name | TEXT | NOT NULL |  |
+| address | TEXT | NOT NULL |  |
+| contact_phone | TEXT | nullable |  |
+| contact_email | TEXT | nullable |  |
+| crop_types | TEXT[] | NOT NULL | Ví dụ `["Chè Trung du", "Chè Kim Tuyên"]` |
+| season_label | TEXT | nullable | Ví dụ `Lứa 1/2026` |
+| htx_code | TEXT | NOT NULL, UNIQUE | Mã HTX, dùng cho mã lô và URL công khai (ví dụ `TC`) |
+| total_area_ha | DOUBLE PRECISION | NOT NULL, DEFAULT 0 | Tổng diện tích (ha) |
+| created_at | TIMESTAMP(3) | NOT NULL, DEFAULT now() |  |
+| updated_at | TIMESTAMP(3) | NOT NULL |  |
 | public_show_names | BOOLEAN | NOT NULL, DEFAULT false | Hiện tên người (hộ, người ghi nhật ký, thợ sao) trên trang QR công khai; ẩn lúc dựng trang khi `false` (`20261128160100_certificates_and_public_names`, GĐ2) |
-| disease_training_consent | BOOLEAN | NOT NULL, DEFAULT false | Cho phép dùng ảnh ca bệnh đã xác nhận để huấn luyện mô hình chè; mặc định tắt, chỉ trưởng HTX (`manager`) bật (`20261128180100_disease_training_consent`, GĐ4-B). Bảng đã có trigger kiểm toán, nên mỗi lần bật/tắt để lại sự kiện kèm người làm |
-| disease_training_consent_at | TIMESTAMPTZ | | Lần đổi gần nhất của công tắc trên |
-| disease_training_consent_by | TEXT | | Mã người dùng đổi công tắc gần nhất |
-| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
-| updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
-
----
-
-### `users`
-Keycloak-linked user records. Synced on first login.
-
-| Column | Type | Constraints | Description |
-|--------|------|-------------|-------------|
-| id | UUID | PK | Matches Keycloak subject ID |
-| keycloak_id | VARCHAR(100) | UNIQUE, NOT NULL | Keycloak sub claim |
-| email | VARCHAR(200) | UNIQUE, NOT NULL | |
-| full_name | VARCHAR(200) | NOT NULL | |
-| role | ENUM('manager','officer','farmer') | NOT NULL | Synced from Keycloak role |
-| phone | VARCHAR(20) | | |
-| household_id | UUID | FK → households, nullable | Nếu role = farmer |
-| is_active | BOOLEAN | NOT NULL, DEFAULT true | |
-| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
-| updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
-
-**Indexes:** `keycloak_id`, `email`, `role`
+| disease_training_consent | BOOLEAN | NOT NULL, DEFAULT false | Cho phép dùng ảnh ca bệnh đã xác nhận để huấn luyện mô hình chè; mặc định tắt, chỉ trưởng HTX (`manager`) bật (`20261128180100_disease_training_consent`, GĐ4-B). Bảng có trigger kiểm toán nên mỗi lần bật/tắt để lại sự kiện kèm người làm |
+| disease_training_consent_at | TIMESTAMP(3) | nullable | Lần đổi gần nhất của công tắc trên |
+| disease_training_consent_by | TEXT | nullable | Mã người dùng đổi công tắc gần nhất |
 
 ---
 
 ### `households`
 Nông hộ thành viên HTX.
 
-> ⚠️ **Schema Divergence (Story 7.0a):** `htx_profile_id` được thêm qua migration `20260814102205_add_htx_relations`. Field là `nullable` (`String?`) trong Prisma thực tế, không phải NOT NULL như spec gốc. Existing rows cần backfill (`scripts/backfill-htx-profile-id.sql`).
-
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
-| id | TEXT (cuid) | PK | |
-| htx_profile_id | TEXT | FK → htx_profiles, **nullable** | Added by Story 7.0a migration |
-| name | VARCHAR(200) | NOT NULL | Tên chủ hộ (`owner_name` trong spec gốc) |
-| phone | VARCHAR(20) | UNIQUE, NOT NULL | Dùng làm household_code |
-| address | TEXT | nullable | |
-| keycloak_user_id | TEXT | nullable | Linked after farmer account created |
-| bank_bin | TEXT | nullable, `CHECK` `^[0-9]{6}$` | BIN ngân hàng nhận tiền (`20261128150000_member_ledger`, GĐ1 S4) |
-| bank_account | TEXT | nullable, `CHECK` `^[0-9]{6,19}$` | Số tài khoản; chỉ `manager` và `accountant` đọc đủ, không vào Hasura, Telegram hay agent |
+| id | TEXT | PK |  |
+| name | TEXT | NOT NULL | Tên chủ hộ |
+| phone | TEXT | NOT NULL, UNIQUE | Dùng làm mã hộ |
+| address | TEXT | nullable |  |
+| keycloak_user_id | TEXT | nullable | Gắn sau khi tạo tài khoản nông dân |
+| bank_bin | TEXT | nullable | BIN ngân hàng nhận tiền; `CHECK` `^[0-9]{6}$` (`20261128150000_member_ledger`, GĐ1 S4) |
+| bank_account | TEXT | nullable | Số tài khoản; `CHECK` `^[0-9]{6,19}$`; chỉ `manager` và `accountant` đọc đủ, không vào Hasura, Telegram hay agent |
 | bank_account_name | TEXT | nullable | Tên chủ tài khoản, tối đa 60 ký tự (API) |
-| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
-| updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() |
+| created_at | TIMESTAMP(3) | NOT NULL, DEFAULT now() |  |
+| updated_at | TIMESTAMP(3) | NOT NULL |  |
+| htx_profile_id | TEXT | nullable, FK → htx_profiles (SET NULL) | Nullable: thêm bởi `20260814102205_add_htx_relations`, dòng cũ cần backfill (`scripts/backfill-htx-profile-id.sql`) |
+
+**Index:** `htx_profile_id`
 
 ---
 
 ### `parcels`
-Thửa đất (land parcel). Mỗi hộ có nhiều thửa.
+Thửa đất (nương chè). Mỗi hộ có nhiều thửa.
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
-| id | UUID | PK | |
-| household_id | UUID | FK → households, NOT NULL | |
-| parcel_code | VARCHAR(50) | UNIQUE, NOT NULL | Mã thửa |
-| name | VARCHAR(200) | | Tên thửa (tự đặt) |
-| area_ha | DECIMAL(10,4) | NOT NULL | Diện tích (ha) — Turf.js calculated |
-| geojson | JSONB | NOT NULL | GeoJSON polygon từ Leaflet.draw |
-| centroid_lat | DECIMAL(10,7) | NOT NULL | Tâm thửa — cho Open-Meteo query |
-| centroid_lng | DECIMAL(10,7) | NOT NULL | |
-| status | ENUM('idle','growing','harvested','fallow') | NOT NULL, DEFAULT 'idle' | |
-| current_crop | VARCHAR(100) | | Cây trồng đang canh tác |
-| soil_type | VARCHAR(100) | | Loại đất |
-| irrigation_type | VARCHAR(100) | | Tưới tiêu |
-| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
-| updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
-
-**Indexes:** `household_id`, `status`, `(centroid_lat, centroid_lng)`
+| id | TEXT | PK |  |
+| parcel_code | TEXT | NOT NULL, UNIQUE | Mã thửa, tự sinh, ví dụ `P-TC-001` |
+| household_id | TEXT | NOT NULL, FK → households (RESTRICT) |  |
+| crop_type | TEXT | NOT NULL |  |
+| area_ha | DOUBLE PRECISION | NOT NULL |  |
+| centroid_lat | DOUBLE PRECISION | nullable |  |
+| centroid_lng | DOUBLE PRECISION | nullable |  |
+| polygon_geojson | JSONB | nullable | GeoJSON Polygon feature |
+| status | ENUM `ParcelStatus` | NOT NULL, DEFAULT 'DRAFT' | `SOWING` / `TENDING` / `HARVEST_APPROVED` / `HARVESTED` / `DRAFT` |
+| estimated_yield_per_ha | DOUBLE PRECISION | nullable | Sản lượng ước tính mỗi ha |
+| harvest_approved_by | TEXT | nullable | Keycloak ID của cán bộ duyệt thu hoạch |
+| harvest_approved_at | TIMESTAMP(3) | nullable |  |
+| created_at | TIMESTAMP(3) | NOT NULL, DEFAULT now() |  |
+| updated_at | TIMESTAMP(3) | NOT NULL |  |
 
 ---
 
 ### `parcel_crop_cycles`
-Vụ mùa của thửa đất. Mỗi thửa có thể nhiều vụ.
+Một dòng là một **lứa hái** của nương chè (hái 7 đến 9 lứa mỗi năm). `journal_entries.cycle_id`, `lot_parcels.cycle_id` và `fresh_leaf_tickets.cycle_id` trỏ tới bảng này.
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
-| id | UUID | PK | |
-| parcel_id | UUID | FK → parcels, NOT NULL | |
-| season | VARCHAR(50) | NOT NULL | Vụ Đông Xuân / Hè Thu / Vụ Mùa |
-| crop | VARCHAR(100) | NOT NULL | Cây trồng vụ này |
-| planting_date | DATE | NOT NULL | |
-| estimated_harvest_date | DATE | | |
-| actual_harvest_date | DATE | | |
-| estimated_yield_kg | DECIMAL(10,2) | | Sản lượng ước tính |
-| actual_yield_kg | DECIMAL(10,2) | | Sản lượng thực tế |
-| is_active | BOOLEAN | NOT NULL, DEFAULT true | |
-| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
-
-> **Thực tế trong Prisma (GĐ1 S1):** bảng dùng `season` (nullable, dạng `Lứa n/năm`), `sowed_at`, `harvested_at`, `estimated_harvest_date`, `created_at`; một dòng là một **lứa hái** của nương chè (hái 7 đến 9 lứa mỗi năm). `harvested_at` rỗng nghĩa là lứa đang mở. `journal_entries.cycle_id`, `lot_parcels.cycle_id` và `fresh_leaf_tickets.cycle_id` trỏ tới bảng này.
+| id | TEXT | PK |  |
+| parcel_id | TEXT | NOT NULL, FK → parcels (RESTRICT) |  |
+| season | TEXT | nullable | Dạng `Lứa n/năm` |
+| sowed_at | TIMESTAMP(3) | nullable |  |
+| harvested_at | TIMESTAMP(3) | nullable | Rỗng nghĩa là lứa đang mở |
+| estimated_harvest_date | TIMESTAMP(3) | nullable |  |
+| created_at | TIMESTAMP(3) | NOT NULL, DEFAULT now() |  |
 
 ---
 
 ### `journal_entries`
-Nhật ký canh tác. Officer ghi, Manager duyệt.
+Nhật ký canh tác: mỗi dòng một hoạt động của một thửa. Nông dân hoặc cán bộ ghi, cán bộ duyệt.
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
-| id | UUID | PK | |
-| parcel_crop_cycle_id | UUID | FK → parcel_crop_cycles, NOT NULL | |
-| recorded_by | UUID | FK → users, NOT NULL | Officer ID |
-| approved_by | UUID | FK → users, nullable | Manager ID |
-| entry_date | DATE | NOT NULL | Ngày ghi |
-| growth_stage | VARCHAR(100) | | Giai đoạn sinh trưởng |
-| observation | TEXT | | Quan sát chung |
-| weather_condition | VARCHAR(100) | | Thời tiết ngày đó |
-| temperature_c | DECIMAL(5,2) | | Auto từ Open-Meteo |
-| rainfall_mm | DECIMAL(8,2) | | Auto từ Open-Meteo |
-| status | ENUM('draft','pending_approval','approved','rejected') | NOT NULL, DEFAULT 'draft' | |
-| approved_at | TIMESTAMPTZ | | |
-| rejection_reason | TEXT | | |
+| id | TEXT | PK |  |
+| parcel_id | TEXT | NOT NULL, FK → parcels (RESTRICT) |  |
+| entry_date | TIMESTAMP(3) | NOT NULL |  |
+| activity_type | ENUM `ActivityType` | NOT NULL | `SOWING` / `FERTILIZING` / `SPRAYING` / `IRRIGATION` / `HARVEST` / `PRUNING` / `OTHER` |
+| performed_by | TEXT | NOT NULL | Tên người thực hiện (chuỗi) |
+| submitted_by_id | TEXT | nullable | Keycloak ID người gửi |
+| submitted_role | ENUM `UserRole` | NOT NULL | Vai lúc gửi |
+| status | TEXT | NOT NULL, DEFAULT 'PENDING_APPROVAL' | TEXT, không phải enum: `DRAFT`, `PENDING_APPROVAL`, `APPROVED`, `REJECTED`, `REQUEST_CHANGES` |
+| approved_by_id | TEXT | nullable | Keycloak ID của cán bộ duyệt |
+| approved_at | TIMESTAMP(3) | nullable |  |
 | review_note | TEXT | nullable | Lý do cán bộ nhập khi từ chối hoặc yêu cầu sửa (`20261124120000_journal_review_note`) |
 | reviewed_by_id | TEXT | nullable | Keycloak ID của người duyệt, từ chối hoặc yêu cầu sửa; ghi cùng lúc với cập nhật trạng thái có điều kiện `PENDING_APPROVAL` (`20261124140000_journal_reviewed_by`) |
-| cycle_id | TEXT | nullable FK → parcel_crop_cycles (ON DELETE SET NULL) | Lứa hái của nhật ký (`20261128120100_flush_and_pesticides`). Rỗng với nhật ký `DRAFT` và nương chưa có lứa; được điền lúc gửi hoặc khi ngày ghi đổi |
+| notes | TEXT | nullable |  |
+| cycle_id | TEXT | nullable, FK → parcel_crop_cycles (SET NULL) | Lứa hái của nhật ký (`20261128120100_flush_and_pesticides`). Rỗng với nhật ký `DRAFT` và nương chưa có lứa; được điền lúc gửi hoặc khi ngày ghi đổi |
 | client_id | TEXT | nullable | UUID do máy khách sinh, chống trùng khi gửi lại từ hàng đợi offline |
-| photo_minio_keys | TEXT[] | | Mảng MinIO keys |
-| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
-| updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
+| weather_condition | TEXT | nullable | Thời tiết ngày đó, tự gắn |
+| weather_temperature | DOUBLE PRECISION | nullable | Nhiệt độ, tự gắn |
+| weather_precipitation | DOUBLE PRECISION | nullable | Lượng mưa, tự gắn |
+| weather_humidity | DOUBLE PRECISION | nullable | Độ ẩm, tự gắn |
+| photo_url | TEXT | nullable |  |
+| photo_minio_key | TEXT | nullable |  |
+| created_at | TIMESTAMP(3) | NOT NULL, DEFAULT now() |  |
+| updated_at | TIMESTAMP(3) | NOT NULL |  |
 
-**Indexes:** `parcel_crop_cycle_id`, `status`, `entry_date`, `recorded_by`; thêm ở GĐ1: `cycle_id` và khoá duy nhất `(submitted_by_id, client_id)` (nhiều dòng có `client_id` rỗng vẫn hợp lệ). Trạng thái thực tế (cột `status` kiểu TEXT trong Prisma) gồm `DRAFT`, `PENDING_APPROVAL`, `APPROVED`, `REJECTED`, `REQUEST_CHANGES`.
+**Khoá duy nhất:** `(submitted_by_id, client_id)`. **Index:** `cycle_id`
 
 ---
 
 ### `journal_activities`
-Chi tiết hoạt động trong một nhật ký (phun thuốc, bón phân...).
+Chi tiết của một nhật ký (phun thuốc, bón phân, hái...). Kiểu hoạt động nằm ở `journal_entries.activity_type`, enum `ActivityType` = `SOWING`, `FERTILIZING`, `SPRAYING`, `IRRIGATION`, `HARVEST`, `PRUNING`, `OTHER`; `PRUNING` (Đốn chè) thêm bằng migration riêng `20261128120000_activity_pruning` vì giá trị enum mới không dùng được trong giao dịch đã thêm nó.
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
-| id | UUID | PK | |
-| journal_entry_id | UUID | FK → journal_entries, NOT NULL | |
-| activity_type | ENUM('pesticide','fertilizer','irrigation','harvesting','soil_prep','other') | NOT NULL | |
-| product_name | VARCHAR(200) | | Tên thuốc / phân bón |
-| dosage | VARCHAR(100) | | Liều lượng |
-| area_applied_ha | DECIMAL(10,4) | | Diện tích áp dụng |
-| withdrawal_days | INT | | Ngày cách ly (thuốc BVTV) |
-| safe_harvest_date | DATE | | entry_date + withdrawal_days |
-| notes | TEXT | | |
-| pesticide_product_id | TEXT | nullable FK → pesticide_products (ON DELETE SET NULL) | Thuốc trong danh mục; rỗng là "Thuốc khác" (GĐ1 S1) |
+| id | TEXT | PK |  |
+| journal_entry_id | TEXT | NOT NULL, FK → journal_entries (CASCADE) |  |
+| activity_detail | TEXT | NOT NULL | Mô tả hoạt động |
+| product_name | TEXT | nullable | Tên thuốc hoặc phân bón (phun, bón) |
+| dosage | TEXT | nullable |  |
+| withdrawal_days | INT | nullable | Ngày cách ly (phun thuốc) |
+| safe_harvest_date | TIMESTAMP(3) | nullable | `entry_date` + `withdrawal_days` |
 | fresh_leaf_kg | DOUBLE PRECISION | nullable | Kg búp tươi thu hoạch, chỉ trên hoạt động `HARVEST` (`20261128120200_journal_fresh_leaf_kg`) |
-| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
-
-> **Thực tế trong Prisma:** kiểu hoạt động là enum `ActivityType` = `SOWING`, `FERTILIZING`, `SPRAYING`, `IRRIGATION`, `HARVEST`, `PRUNING`, `OTHER`. `PRUNING` (Đốn chè) thêm bằng migration riêng `20261128120000_activity_pruning`, vì giá trị enum mới không dùng được trong giao dịch đã thêm nó.
+| pesticide_product_id | TEXT | nullable, FK → pesticide_products (SET NULL) | Thuốc trong danh mục; rỗng là "Thuốc khác" (GĐ1 S1) |
+| created_at | TIMESTAMP(3) | NOT NULL, DEFAULT now() |  |
 
 ---
 
 ### `lots`
-Lô hàng — đơn vị QR truy xuất nguồn gốc.
+Lô hàng, đơn vị QR truy xuất nguồn gốc. Quan hệ ngược: `lot_parcels`, `lot_batch_sources`, `lot_certificates`, `sales_order_lines`.
 
-> ⚠️ **Schema Divergence (Story 7.0a):** Table được recreate qua migration `20260814102205_add_htx_relations` (DROP TABLE `Lot` + CREATE TABLE `lots`). Một số fields thực tế khác với spec gốc — xem cột "Thực tế" bên dưới.
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | TEXT | PK |  |
+| lot_code | TEXT | NOT NULL, UNIQUE | Ví dụ `TC-CHE-20261110-001` |
+| commodity | TEXT | NOT NULL |  |
+| quality_grade | TEXT | nullable | `Grade 1` / `Grade 2` / `Ungraded` |
+| harvest_date | TIMESTAMP(3) | NOT NULL |  |
+| estimated_weight_kg | DOUBLE PRECISION | nullable |  |
+| actual_weight_kg | DOUBLE PRECISION | nullable |  |
+| packaging_type | TEXT | nullable |  |
+| destination | TEXT | nullable | Nơi giao hàng |
+| buyer_name | TEXT | nullable | Tên người mua |
+| packaging_date | TIMESTAMP(3) | nullable | Lô đóng từ mẻ ghi ngày hôm nay (GĐ2) |
+| total_weight_kg | DOUBLE PRECISION | nullable | Tổng kg lấy từ các mẻ (GĐ2) |
+| packaging_spec | TEXT | nullable |  |
+| status | ENUM `LotStatus` | NOT NULL, DEFAULT 'DRAFT' | `DRAFT` / `READY` / `QR_EXPORTED` |
+| qr_image_url | TEXT | nullable | URL ảnh QR trong kho đối tượng |
+| certificate_keys | TEXT[] | NOT NULL, DEFAULT '{}' | Khoá tệp chứng nhận (kho đối tượng) cho route tải công khai |
+| public_page_data | JSONB | nullable | Ảnh chụp dữ liệu cho trang QR công khai |
+| dry_grade | ENUM `DryTeaGrade` | nullable | Hạng chè khô của lô đóng từ mẻ; rỗng với lô tạo trước GĐ2 (`20261128160000_processing_batches`) |
+| created_by_id | TEXT | nullable | Keycloak ID của cán bộ tạo lô |
+| created_at | TIMESTAMP(3) | NOT NULL, DEFAULT now() |  |
+| updated_at | TIMESTAMP(3) | NOT NULL |  |
+| htx_profile_id | TEXT | nullable, FK → htx_profiles (SET NULL) |  |
 
-| Column | Type | Constraints | Thực tế trong Prisma | Description |
-|--------|------|-------------|---------------------|-------------|
-| id | TEXT (cuid) | PK | `id String @id @default(cuid())` | |
-| lot_code | VARCHAR(100) | UNIQUE, NOT NULL | ✅ | Format: HTX-CROP-YYYYMMDD-NNN |
-| htx_profile_id | TEXT | **nullable** FK → htx_profiles | ✅ Added Story 7.0a | HTX scoping |
-| commodity | VARCHAR(100) | NOT NULL | ✅ (`commodity`) | Loại nông sản |
-| quality_grade | TEXT | nullable | ✅ (không có trong spec gốc) | "Grade 1" / "Grade 2" / "Ungraded" |
-| harvest_date | DATE | NOT NULL | ✅ `DateTime` | |
-| estimated_weight_kg | DECIMAL(10,2) | nullable | ✅ | |
-| actual_weight_kg | DECIMAL(10,2) | nullable | ✅ | |
-| packaging_type | VARCHAR(100) | nullable | ✅ | |
-| destination | VARCHAR(200) | nullable | ✅ | Nơi giao hàng |
-| buyer_name | VARCHAR(200) | nullable | ✅ | Tên người mua |
-| status | ENUM | NOT NULL, DEFAULT 'DRAFT' | `LotStatus` enum: DRAFT/READY/QR_EXPORTED | |
-| qr_image_url | TEXT | nullable | `qr_image_url` (không phải `qr_minio_key`) | MinIO URL |
-| certificate_keys | TEXT[] | DEFAULT [] | ✅ | Khoá tệp chứng nhận (kho đối tượng) cho route tải công khai |
-| dry_grade | ENUM `DryTeaGrade` | nullable | ✅ GĐ2 | Hạng chè khô của lô đóng từ mẻ; rỗng với lô tạo trước GĐ2 (`20261128160000_processing_batches`) |
-| public_page_data | JSONB | nullable | ✅ | Snapshot for QR public page |
-| created_by_id | TEXT | nullable | keycloak officer user ID | |
-| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | ✅ | |
-| updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | ✅ | |
-
-**Indexes:** `lot_code` (unique), `status`, `htx_profile_id`
-
-> **Note (cập nhật GĐ2):** `packaging_date`, `total_weight_kg` và `packaging_spec` có trong `schema.prisma` hiện tại; lô đóng từ mẻ ghi `packaging_date` (hôm nay) và `total_weight_kg` (tổng kg lấy). Quan hệ ngược: `batch_sources` (`lot_batch_sources`) và `certificates` (`lot_certificates`).
+**Index:** `(htx_profile_id, status)`
 
 ---
 
 ### `lot_parcels`
-Junction: thửa nào thuộc lô nào (M-M).
+Bảng nối: thửa nào thuộc lô nào (M-M).
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
-| lot_id | UUID | FK → lots, NOT NULL | |
-| parcel_id | UUID | FK → parcels, NOT NULL | |
-| cycle_id | TEXT | nullable FK → parcel_crop_cycles (ON DELETE SET NULL) | Lứa của dòng lô: lứa đóng gần nhất không sau ngày hái của lô, nếu không có thì lứa đang mở (`20261128120100_flush_and_pesticides` điền cho dòng cũ). Dòng cũ không có lứa vẫn rỗng |
+| id | TEXT | PK |  |
+| lot_id | TEXT | NOT NULL, FK → lots (RESTRICT) |  |
+| parcel_id | TEXT | NOT NULL, FK → parcels (RESTRICT) |  |
+| cycle_id | TEXT | nullable, FK → parcel_crop_cycles (SET NULL) | Lứa của dòng lô: lứa đóng gần nhất không sau ngày hái của lô, nếu không có thì lứa đang mở (`20261128120100_flush_and_pesticides` điền cho dòng cũ). Dòng cũ không có lứa vẫn rỗng |
 
-**PK:** (lot_id, parcel_id)
+**Khoá duy nhất:** `(lot_id, parcel_id)`
 
 ---
 
@@ -279,64 +248,73 @@ Junction: thửa nào thuộc lô nào (M-M).
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
-| id | UUID | PK | |
-| htx_profile_id | TEXT | NULL, FK → htx_profiles (ON DELETE SET NULL), index | Tenant của đối tác. Mọi đọc và ghi lọc theo cột này, lấy từ phiên, không lấy từ body. Dòng rỗng coi như không tồn tại. Migration gán dòng cũ cho HTX `TC`, hoặc cho HTX duy nhất nếu chỉ có một; còn lại để rỗng. |
-| name | VARCHAR(200) | NOT NULL | Tên đối tác |
-| type | ENUM('buyer','supplier','service','bank','other') | NOT NULL | |
-| address | TEXT | | |
-| lat | DECIMAL(10,7) | | Geocoded bởi Nominatim |
-| lng | DECIMAL(10,7) | | |
-| phone | VARCHAR(20) | | |
-| website | VARCHAR(500) | | |
-| contact_person | VARCHAR(200) | | |
-| is_verified | BOOLEAN | NOT NULL, DEFAULT false | Manager verified |
-| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
-| updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
+| id | TEXT | PK |  |
+| name | TEXT | NOT NULL |  |
+| partner_type | ENUM `PartnerType` | NOT NULL | `BUYER` / `MIDDLEMAN` / `WAREHOUSE` |
+| contact_phone | TEXT | nullable |  |
+| primary_commodities | TEXT[] | NOT NULL | Nông sản chính |
+| lat | DOUBLE PRECISION | NOT NULL | Vĩ độ |
+| lng | DOUBLE PRECISION | NOT NULL | Kinh độ |
+| address | TEXT | nullable |  |
+| htx_profile_id | TEXT | nullable, FK → htx_profiles (SET NULL) | Tenant của đối tác. Mọi đọc và ghi lọc theo cột này, lấy từ phiên, không lấy từ body. Dòng rỗng coi như không tồn tại. Migration `20261128100000_partners_tenant` gán dòng cũ cho HTX `TC`, hoặc cho HTX duy nhất nếu chỉ có một; còn lại để rỗng |
+| created_at | TIMESTAMP(3) | NOT NULL, DEFAULT now() |  |
+| updated_at | TIMESTAMP(3) | NOT NULL |  |
 
-**Indexes:** `type`, `(lat, lng)`, `htx_profile_id`
+**Index:** `htx_profile_id`
 
 ---
 
 ### `notifications`
-Thông báo cá nhân (Web Bell).
+Thông báo (chuông web, phát chung, đẩy Mattermost). Người dùng nằm ở Keycloak nên `recipient_id` là Keycloak ID, không có khoá ngoại.
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
-| id | UUID | PK | |
-| recipient_id | UUID | FK → users, NOT NULL | |
-| type | ENUM('market_alert','journal_approved','journal_rejected','lot_exported','system','disease_result') | NOT NULL | |
-| title | VARCHAR(200) | NOT NULL | |
-| body | TEXT | NOT NULL | |
-| link | VARCHAR(500) | | Deep link URL |
-| is_read | BOOLEAN | NOT NULL, DEFAULT false | |
-| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
-| read_at | TIMESTAMPTZ | | |
+| id | TEXT | PK |  |
+| type | ENUM `NotificationType` | NOT NULL | `ANNOUNCEMENT` / `HARVEST_APPROVED` / `DISEASE_REPORT` / `JOURNAL_SUBMITTED` / `JOURNAL_APPROVED` / `MARKET_ALERT` / `SYSTEM` / `BROADCAST` |
+| title | TEXT | NOT NULL |  |
+| body | TEXT | NOT NULL |  |
+| recipient_id | TEXT | nullable | Keycloak ID người nhận; rỗng là thông báo chung |
+| household_id | TEXT | nullable, FK → households (SET NULL) |  |
+| htx_profile_id | TEXT | nullable, FK → htx_profiles (SET NULL) | HTX sở hữu thông báo chung (`recipient_id` rỗng), `20261109130000_notifications_htx` |
+| sender_id | TEXT | nullable | Keycloak ID người gửi |
+| is_read | BOOLEAN | NOT NULL, DEFAULT false |  |
+| pushed_to_mattermost | BOOLEAN | NOT NULL, DEFAULT false | Đã đẩy sang Mattermost chưa (Story 5.7); n8n quét các dòng chưa đẩy |
+| deep_link_url | TEXT | nullable | Liên kết sâu |
+| tts_text | TEXT | nullable | Văn bản đọc sẵn (tóm tắt) |
+| created_at | TIMESTAMP(3) | NOT NULL, DEFAULT now() |  |
 
-**Indexes:** `recipient_id`, `is_read`, `created_at DESC`
+**Index:** `(recipient_id, is_read)`; `htx_profile_id`; `created_at`; `(pushed_to_mattermost, type)`
 
 ---
 
 ### `disease_reports`
-Kết quả chẩn đoán bệnh cây (FastAPI model).
+Báo cáo sâu bệnh của nông dân kèm ảnh, kết quả AI và xác nhận của cán bộ.
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
-| id | UUID | PK | |
-| submitted_by | UUID | FK → users, NOT NULL | |
-| parcel_id | UUID | FK → parcels, nullable | |
-| lot_id | UUID | FK → lots, nullable | |
-| image_minio_key | VARCHAR(500) | NOT NULL | |
-| disease_name | VARCHAR(200) | | Tên bệnh (VI) |
-| confidence_score | DECIMAL(5,4) | | 0.0000 – 1.0000 |
-| raw_api_response | JSONB | | Full FastAPI response |
-| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
+| id | TEXT | PK |  |
+| parcel_id | TEXT | NOT NULL, FK → parcels (RESTRICT) |  |
+| household_id | TEXT | NOT NULL, FK → households (RESTRICT) |  |
+| detected_by_id | TEXT | NOT NULL | Keycloak ID nông dân |
+| detection_date | TIMESTAMP(3) | NOT NULL |  |
+| photo_url | TEXT | NOT NULL | Đường dẫn ảnh trong kho đối tượng |
+| photo_minio_key | TEXT | NOT NULL | Khoá đối tượng, dùng để tạo URL mới |
+| gps_lat | DOUBLE PRECISION | nullable |  |
+| gps_lng | DOUBLE PRECISION | nullable |  |
+| ai_disease_name | TEXT | NOT NULL | Tên bệnh mô hình dự đoán |
+| ai_confidence | DOUBLE PRECISION | NOT NULL | Độ tin cậy 0 đến 1 |
+| confirmed_diagnosis | TEXT | nullable | Chẩn đoán cán bộ tự gõ; vẫn giữ sau khi có nhãn |
+| confirmed_by_id | TEXT | nullable | Keycloak ID cán bộ xác nhận |
+| confirmed_at | TIMESTAMP(3) | nullable |  |
+| treatment_notes | TEXT | nullable | Ghi chú nội bộ của cán bộ, không hiện cho nông dân |
+| treatment_recommendation | TEXT | nullable | Lời khuyên điều trị hiện cho nông dân |
+| confirmed_label_code | TEXT | nullable, FK → disease_labels (SET NULL) | Nhãn cán bộ chọn khi duyệt (`20261128180000_disease_labels`, GĐ4-B); bắt buộc ở tầng ứng dụng khi `status = CONFIRMED`. Báo cáo cũ được gán nhãn khi `confirmed_diagnosis` khớp đúng `disease_labels.name_vi`, không khớp thì để trống |
+| model_version | TEXT | nullable | Phiên bản mô hình AI đã dự đoán (ví dụ `tea-2026.11.0`); rỗng với mô hình chung hoặc báo cáo cũ |
+| status | ENUM `DiseaseReportStatus` | NOT NULL, DEFAULT 'PENDING' | `PENDING` / `CONFIRMED` / `REJECTED` |
+| created_at | TIMESTAMP(3) | NOT NULL, DEFAULT now() |  |
+| updated_at | TIMESTAMP(3) | NOT NULL |  |
 
-**GĐ4-B** (`20261128180000_disease_labels`) thêm hai cột vào bảng thực tế `disease_reports` (tên cột theo `schema.prisma`):
-
-| Column | Type | Constraints | Description |
-|--------|------|-------------|-------------|
-| confirmed_label_code | TEXT | FK → disease_labels (SET NULL), nullable, INDEX | Nhãn cán bộ chọn khi duyệt; bắt buộc ở tầng ứng dụng khi `status = CONFIRMED`. Ô tên tự gõ `confirmed_diagnosis` vẫn giữ. Báo cáo cũ được gán nhãn khi `confirmed_diagnosis` khớp đúng `disease_labels.name_vi`, không khớp thì để trống |
-| model_version | TEXT | nullable | Phiên bản mô hình AI đã dự đoán (ví dụ `tea-2026.11.0`); `NULL` với mô hình chung hoặc báo cáo cũ |
+**Index:** `confirmed_label_code`
 
 ---
 
@@ -347,8 +325,8 @@ Danh mục nhãn duy nhất cho sâu bệnh chè (`20261128180000_disease_labels
 |--------|------|-------------|-------------|
 | code | TEXT | PK | Mã lớp, tiếng Anh, ví dụ `green_leafhopper` |
 | name_vi | TEXT | NOT NULL | Tên tiếng Việt hiển thị |
-| scientific_name | TEXT | | Tên khoa học (chỉ ghi khi chắc chắn) |
-| group | ENUM('PEST','DISEASE','HEALTHY','OTHER') | NOT NULL | Sâu, bệnh, khoẻ, khác |
+| scientific_name | TEXT | nullable | Tên khoa học (chỉ ghi khi chắc chắn) |
+| group | ENUM `DiseaseLabelGroup` | NOT NULL | Sâu, bệnh, khoẻ, khác: `PEST` / `DISEASE` / `HEALTHY` / `OTHER` |
 | is_target | BOOLEAN | NOT NULL, DEFAULT false | Một trong năm mục tiêu của GĐ4-B |
 | sort_order | INT | NOT NULL | Thứ tự trong danh sách (mục tiêu trước) |
 
@@ -356,75 +334,88 @@ Danh mục nhãn duy nhất cho sâu bệnh chè (`20261128180000_disease_labels
 
 ---
 
-### `market_data` *(written by n8n)*
-Dữ liệu thị trường raw từ external APIs.
+### `market_data`
+Dữ liệu thị trường thô từ API ngoài. *(chỉ n8n ghi)*
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
-| id | UUID | PK | |
-| source | VARCHAR(50) | NOT NULL | (NASA, COMTRADE, USDA, WTO, FAOSTAT, worldbank, etc.) |
-| commodity | VARCHAR(100) | NOT NULL | |
-| metric | VARCHAR(100) | NOT NULL | (export_volume, price_fob, tariff_rate...) |
-| value | DECIMAL(18,4) | NOT NULL | |
-| unit | VARCHAR(50) | | |
-| period | VARCHAR(20) | | YYYY-MM hoặc YYYY |
-| country | VARCHAR(10) | | ISO country code |
-| fetched_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
+| id | UUID | PK, DEFAULT gen_random_uuid() |  |
+| source | TEXT | NOT NULL | `USDA`, `WTO`, `FAOSTAT`, `NASA`... |
+| commodity | TEXT | NOT NULL |  |
+| metric | TEXT | NOT NULL | `export_price`, `import_tariff`, `production_volume`... |
+| value | DOUBLE PRECISION | NOT NULL |  |
+| unit | TEXT | NOT NULL |  |
+| period | TEXT | NOT NULL | `2026-07`, `2026` hoặc `2026-W30` |
+| fetched_at | TIMESTAMP(3) | NOT NULL, DEFAULT now() |  |
 
-**Indexes:** `(source, commodity, metric, period)`
+**Khoá duy nhất:** `(source, commodity, metric, period)`. **Index:** `(commodity, fetched_at)`
 
 ---
 
-### `weather_cache` *(written by n8n)*
-Cache thời tiết theo thửa (Open-Meteo 1h).
+### `weather_cache`
+Cache thời tiết theo thửa (Open-Meteo, mỗi giờ). *(chỉ n8n ghi)*
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
-| id | UUID | PK | |
-| parcel_id | UUID | FK → parcels, NOT NULL | |
-| temperature_c | DECIMAL(5,2) | | |
-| humidity_pct | DECIMAL(5,2) | | |
-| rainfall_mm | DECIMAL(8,2) | | |
-| wind_speed_ms | DECIMAL(6,2) | | |
-| weather_code | INT | | WMO weather code |
-| uv_index | DECIMAL(4,1) | | |
-| forecast_json | JSONB | | 7-day forecast |
-| fetched_at | TIMESTAMPTZ | NOT NULL | |
+| id | UUID | PK, DEFAULT gen_random_uuid() |  |
+| parcel_id | TEXT | NOT NULL, FK → parcels (RESTRICT) |  |
+| recorded_at | TIMESTAMP(3) | NOT NULL | Giờ đã làm tròn xuống |
+| condition | TEXT | NOT NULL |  |
+| temperature_c | DOUBLE PRECISION | NOT NULL |  |
+| precipitation_mm | DOUBLE PRECISION | NOT NULL |  |
+| humidity_pct | DOUBLE PRECISION | NOT NULL |  |
+| source | TEXT | NOT NULL, DEFAULT 'open-meteo' | Nguồn dữ liệu |
+| forecast_json | JSONB | nullable | Dự báo |
 
-**Upsert key:** `(parcel_id)` — một record per parcel, overwritten mỗi giờ
+**Khoá duy nhất:** `(parcel_id, recorded_at)`
 
 ---
 
-### `bulletins` *(written by n8n + Ollama)*
-Bản tin thị trường được AI tổng hợp.
+### `bulletins`
+Bản tin thị trường do AI tổng hợp. *(n8n + Ollama ghi; agent đăng bản của HTX)* Agent `bulletin.publish` đánh dấu các dòng mới nhất cũ của HTX là không mới nhất rồi thêm một dòng có `htx_code`. Nơi đọc (`/api/bulletin`, `/api/tts`, trang manager và officer, Hasura `public_bulletins`) hiện dòng đã đăng của HTX trước, rồi mới đến dòng chung mới nhất.
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
-| id | UUID | PK | |
-| commodity | VARCHAR(100) | NOT NULL | |
-| bulletin_vi | TEXT | NOT NULL | Bản tin tiếng Việt (Ollama output) |
-| sources_json | JSONB | NOT NULL | Citations: [{source, url, date, value}] |
-| audio_minio_key | VARCHAR(500) | | Piper TTS audio (nullable nếu chưa gen) |
-| generated_at | TIMESTAMPTZ | NOT NULL | |
-| model_used | VARCHAR(100) | NOT NULL | phi3 / mistral |
-| is_latest | BOOLEAN | NOT NULL, DEFAULT true | Chỉ 1 record is_latest=true per commodity |
-| status | TEXT | NOT NULL, DEFAULT 'published', CHECK `draft \| published \| rejected` | M4. Only `published` rows are read. Drafts are not stored (the text lives in the proposal), so `draft` and `rejected` are reserved |
-| htx_code | TEXT | NULL | M4. The owning cooperative; NULL is a shared bulletin written by the n8n workflow |
+| id | UUID | PK, DEFAULT gen_random_uuid() |  |
+| commodity | TEXT | NOT NULL |  |
+| bulletin_vi | TEXT | NOT NULL | Bản tin tiếng Việt (Ollama) |
+| sources_json | JSONB | NOT NULL | Trích dẫn `[{source, metric, value, date}]` |
+| model_used | TEXT | NOT NULL | Mô hình tạo bản tin; `agent:bulletin` với bản do agent đăng |
+| is_latest | BOOLEAN | NOT NULL, DEFAULT false | Chỉ một dòng `true` cho mỗi nông sản (và mỗi HTX) |
+| status | TEXT | NOT NULL, DEFAULT 'published' | `CHECK` `draft | published | rejected` (`20261125130000_bulletin_status_and_cooperative`). Chỉ đọc dòng `published`; bản nháp không lưu (văn bản nằm trong đề xuất) nên `draft` và `rejected` để dành |
+| htx_code | TEXT | nullable | HTX sở hữu; rỗng là bản tin chung do workflow n8n ghi |
+| created_at | TIMESTAMP(3) | NOT NULL, DEFAULT now() |  |
 
-Migration `20261125130000_bulletin_status_and_cooperative` adds `status` and `htx_code` (index `bulletins_htx_code_commodity_is_latest_idx`). The agent's `bulletin.publish` approval marks the cooperative's earlier latest rows of the commodity not latest and inserts a row with `htx_code` and `model_used = 'agent:bulletin'`. Readers (`/api/bulletin`, `/api/tts`, the manager and officer pages, Hasura `public_bulletins`) show the cooperative's own published row first, otherwise the latest shared one.
-
-**Indexes:** `(commodity, is_latest)`, `generated_at DESC`
+**Index:** `(commodity, is_latest)`; `(htx_code, commodity, is_latest)`
 
 ---
 
-### `fx_rates` *(written by n8n)*
-Tỷ giá USD/VND (Frankfurter API).
+### `fx_rates`
+Tỷ giá USD/VND (Frankfurter API). *(chỉ n8n ghi)*
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
-| id | UUID | PK | |
-| rates | JSONB | NOT NULL | Toàn bộ tỷ giá thế giới (VND, CNY, JPY...) |
-| fetched_at | TIMESTAMPTZ | NOT NULL | |
+| id | UUID | PK, DEFAULT gen_random_uuid() |  |
+| rates | JSONB | NOT NULL | Toàn bộ tỷ giá (VND, CNY, JPY...) |
+| fetched_at | TIMESTAMPTZ | NOT NULL, DEFAULT now()) @db.Timestamptz(6 |  |
+
+---
+
+### `chat_history`
+Lịch sử chat của trợ lý (thị trường hoặc kỹ thuật). Người dùng nằm ở Keycloak nên `user_id` là Keycloak ID, không có khoá ngoại.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | TEXT | PK |  |
+| session_id | TEXT | NOT NULL | Mã phiên chat |
+| user_id | TEXT | NOT NULL | Keycloak ID người chat |
+| role | ENUM `ChatRole` | NOT NULL | `USER` / `ASSISTANT` |
+| content | TEXT | NOT NULL |  |
+| sources_json | JSONB | nullable | Trích dẫn `[{source, date, url}]` |
+| chat_type | TEXT | NOT NULL | `market` hoặc `technical` |
+| created_at | TIMESTAMP(3) | NOT NULL, DEFAULT now() |  |
+
+**Index:** `(session_id, created_at)`; `(user_id, created_at)`
 
 ---
 
@@ -459,7 +450,7 @@ Số ngày cách ly theo nhãn thật mà một HTX đã đối chiếu; thay m�
 | htx_profile_id | TEXT | FK → htx_profiles (RESTRICT), NOT NULL | |
 | pesticide_product_id | TEXT | FK → pesticide_products (RESTRICT), NOT NULL | |
 | label_phi_days | INT | NOT NULL, `CHECK` 1..365 | |
-| label_note | TEXT | | Số lô hoặc nội dung nhãn; API bắt buộc khi thấp hơn mức mặc định |
+| label_note | TEXT | nullable | Số lô hoặc nội dung nhãn; API bắt buộc khi thấp hơn mức mặc định |
 | verified_by_id | TEXT | NOT NULL | Keycloak sub của người đối chiếu |
 | verified_at | TIMESTAMP(3) | NOT NULL, DEFAULT now() | |
 | created_at, updated_at | TIMESTAMP(3) | NOT NULL | |
@@ -866,27 +857,7 @@ Kênh tin nhắn Zalo cấp nền tảng: web giữ mọi logic, relay `dxos-zal
 
 ## Indexing Strategy
 
-```sql
--- Critical query patterns and their indexes
-
--- 1. Journal entries by parcel, pending approval (most common officer query)
-CREATE INDEX idx_journal_parcel_status ON journal_entries(parcel_crop_cycle_id, status);
-
--- 2. Notifications for user, unread first (polling/SSE)
-CREATE INDEX idx_notif_recipient_read ON notifications(recipient_id, is_read, created_at DESC);
-
--- 3. Market data latest per source+commodity (bulletin generation)
-CREATE INDEX idx_market_source_commodity ON market_data(source, commodity, metric, period DESC);
-
--- 4. Lot lookup by code (QR public page — must be fast)
-CREATE UNIQUE INDEX idx_lot_code ON lots(lot_code);
-
--- 5. Weather by parcel (real-time dashboard)
-CREATE INDEX idx_weather_parcel ON weather_cache(parcel_id, fetched_at DESC);
-
--- 6. Latest bulletin per commodity
-CREATE INDEX idx_bulletin_latest ON bulletins(commodity, is_latest, generated_at DESC);
-```
+Index và khoá duy nhất khai báo bằng `@@index` và `@@unique` trong `schema.prisma`, liệt kê dưới từng bảng ở trên; không có index viết tay ngoài Prisma. Các truy vấn nóng: nhật ký chờ duyệt theo lứa (`journal_entries.cycle_id`), thông báo chưa đọc (`notifications (recipient_id, is_read)`), tra lô theo mã QR (`lots.lot_code` duy nhất), bản tin mới nhất (`bulletins (commodity, is_latest)`), thời tiết theo thửa (`weather_cache (parcel_id, recorded_at)` duy nhất).
 
 ---
 

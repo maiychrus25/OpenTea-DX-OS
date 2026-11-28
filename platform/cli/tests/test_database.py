@@ -138,13 +138,16 @@ def test_env_file_mode_600(root, pg_url):
     path = env_file(root)
     assert stat.S_IMODE(path.stat().st_mode) == 0o600
     password = read_env_password(path)
-    assert path.read_text(encoding="utf-8") == (
-        f"DXOS_APP_DB_URL=postgresql://app_tea_tour:{password}@postgres:5432/agrimarket\n")
+    lines = path.read_text(encoding="utf-8").splitlines()
+    assert lines[0] == f"DXOS_APP_DB_URL=postgresql://app_tea_tour:{password}@postgres:5432/agrimarket"
+    assert lines[1].startswith("DXOS_APP_GATEWAY_SECRET=") and len(lines) == 2
+    secret = lines[1]
     with as_app(pg_url, password) as conn:
         assert conn.execute("SELECT current_user").fetchone() == ("app_tea_tour",)
     # A re-run keeps the password, so a running container's env file stays valid.
     assert main(["prepare", app_dir(root)]) == 0
     assert read_env_password(path) == password
+    assert f"{secret}\n" in path.read_text(encoding="utf-8")  # and the gateway secret, which routes already carry
 
 
 def test_env_file_url_encodes_the_password(tmp_path):

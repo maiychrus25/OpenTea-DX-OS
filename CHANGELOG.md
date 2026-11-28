@@ -7,6 +7,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Stage demo data for HTX Tân Cương:** `make demo-seed` (or `npm run demo-seed` in `apps/web`) runs after `seed` and builds one connected story, with no new business feature. It covers:
+  - today's leaf prices;
+  - recent weighing tickets;
+  - TC-A3 still in withdrawal, so the weighing station shows the red block;
+  - a finished processing batch at 4.75 : 1;
+  - lot `TC-CHE-A3-001` with all four layers on `/q` and a sample VietGAP certificate;
+  - a closed settlement with an advance offset and a VietQR on the slip;
+  - the inputs that make the cross-check agent raise both alerts.
+
+  A second run adds nothing. The closed settlement is never touched again, because the ledger is append-only.
+- **`./dxos demo accounts [--reset-otp] [--password <p>]`** prepares the five demo accounts (`platform_admin`, `manager_tc`, `accountant_tc`, `officer_tc`, `farmer_tc`):
+  - it creates a missing one with its role and `htx_code`;
+  - it clears stuck required actions such as TOTP setup;
+  - it removes OTP only with `--reset-otp`.
+
+  Any other username is refused.
+- **`python -m dxos_agent --once cross-check --htx TC`** runs the cross-check agent once, on the same code path as the daily schedule.
+- **`scripts/check-schema-doc.py`** fails CI when `docs/database-schema.md` and `schema.prisma` disagree on a table or column.
+
+### Changed
+
+- **Mini-apps accept only requests that came through the gateway.**
+  - Each installed app gets its own secret in its env file.
+  - APISIX sends it as `X-Dxos-App-Gateway` on every route of that app, public routes included.
+  - The app kit and `hello` refuse anything else with 403, except `GET /healthz`. Without the secret they refuse every request.
+  - This closes the cross-app spoofing limit on `dxos-apps-net` (R24).
+- **README and site are rewritten for v1.23**, centred on the OSI-licensed core.
+  - `n8n` (Sustainable Use License) and the Groq, OpenAI and Anthropic APIs are optional integrations.
+  - They cover five roles with role switching, `dxos-zalo` in the release images, and the advertised mini-apps only: `tea-shop` 0.4.0, `tea-tour`, `custom-books` 0.3.0 and `hello`.
+  - The site screens and the social card are real screenshots of the demo data. No frozen app is shown.
+- **`docs/database-schema.md`** matches `schema.prisma` column by column: `chat_history` is added, and the old `users` table is removed. DEV-016 is fixed. DEV-015 is updated for v1.23.0.
+
+### Fixed
+
+- **The cross-check agent (A13) never reached Hasura (since 1.22.0).** It declared its spraying and ticket filters as `timestamptz`, while `journal_entries.entry_date` and `fresh_leaf_tickets.weighed_at` are `timestamp` columns. Hasura refused the query, and the run only logged an error. The filters now use `timestamp`, from Vietnam midnight written in UTC. Its read of its own earlier proposals also filtered on a column the agent role cannot see; the Hasura permission already limits it to cross-check proposals. A test now checks every field it reads against the agent role's columns.
+
+### Upgrade notes
+
+- Run `make platform-up` after pulling. It creates a gateway secret for every installed mini-app and recreates those apps. Until it runs, an app installed before this release answers 403.
+- Demo stage:
+  1. `./dxos demo accounts` (add `--reset-otp` if an account still asks for TOTP);
+  2. `npm run seed` once on a fresh database;
+  3. `make demo-seed`.
+
+  Do not run `seed` again on the same database after `demo-seed`; rebuild the database instead.
+- The cross-check alerts for the demo appear after `python -m dxos_agent --once cross-check --htx TC`, run in the agent container.
+
+### Known limits
+
+- `hub-mobile` (frozen) has no gateway check.
+- `make demo-seed` needs network for `npm ci` in the migrate image (about 30 s).
+
 ## [1.23.0] - 2026-11-28
 
 ### Added

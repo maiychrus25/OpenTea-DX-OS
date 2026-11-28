@@ -9,7 +9,8 @@ This script replaces them with values read from the repository:
   version   apps/web/package.json, field "version"                 -> v1.13.0
   latest    newest released "## [X.Y.Z] - YYYY-MM-DD" in CHANGELOG.md -> v1.13.0 · 2026-11-22
   releases  number of "## [X.Y.Z]" version headings in CHANGELOG.md  -> 14
-  apps      number of directories in miniapps/ that contain app.yaml  -> 7
+  apps      number of advertised mini-apps: directories in miniapps/ that contain
+            app.yaml, minus FROZEN_APPS                                  -> 4
 
 Usage: python3 scripts/inject-site-values.py <site-output-dir>
 """
@@ -20,6 +21,11 @@ import sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PAGES = ["index.html", os.path.join("en", "index.html")]
+
+# Apps kept in the repo but not advertised on the site (v1.24.0): leaf-purchase, farm-supply and
+# htx-dashboard are frozen, and hub-mobile is the mobile client rather than a mini-app. Their
+# app.yaml files stay as they are; only the count leaves them out.
+FROZEN_APPS = {"leaf-purchase", "farm-supply", "htx-dashboard", "hub-mobile"}
 
 
 def read_values():
@@ -32,7 +38,7 @@ def read_values():
     if not latest:
         raise SystemExit("CHANGELOG.md has no released section")
     apps = sum(1 for d in sorted(os.listdir(os.path.join(REPO, "miniapps")))
-               if os.path.isfile(os.path.join(REPO, "miniapps", d, "app.yaml")))
+               if d not in FROZEN_APPS and os.path.isfile(os.path.join(REPO, "miniapps", d, "app.yaml")))
     return {
         "version": "v" + version,
         "latest": "v%s · %s" % (latest.group(1), latest.group(2)),

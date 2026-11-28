@@ -11,7 +11,7 @@ from pathlib import Path
 import psycopg
 import yaml
 
-from dxos_cli import database, registry
+from dxos_cli import appenv, database, registry
 from dxos_cli.compose import render_app_compose
 from dxos_cli.gateway import app_routes, sync_gateway
 from dxos_cli.manifest import load_manifest, read_core_version, validate_manifest
@@ -102,11 +102,14 @@ class GatewayStep:
 
     def __init__(self, root: Path, app_id: str, manifest: dict | None = None):
         self.root, self.app_id, self.manifest = root, app_id, manifest
+        self.made_secret = False
 
     def apply(self) -> None:
         path = fragment_path(self.root, self.app_id)
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(yaml.safe_dump(app_routes(self.manifest), sort_keys=False, allow_unicode=True), encoding="utf-8")
+        secret, self.made_secret = appenv.ensure_gateway_secret(env_path(self.root, self.app_id))
+        path.write_text(yaml.safe_dump(app_routes(self.manifest, secret), sort_keys=False, allow_unicode=True),
+                        encoding="utf-8")
         try:
             sync_gateway(self.root)
         except Exception:
@@ -116,6 +119,10 @@ class GatewayStep:
 
     def undo(self) -> None:
         fragment_path(self.root, self.app_id).unlink(missing_ok=True)
+        if self.made_secret:
+            # A failed install made this secret for an app that never ran: it goes with the route. A remove (fresh step,
+            # nothing made) keeps the secret like the data, and --purge removes it; a database URL in the file stays.
+            appenv.remove_key(env_path(self.root, self.app_id), appenv.GATEWAY_SECRET_KEY)
         sync_gateway(self.root)
 
 

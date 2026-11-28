@@ -203,6 +203,7 @@ jobs:
         run: |
           bash scripts/validate-env.sh
           bash scripts/validate-structure.sh
+          python3 scripts/check-schema-doc.py
 
   # ─── Stage 5: Docker smoke test (depends on infra + build) ──────────
   smoke-test-docker:
