@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.23.0] - 2026-11-28
+
 ### Added
 
 - **One label list for tea pests and diseases (`apps/web`)**: officers confirm a disease report with a label from `disease_labels`, 14 codes, with the five targets first: Rầy xanh, Bọ cánh tơ, Nhện đỏ, Phồng lá chè, Bọ xít muỗi.
