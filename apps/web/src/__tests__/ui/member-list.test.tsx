@@ -47,6 +47,26 @@ describe('MemberList UI', () => {
     expect(pendingTexts.length).toBeGreaterThanOrEqual(1);
   });
 
+  test('links a member with a household to its detail page, where Zalo consent is recorded', async () => {
+    global.fetch = jest.fn((url: string) =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({
+          data: url === '/api/farm/households'
+            ? [{ id: 'hh-9', phone: '012', parcel_count: 2, total_area_ha: 0.5 }]
+            : [...mockMembers, { id: '3', name: 'Trần Thị D', email: 'd@ex.com', phone: '014', role: 'FARMER', status: 'ACTIVE' }],
+        }),
+      })
+    ) as jest.Mock;
+    await act(async () => {
+      render(<MemberList />);
+    });
+
+    const link = await screen.findByRole('link', { name: 'Chi tiết hộ Nguyễn Văn A' });
+    expect(link).toHaveAttribute('href', '/manager/households/hh-9');
+    expect(screen.queryByRole('link', { name: 'Chi tiết hộ Trần Thị D' })).not.toBeInTheDocument();
+  });
+
   test('8.11-UNIT-002: invite flow requires confirmation (shows modal)', async () => {
     await act(async () => {
       render(<MemberList />);
