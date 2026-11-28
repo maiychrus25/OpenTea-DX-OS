@@ -561,6 +561,8 @@ Officer approves or rejects a pending disease report of their HTX (another HTX's
 
 **Roles:** officer
 
+**GĐ4-B:** body thêm `confirmed_label_code` (mã trong `disease_labels`, xem `GET /api/disease-labels`). Với `CONFIRMED`, thiếu mã hoặc mã không có trong danh mục trả 400 `VALIDATION_ERROR` ("Vui lòng chọn nhãn bệnh/sâu trước khi duyệt." / "Nhãn bệnh/sâu không có trong danh sách."); với `REJECTED` trường này bị bỏ qua. Tên tự gõ `confirmed_diagnosis` vẫn bắt buộc như trước. Nếu chép sang P.A.R.A lỗi, hệ thống ghi cảnh báo, thử lại một lần, và không chặn việc duyệt.
+
 ---
 
 ## FastAPI — Disease Classifier Service
@@ -1441,6 +1443,19 @@ Mở tệp chứng nhận. **Vai:** `officer`, `manager`. **Response:** 302 chuy
 
 ### `PUT /api/htx/public-settings`
 Bật hoặc tắt hiện tên người trên trang QR công khai. **Vai:** `manager`. **Request:** `{ "public_show_names": true }` (khoá lạ bị từ chối). **Response:** `{ "data": { "public_show_names": true } }`. **Errors:** 400 `VALIDATION_ERROR`; 403 `FORBIDDEN`.
+
+### `GET /api/disease-labels` (GĐ4-B)
+Danh mục nhãn sâu bệnh để cán bộ chọn khi duyệt. **Vai:** `manager`, `officer`. **Response:** `{ "data": [{ "code": "helopeltis", "name_vi": "Bọ xít muỗi", "scientific_name": "Helopeltis theivora", "group": "PEST", "is_target": true, "sort_order": 50 }] }`, năm mục tiêu trước rồi theo `sort_order`. **Errors:** 403 `FORBIDDEN`.
+
+### `GET /api/htx/disease-training-consent` và `PUT /api/htx/disease-training-consent` (GĐ4-B)
+Công tắc cho phép dùng ảnh ca bệnh đã xác nhận để huấn luyện mô hình chè; mặc định tắt. **Vai:** `manager` (cả đọc lẫn ghi). **PUT request:** `{ "enabled": true }` (khoá lạ bị từ chối). **Response (cả hai):** `{ "data": { "enabled": true, "at": "2026-11-28T10:00:00.000Z", "by": "<mã người dùng>" } }`; khi chưa từng bật `at` và `by` là `null`. Mỗi lần ghi đặt `dxos.actor` nên sự kiện audit của `htx_profiles` nêu tên người làm. **Errors:** 400 `VALIDATION_ERROR`; 403 `FORBIDDEN`.
+
+### `GET /api/platform/disease-dataset?since=&htx=` (GĐ4-B)
+Bản kê ảnh thực địa để huấn luyện. **Vai:** `platform_admin` (401 khi chưa đăng nhập, 403 với vai khác). `since` là ngày hoặc thời điểm ISO (chỉ lấy ca xác nhận sau mốc đó), `htx` là mã HTX; cả hai tuỳ chọn, sai định dạng trả 400. **Response** (không bọc `data`, không lưu đệm: `Cache-Control: no-store`):
+```json
+{ "items": [{ "report_id": "cuid", "label_code": "helopeltis", "htx_code": "TC", "confirmed_on": "2026-11-20", "sha256": "<băm sha256 của ảnh gốc>", "url": "<URL GET đã ký, sống 15 phút>" }] }
+```
+Chỉ gồm ca `CONFIRMED` có nhãn và có ảnh của HTX đang bật công tắc trên; HTX chưa bao giờ bật cho 0 dòng. Bản kê không có tên hay số điện thoại; ảnh gốc chưa xoá EXIF/GPS, bước tải về của `ai-models/tea/train.py` xoá. Sắp theo thời điểm xác nhận cũ trước, tối đa 500 dòng mỗi lần (lấy tiếp bằng `since`); ảnh không đọc được trong kho bị bỏ qua kèm cảnh báo.
 
 ### `GET /q/[lotCode]` (trang công khai, không phải route API)
 Trang Server Component không cần đăng nhập; mã lô sai ký tự (`/`, `?`, `#`, xuống dòng, hoặc dài hơn 100) hiện "Mã QR không hợp lệ", lô không có hiện "Không tìm thấy dữ liệu". Dựng bốn tầng (Vùng trồng; An toàn cách ly; Mẻ sao chế biến; Chứng nhận) từ dữ liệu truy xuất của lô, chứng nhận đọc trực tiếp lúc dựng trang, tên người (hộ, người ghi nhật ký, thợ sao) ẩn trừ khi `public_show_names` bật, cộng khối "Kiểm chứng trong sổ audit" (bộ nhớ đệm 5 phút). `GET /lot/[lotCode]` chuyển hướng 308 tới đây.

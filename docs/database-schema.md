@@ -82,6 +82,9 @@ HTX (Hợp tác xã) master profile. Multi-tenant isolation key (`htx_code`, h�
 | certification | VARCHAR(50) | | VietGAP / GlobalGAP / Organic |
 | logo_minio_key | VARCHAR(500) | | MinIO object key cho logo |
 | public_show_names | BOOLEAN | NOT NULL, DEFAULT false | Hiện tên người (hộ, người ghi nhật ký, thợ sao) trên trang QR công khai; ẩn lúc dựng trang khi `false` (`20261128160100_certificates_and_public_names`, GĐ2) |
+| disease_training_consent | BOOLEAN | NOT NULL, DEFAULT false | Cho phép dùng ảnh ca bệnh đã xác nhận để huấn luyện mô hình chè; mặc định tắt, chỉ trưởng HTX (`manager`) bật (`20261128180100_disease_training_consent`, GĐ4-B). Bảng đã có trigger kiểm toán, nên mỗi lần bật/tắt để lại sự kiện kèm người làm |
+| disease_training_consent_at | TIMESTAMPTZ | | Lần đổi gần nhất của công tắc trên |
+| disease_training_consent_by | TEXT | | Mã người dùng đổi công tắc gần nhất |
 | created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
 | updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
 
@@ -327,6 +330,29 @@ Kết quả chẩn đoán bệnh cây (FastAPI model).
 | confidence_score | DECIMAL(5,4) | | 0.0000 – 1.0000 |
 | raw_api_response | JSONB | | Full FastAPI response |
 | created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
+
+**GĐ4-B** (`20261128180000_disease_labels`) thêm hai cột vào bảng thực tế `disease_reports` (tên cột theo `schema.prisma`):
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| confirmed_label_code | TEXT | FK → disease_labels (SET NULL), nullable, INDEX | Nhãn cán bộ chọn khi duyệt; bắt buộc ở tầng ứng dụng khi `status = CONFIRMED`. Ô tên tự gõ `confirmed_diagnosis` vẫn giữ. Báo cáo cũ được gán nhãn khi `confirmed_diagnosis` khớp đúng `disease_labels.name_vi`, không khớp thì để trống |
+| model_version | TEXT | nullable | Phiên bản mô hình AI đã dự đoán (ví dụ `tea-2026.11.0`); `NULL` với mô hình chung hoặc báo cáo cũ |
+
+---
+
+### `disease_labels`
+Danh mục nhãn duy nhất cho sâu bệnh chè (`20261128180000_disease_labels`, GĐ4-B). Cán bộ chọn nhãn từ đây khi duyệt; mô hình chè huấn luyện theo các mã này. Ghi bởi migration; có trigger kiểm toán `dxos_audit_row` (cũng nằm trong `03-audit-triggers.sql`).
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| code | TEXT | PK | Mã lớp, tiếng Anh, ví dụ `green_leafhopper` |
+| name_vi | TEXT | NOT NULL | Tên tiếng Việt hiển thị |
+| scientific_name | TEXT | | Tên khoa học (chỉ ghi khi chắc chắn) |
+| group | ENUM('PEST','DISEASE','HEALTHY','OTHER') | NOT NULL | Sâu, bệnh, khoẻ, khác |
+| is_target | BOOLEAN | NOT NULL, DEFAULT false | Một trong năm mục tiêu của GĐ4-B |
+| sort_order | INT | NOT NULL | Thứ tự trong danh sách (mục tiêu trước) |
+
+**Dữ liệu gieo (14 dòng):** năm mục tiêu `green_leafhopper` Rầy xanh, `tea_thrips` Bọ cánh tơ, `red_spider_mite` Nhện đỏ, `blister_blight` Phồng lá chè, `helopeltis` Bọ xít muỗi; sáu lớp còn lại của mô hình hiện có (`algal_leaf_spot`, `birds_eye_spot`, `brown_blight`, `gray_blight`, `red_leaf_spot`, `white_spot`, tên theo `ai-models/tea_class_names_vi.json`); và `healthy` (Lá khoẻ), `not_tea_leaf` (Không phải lá chè), `other` (Khác).
 
 ---
 

@@ -252,9 +252,9 @@ describe('SubmitDiagnosisUseCase — tea model', () => {
     htxCode: 'TC',
   }
 
-  function teaMocks(prediction: { disease_name: string | null; confidence_score: number; uncertain: boolean }) {
+  function teaMocks(prediction: { disease_name: string | null; confidence_score: number; uncertain: boolean; model_version?: string | null }) {
     const mocks = makeMockPorts(teaParcel)
-    mocks.diseasePort.predict.mockResolvedValue(prediction)
+    mocks.diseasePort.predict.mockResolvedValue({ model_version: null, ...prediction })
     // Echo what was stored, as the repository does.
     mocks.diseaseReportPort.save.mockImplementation(async (data) => ({
       id: 'report-tea',
@@ -274,6 +274,16 @@ describe('SubmitDiagnosisUseCase — tea model', () => {
     const { mocks, useCase } = teaMocks({ disease_name: 'Thán thư', confidence_score: 0.8, uncertain: false })
     await useCase.execute(command)
     expect(mocks.diseasePort.predict).toHaveBeenCalledWith(DUMMY_BLOB, 'tea')
+  })
+
+  it('stores the model version of the prediction on the report, null when there is none', async () => {
+    const versioned = teaMocks({ disease_name: 'Thán thư', confidence_score: 0.8, uncertain: false, model_version: 'tea-2026.11.0' })
+    await versioned.useCase.execute(command)
+    expect(versioned.mocks.diseaseReportPort.save).toHaveBeenCalledWith(expect.objectContaining({ model_version: 'tea-2026.11.0' }))
+
+    const bare = teaMocks({ disease_name: 'Thán thư', confidence_score: 0.8, uncertain: false })
+    await bare.useCase.execute(command)
+    expect(bare.mocks.diseaseReportPort.save).toHaveBeenCalledWith(expect.objectContaining({ model_version: null }))
   })
 
   it('asks the general model for a non-tea parcel', async () => {

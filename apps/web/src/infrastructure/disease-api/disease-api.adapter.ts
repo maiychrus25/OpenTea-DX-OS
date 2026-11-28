@@ -45,6 +45,7 @@ export class DiseaseApiAdapter implements DiseaseDetectionPort {
         disease_name: prediction.disease_name_vi ?? null,
         confidence_score: prediction.confidence,
         uncertain: prediction.uncertain === true,
+        model_version: typeof prediction.model_version === 'string' ? prediction.model_version : null,
       }
     } catch (error: unknown) {
       if (error instanceof Error && error.name === 'TimeoutError') {
