@@ -305,3 +305,67 @@ def test_staff_is_in_usage_and_takes_an_action_and_a_cooperative():
     text = DXOS.read_text()
     assert "staff <enable|disable> <HTX>" in text
     assert "staff)" in text
+
+
+def run_seed(*args, env=None):
+    import os
+    return subprocess.run([str(DXOS), "para", "seed", *args], capture_output=True, text=True, env={**os.environ, **(env or {})})
+
+
+def test_para_seed_dry_run_lists_every_template_file_without_a_session():
+    run = run_seed("TC", "--dry-run", env={"DXOS_WEB_COOKIE": ""})
+    assert run.returncode == 0, run.stderr
+    lines = run.stdout.splitlines()
+    assert "sẽ chép para/TC/Resources/tea-pests-and-diseases/officer-pesticide-reference.md" in lines
+    assert "sẽ chép para/TC/Areas/cooperative-law-and-governance/management-handbook/01-charter.md" in lines
+    assert lines[-1].startswith("Kế hoạch: ") and len(lines) > 60
+
+
+def test_para_seed_refuses_a_bad_code_and_a_missing_cookie():
+    assert run_seed("tc", "--dry-run").returncode == 1
+    run = run_seed("TC", env={"DXOS_WEB_COOKIE": ""})
+    assert run.returncode == 1 and "DXOS_WEB_COOKIE" in run.stderr
+    assert run_seed("TC", "--bogus").returncode == 2
+
+
+def test_para_seed_uploads_only_missing_files_and_never_overwrites():
+    import json, threading
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+
+    puts, posts = [], []
+
+    class Api(BaseHTTPRequestHandler):
+        def log_message(self, *args):
+            pass
+
+        def reply(self, payload):
+            body = json.dumps(payload).encode()
+            self.send_response(200)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def do_GET(self):
+            # the officer reference is already stored, nothing else is
+            names = [{"name": "officer-pesticide-reference.md"}] if "tea-pests-and-diseases" in self.path else []
+            self.reply({"data": {"documents": names, "count": len(names)}})
+
+        def do_POST(self):
+            body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+            posts.append(body)
+            self.reply({"data": {"uploadUrl": f"http://127.0.0.1:{self.server.server_port}/put/{body['fileName']}", "key": body["pathPrefix"] + body["fileName"]}})
+
+        def do_PUT(self):
+            self.rfile.read(int(self.headers["Content-Length"]))
+            puts.append(self.path)
+            self.reply({})
+
+    server = HTTPServer(("127.0.0.1", 0), Api)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    try:
+        run = run_seed("TC", env={"DXOS_WEB_COOKIE": "session=x", "DXOS_WEB_URL": f"http://127.0.0.1:{server.server_port}"})
+    finally:
+        server.shutdown()
+    assert run.returncode == 0, run.stderr
+    assert not any(p["fileName"] == "officer-pesticide-reference.md" for p in posts)
+    assert len(posts) == len(puts) > 60 and "bỏ qua 1 tệp đã có" in run.stdout

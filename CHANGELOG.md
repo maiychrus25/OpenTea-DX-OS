@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Tea handbook template (`docs/templates/para-tea-cooperative`)**: 66 notes and 5 tables on cultivation, pests and diseases, processing and sales, food safety, cooperative law, finance and regional data, ported from the resource survey by Nguyễn Bá Quyến (PR #99) into English kebab-case folders, each file crediting the author and its own sources. The officer pesticide reference carries `ai: false`. `./dxos para seed <HTX> [--dry-run]` copies the template into `para/<HTX>/` through the web document API, only files that do not exist yet.
+
 ## [1.21.0] - 2026-11-28
 
 ### Added
