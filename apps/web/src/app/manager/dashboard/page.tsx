@@ -4,7 +4,7 @@
 import React from 'react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { CheckSquare, ChevronRight, Newspaper, BarChart3, Coins, Flame, Leaf, ShoppingBag } from 'lucide-react'
+import { ChevronRight, Newspaper, BarChart3, Coins, Flame, Leaf, ShoppingBag } from 'lucide-react'
 
 import { GetHtxProfileUseCase } from '@/application/useCases/GetHtxProfileUseCase'
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/repositories/PrismaHtxProfileRepository'
@@ -20,10 +20,8 @@ import { WeatherHero } from '@/components/features/farmer-web/WeatherHero'
 import { StatCards, type StatCard } from '@/components/features/manager-web/parts'
 import type { SeasonReport } from '@/domain/report/views'
 import { OverviewSection, type Todo } from './_components/OverviewSection'
-import { Panel, EmptyState } from '@/components/ui'
+import { HeadNotices } from './_components/HeadNotices'
 
-import { NoticesAndWeather, RainAlert } from '@/components/features/dashboard/NoticesAndWeather'
-import { PendingJournals } from '@/components/features/dashboard/PendingJournals'
 import { DirectorBoardView } from '@/components/features/board/DirectorBoardView'
 import styles from './Dashboard.module.css'
 import layout from '@/components/features/dashboard/dashboard.module.css'
@@ -79,16 +77,6 @@ function formatDate(date: Date): string {
   }).format(date)
 }
 
-const ACTIVITY_LABELS: Record<string, string> = {
-  SOWING: 'Gieo trồng',
-  FERTILIZING: 'Bón phân',
-  SPRAYING: 'Phun thuốc',
-  IRRIGATION: 'Tưới tiêu',
-  HARVEST: 'Thu hoạch',
-  PRUNING: 'Đốn chè',
-  OTHER: 'Khác',
-}
-
 export default async function ManagerDashboard() {
   const session = await auth()
   if (!session || session.user?.role !== 'manager') {
@@ -119,7 +107,6 @@ export default async function ManagerDashboard() {
     }
   }
 
-  let pending: { id: string; activity_type: string; entry_date: Date; activities?: { product_name: string | null }[]; parcel: { parcel_code: string; household: { name: string } } }[] = []
   let board = null as Awaited<ReturnType<typeof loadDirectorBoard>> | null
   let analysisEnabled = false
   let figures: StatCard[] = []
@@ -127,23 +114,10 @@ export default async function ManagerDashboard() {
   const todos: Todo[] = []
 
   if (hasProfile && profileId) {
-    const [entries, loaded, enabled] = await Promise.all([
-      prisma.journalEntry.findMany({
-        where: { parcel: { household: { htx_profile_id: profileId } }, status: 'PENDING_APPROVAL' },
-        orderBy: { entry_date: 'desc' },
-        take: 5,
-        select: {
-          id: true,
-          activity_type: true,
-          entry_date: true,
-          activities: { select: { product_name: true }, take: 1 },
-          parcel: { select: { parcel_code: true, household: { select: { name: true } } } }
-        }
-      }),
+    const [loaded, enabled] = await Promise.all([
       loadDirectorBoard(profileId, new Date(), 'manager'),
       new PrismaInstalledAppRepository().isEnabledFor(ANALYSIS_APP_ID, htxCode).catch(() => false),
     ])
-    pending = entries
     board = loaded
     analysisEnabled = enabled
 
@@ -192,11 +166,11 @@ export default async function ManagerDashboard() {
         <>
           {hero}
 
-          <RainAlert />
-
           <StatCards items={figures} />
 
           <OverviewSection weeks={weeks} todos={todos} />
+
+          <HeadNotices />
 
           <DirectorBoardView board={board} role="manager" />
 
@@ -214,23 +188,6 @@ export default async function ManagerDashboard() {
               <ChevronRight size={16} aria-hidden="true" />
             </Link>
           </nav>
-
-          <NoticesAndWeather />
-
-          <Panel title="Nhật ký chờ duyệt" href="/manager/journal-approve">
-            {pending.length === 0 ? (
-              <EmptyState icon={<CheckSquare />} title="Không có nhật ký chờ duyệt" />
-            ) : (
-              <PendingJournals rows={pending.map(entry => ({
-                id: entry.id,
-                parcel: entry.parcel.parcel_code,
-                household: entry.parcel.household.name,
-                activity: ACTIVITY_LABELS[entry.activity_type] ?? entry.activity_type,
-                material: entry.activities?.[0]?.product_name || '—',
-                date: entry.entry_date.toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
-              }))} />
-            )}
-          </Panel>
         </>
       ) : hasProfile ? (
         <>

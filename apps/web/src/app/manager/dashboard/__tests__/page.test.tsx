@@ -29,7 +29,6 @@ jest.mock('@/lib/api/tenant', () => ({
 
 jest.mock('@/infrastructure/db/prisma.client', () => ({
   prisma: {
-    journalEntry: { findMany: jest.fn().mockResolvedValue([]) },
   },
 }))
 
@@ -50,14 +49,7 @@ jest.mock('@/application/useCases/GetHtxProfileUseCase', () => ({
 // TODO(integration): the board comes from DirectorBoardUseCase; these tests mock the local data step.
 jest.mock('@/lib/board/director-board-data', () => ({ loadDirectorBoard: jest.fn() }))
 
-jest.mock('@/components/features/dashboard/NoticesAndWeather', () => ({
-  NoticesAndWeather: () => null,
-  RainAlert: () => null,
-}))
-
-jest.mock('@/components/features/dashboard/PendingJournals', () => ({
-  PendingJournals: () => null,
-}))
+jest.mock('../_components/HeadNotices', () => ({ HeadNotices: () => null }))
 
 const board: DirectorBoard = {
   today: '2026-11-28',

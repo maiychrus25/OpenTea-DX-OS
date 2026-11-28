@@ -16,6 +16,7 @@
 .progress progress::-webkit-progress-value { background: var(--color-primary); }
 .progress progress::-moz-progress-bar { background: var(--color-primary); }
 .progress strong { font-size: 20px; color: var(--color-primary); }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
 .muted { margin: 0; font-size: 13.5px; color: var(--color-ink-secondary); }
 
 @media (max-width: 900px) {

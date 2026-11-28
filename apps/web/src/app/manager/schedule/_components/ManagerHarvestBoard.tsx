@@ -144,15 +144,14 @@ export function ManagerHarvestBoard() {
             { key: 'calendar', label: 'Lịch tháng' },
           ]}
         />
-        <span className={ui.grow} />
         {view !== 'calendar' && (
-          <>
+          <div className={styles.filters}>
             <input type="month" className={ui.control} aria-label="Tháng" value={`${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}`} onChange={(e) => pickMonth(e.target.value)} />
             <select className={ui.control} aria-label="Nông hộ" value={household} onChange={(e) => { setHousehold(e.target.value); setPage(1) }}>
               <option value="">Tất cả nông hộ</option>
               {households.map((name) => <option key={name} value={name}>{name}</option>)}
             </select>
-          </>
+          </div>
         )}
       </div>
 

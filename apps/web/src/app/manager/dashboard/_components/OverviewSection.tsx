@@ -38,7 +38,7 @@ export function OverviewSection({ weeks, todos }: { weeks: WeekKg[]; todos: Todo
           <ol className={styles.chart}>
             {weeks.map((week, index) => (
               <li key={week.label} title={`Tuần từ ${week.label}: ${kg(week.kg)} kg`}>
-                <span className={styles.value}>{kg(week.kg)}</span>
+                <span className={styles.value}>{week.kg > 0 ? kg(week.kg) : ' '}</span>
                 <span className={styles.track}><i className={index === weeks.length - 1 ? styles.current : undefined} style={{ height: `${(week.kg / max) * 100}%` }} /></span>
                 <span className={styles.week}>{week.label}</span>
               </li>

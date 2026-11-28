@@ -15,7 +15,9 @@ Trình bày lại bốn trang theo ảnh thiết kế, trên bản 1.23.0.
 
 Ảnh thiết kế là chuẩn bố cục; mã là chuẩn nghiệp vụ. Không đổi màu, phông, quyền hay luồng. Số liệu lấy từ dữ liệu thật; không có dữ liệu thì bỏ ô đó, không bịa số.
 
-Giữ lại những gì ảnh không vẽ: sáu khối điều hành, duyệt nhanh ở Tổng quan, lịch tháng và các thao tác trên lịch, mục quá hạn và yêu cầu sửa, xuất CSV/GeoJSON.
+Giữ lại những gì ảnh không vẽ: sáu khối điều hành, lịch tháng và các thao tác trên lịch, mục quá hạn và yêu cầu sửa, xuất CSV/GeoJSON.
+
+Tổng quan bỏ ba khối lặp: dải báo mưa và bảng thời tiết (đã có trên ảnh bìa và trang Bản tin), bảng duyệt nhanh nhật ký (đã có trong "Công việc cần xử lý" và trang Duyệt nhật ký).
 
 Không làm theo ảnh:
 
