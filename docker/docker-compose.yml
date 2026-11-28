@@ -25,6 +25,7 @@ services:
       - ../platform/postgres/init/07-telemetry-views.sql:/docker-entrypoint-initdb.d/07-telemetry-views.sql
       - ../platform/postgres/init/08-agent.sql:/docker-entrypoint-initdb.d/08-agent.sql
       - ../platform/postgres/init/09-telegram.sql:/docker-entrypoint-initdb.d/09-telegram.sql
+      - ../platform/postgres/init/10-zalo.sql:/docker-entrypoint-initdb.d/10-zalo.sql
       - ../platform/postgres/init/11-hasura-agent-metrics.sql:/docker-entrypoint-initdb.d/11-hasura-agent-metrics.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U agrimarket"]
