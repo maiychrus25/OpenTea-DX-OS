@@ -144,6 +144,15 @@ maybe('sales on a real Postgres', () => {
     expect(byPartner.data.every((o) => o.partner_id === otherPartnerId)).toBe(true)
   })
 
+  it('feeds the director board the same receivables', async () => {
+    const { PrismaBoardSource } = require('@/infrastructure/db/board/PrismaBoardSource')
+    const board = await new (require('@/application/board/DirectorBoardUseCase').DirectorBoardUseCase)(new PrismaBoardSource()).read(htxId, new Date(), 'accountant')
+    const direct = await port.receivables(htxId, board.today)
+    expect(board.receivables).toMatchObject({ outstanding_vnd: direct.outstanding_vnd, overdue_count: direct.overdue_count, overdue_vnd: direct.overdue_vnd })
+    expect(board.receivables.top.length).toBeLessThanOrEqual(3)
+    expect(board.alerts.some((a: { kind: string }) => a.kind === 'ORDERS_OVERDUE')).toBe(direct.overdue_count > 0)
+  })
+
   it('audits the writes with the person who acted', async () => {
     const lot = await lotOf(10)
     const order = await create(lot, 1)
