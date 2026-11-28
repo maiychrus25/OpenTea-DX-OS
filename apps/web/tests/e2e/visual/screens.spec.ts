@@ -81,7 +81,8 @@ const SCREENS: Screen[] = [
   },
   { name: 'public-qr-trace', open: p => visit(p, '/q/TC-CHE-A3-001', 'Chè') },
   // The page the printed QR code opens (ExportQrUseCase encodes /lot/<code>).
-  { name: 'public-lot-trace', open: p => visit(p, '/lot/TC-CHE-A3-001', 'Truy xuất nguồn gốc') },
+  // The one public trace page (phase 2); /lot/<code> only redirects here.
+  { name: 'public-lot-trace', open: p => visit(p, '/q/TC-CHE-A3-001', '1. Vùng trồng') },
 ]
 
 const TEA_TOUR_FRAME = 'iframe[title="Đặt tour đồi chè"]'

@@ -123,8 +123,9 @@ test('một ngày của lô chè A3', async ({ browser }) => {
     const a3 = parcels.data.find((p: { parcel_code: string }) => p.parcel_code === 'TC-A3')
     expect(a3).toBeTruthy()
     const approval = await officer.request.post(`/api/parcels/${a3.id}/approve-harvest`)
-    expect(approval.status()).toBe(400)
-    expect((await approval.json()).error).toMatch(/^Chưa qua thời gian cách ly\. An toàn thu hoạch từ ngày /)
+    // The route answers with the shared error envelope: 422 DOMAIN_ERROR and the message for the officer.
+    expect(approval.status()).toBe(422)
+    expect((await approval.json()).error.message).toMatch(/^Chưa qua thời gian cách ly\. An toàn thu hoạch từ ngày /)
 
     await officer.goto('/officer/lots')
     await officer.getByRole('button', { name: '+ Tạo lô mới' }).click()
@@ -175,6 +176,10 @@ test('một ngày của lô chè A3', async ({ browser }) => {
 
     const card = officer.locator('div', { has: officer.getByText(lotCode, { exact: true }) }).filter({ has: officer.getByRole('button', { name: 'Xuất QR' }) }).last()
     await card.getByRole('button', { name: 'Xuất QR' }).click()
+    // The export dialog lists the HTX's certificates; this HTX has none, so the dialog says the lot goes out without them.
+    const dialog = officer.getByRole('dialog', { name: `Xuất QR cho lô ${lotCode}` })
+    await expect(dialog.getByText('HTX chưa có chứng nhận nào. Lô vẫn xuất QR, không kèm chứng nhận.')).toBeVisible()
+    await dialog.getByRole('button', { name: 'Xuất QR' }).click()
     await expect(officer.getByText(`Đã xuất QR thành công! Mã: ${lotCode}`)).toBeVisible()
   })
 
@@ -184,27 +189,33 @@ test('một ngày của lô chè A3', async ({ browser }) => {
   const publicContext = await browser.newContext()
   const visitor = await publicContext.newPage()
 
-  await test.step('the public trace page shows the exported lot and its safety status', async () => {
+  await test.step('the one public page (/q/<code>) shows the exported lot and the parcel it came from', async () => {
     await visitor.goto(`/q/${encodeURIComponent(lotCode)}`)
-    await expect(visitor.getByText(lotCode, { exact: true })).toBeVisible()
-    await expect(visitor.getByText('Mã thửa: TC-A2', { exact: false })).toBeVisible()
-    await expect(visitor.getByText('Không sử dụng thuốc BVTV').first()).toBeVisible()
-  })
-
-  await test.step('the page the printed QR opens (/lot/<code>) shows the exported lot in Vietnamese', async () => {
-    await visitor.goto(`/lot/${encodeURIComponent(lotCode)}`)
-    await expect(visitor.getByText(lotCode, { exact: true })).toBeVisible()
-    await expect(visitor.getByText('Đã xuất QR', { exact: true })).toBeVisible()
+    await expect(visitor.getByText(`Mã lô ${lotCode}`, { exact: true })).toBeVisible()
+    await expect(visitor.getByRole('heading', { name: '1. Vùng trồng' })).toBeVisible()
+    await expect(visitor.getByText(/Thửa TC-A2 · 0[.,]6 ha/)).toBeVisible()
     await expect(visitor.getByText('QR_EXPORTED')).toHaveCount(0)
-    await expect(visitor.getByText(/đã được xác nhận và khóa/i)).toBeVisible()
   })
 
-  await test.step('the public trace page of the previous A3 round shows the passed withdrawal', async () => {
+  await test.step('the page the printed QR opens (/lot/<code>) redirects to /q/<code> and shows the lock banner', async () => {
+    await visitor.goto(`/lot/${encodeURIComponent(lotCode)}`)
+    // The browser keeps the code percent-encoded in the address bar (È becomes %C3%88).
+    await expect(visitor).toHaveURL(new RegExp(`/q/${encodeURIComponent(lotCode).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`))
+    await expect(visitor.getByText(`Mã lô ${lotCode}`, { exact: true })).toBeVisible()
+    await expect(visitor.getByText(/đã được xác nhận và khoá/)).toBeVisible()
+    await expect(visitor.getByText('QR_EXPORTED')).toHaveCount(0)
+  })
+
+  await test.step('the public page of the previous A3 round shows its spray, its safe verdict and no batch or certificate layer', async () => {
     await visitor.goto('/q/TC-CHE-A3-001')
-    await expect(visitor.getByText('TC-CHE-A3-001', { exact: true })).toBeVisible()
-    await expect(visitor.getByText('Đạt chuẩn An Toàn')).toBeVisible()
-    await expect(visitor.getByText(/Thuốc cuối cùng: Chế phẩm sinh học trừ rầy\. Thời gian cách ly: \d+ ngày \/ yêu cầu 7 ngày\./)).toBeVisible()
-    await expect(visitor.getByText('ĐẠT', { exact: true })).toBeVisible()
+    await expect(visitor.getByText('Mã lô TC-CHE-A3-001', { exact: true })).toBeVisible()
+    await expect(visitor.getByRole('heading', { name: '1. Vùng trồng' })).toBeVisible()
+    await expect(visitor.getByRole('heading', { name: '2. An toàn cách ly' })).toBeVisible()
+    await expect(visitor.getByText(/Đạt: mọi phiếu cân nguồn đã qua ngày an toàn\./)).toBeVisible()
+    await expect(visitor.getByText('Chế phẩm sinh học trừ rầy', { exact: false }).first()).toBeVisible()
+    await expect(visitor.getByRole('heading', { name: '3. Mẻ sao chế biến' })).toHaveCount(0)
+    await expect(visitor.getByRole('heading', { name: '4. Chứng nhận' })).toHaveCount(0)
+    await expect(visitor.getByText(/đã được xác nhận và khoá/)).toBeVisible()
   })
 
   await publicContext.close()
