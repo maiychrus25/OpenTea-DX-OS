@@ -8,6 +8,7 @@ jest.mock('@/auth', () => ({ auth: jest.fn(async () => ({ user: { role: 'manager
 jest.mock('next/navigation', () => ({ redirect: jest.fn() }))
 jest.mock('@/components/features/agent/AgentSettingsPanel', () => ({ AgentSettingsPanel: () => <div>settings-panel</div> }))
 jest.mock('@/components/features/agent/AutopilotSection', () => ({ AutopilotSection: () => <div>autopilot-section</div> }))
+jest.mock('@/components/features/agent/CrossCheckThresholds', () => ({ CrossCheckThresholdsSection: () => <div>cross-check-section</div> }))
 
 const previous = process.env.DXOS_LABS
 afterEach(() => {
@@ -20,6 +21,7 @@ describe('manager AI settings page', () => {
     delete process.env.DXOS_LABS
     render(await ManagerAiSettingsPage())
     expect(screen.getByText('settings-panel')).toBeInTheDocument()
+    expect(screen.getByText('cross-check-section')).toBeInTheDocument()
     expect(screen.queryByText('autopilot-section')).not.toBeInTheDocument()
   })
 
