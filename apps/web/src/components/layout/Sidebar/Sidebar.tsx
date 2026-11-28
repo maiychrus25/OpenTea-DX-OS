@@ -214,6 +214,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 {/* The head's card names the cooperative and opens the account menu. */}
                 <span className={styles.coopIcon}><Sprout size={22} aria-hidden="true" /></span>
                 <span className={styles.profileText}>
+                  <span className="sr-only">{userName}</span>
                   <strong>{htxName || 'Đang tải...'}</strong>
                   <small>{htxLocation || '---'}</small>
                   <span className={styles.roleBadge}>{getRoleLabel(role)}</span>
