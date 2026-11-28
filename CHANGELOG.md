@@ -41,6 +41,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - The site screens and the social card are real screenshots of the demo data. No frozen app is shown.
 - **`docs/database-schema.md`** matches `schema.prisma` column by column: `chat_history` is added, and the old `users` table is removed. DEV-016 is fixed. DEV-015 is updated for v1.23.0.
 
+### Fixed
+
+- **The cross-check agent (A13) never reached Hasura (since 1.22.0).** It declared its spraying and ticket filters as `timestamptz`, while `journal_entries.entry_date` and `fresh_leaf_tickets.weighed_at` are `timestamp` columns. Hasura refused the query, and the run only logged an error. The filters now use `timestamp`, from Vietnam midnight written in UTC.
+
 ### Upgrade notes
 
 - Run `make platform-up` after pulling. It creates a gateway secret for every installed mini-app and recreates those apps. Until it runs, an app installed before this release answers 403.
