@@ -329,6 +329,13 @@ def test_stt_service_is_pinned_private_and_in_the_voice_group():
     assert "EXTRAS_VOICE := piper dxos-stt" in makefile
 
 
+def test_whisper_services_ask_for_the_only_platform_the_image_has():
+    # The whisper.cpp image is linux/amd64 only; without this, `make up-voice` stops on an Apple Silicon host before piper starts.
+    services = load_compose(COMPOSE)
+    assert services["dxos-stt"]["platform"] == "linux/amd64" and services["stt-init"]["platform"] == "linux/amd64"
+    assert "platform" not in services["piper"]
+
+
 def test_stt_init_checks_the_model_digest_in_the_tools_profile():
     init = load_compose(COMPOSE)["stt-init"]
     assert init["profiles"] == ["tools"] and init["image"] == load_compose(COMPOSE)["dxos-stt"]["image"]

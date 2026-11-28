@@ -247,6 +247,7 @@ services:
   # writes a short-lived WAV into the tmpfs /tmp (never to disk). The entrypoint is `bash -c`, hence one command string.
   dxos-stt:
     image: ghcr.io/ggml-org/whisper.cpp:main-bd9e1a12352fa57e448bdea6a0649aa9c24c64aa
+    platform: linux/amd64  # the image has no arm64 build; Docker Desktop on Apple Silicon runs it emulated
     container_name: agrimarket-stt
     restart: always
     mem_limit: 2g
@@ -271,6 +272,7 @@ services:
   # pinned to a commit of the Hugging Face repository. Changing the model means changing DXOS_STT_MODEL (base, small or medium).
   stt-init:
     image: ghcr.io/ggml-org/whisper.cpp:main-bd9e1a12352fa57e448bdea6a0649aa9c24c64aa
+    platform: linux/amd64  # the image has no arm64 build; Docker Desktop on Apple Silicon runs it emulated
     profiles: ["tools"]
     restart: "no"
     user: "0:0"
