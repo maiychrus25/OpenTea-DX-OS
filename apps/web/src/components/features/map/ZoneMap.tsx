@@ -127,8 +127,10 @@ export default function ZoneMap({ parcels, focusId, satellite = false }: ZoneMap
       const geoLayer = L.geoJSON(featuresWithParcels as any, {
         style: (feature) => {
           const config = PARCEL_STATUS_CONFIG[(feature?.properties as ParcelSummary | undefined)?.status ?? '']
+          // On satellite imagery a boundary reads like an administrative border: pale and dashed.
           return {
-            color: config?.color ?? 'var(--color-primary)',
+            ...(satellite ? { dashArray: '10 7' } : {}),
+            color: satellite ? 'var(--color-hero-text)' : config?.color ?? 'var(--color-primary)',
             fillColor: config?.fillColor ?? 'var(--color-primary)',
             weight: 3,
             fillOpacity: 0.25,
@@ -161,6 +163,8 @@ export default function ZoneMap({ parcels, focusId, satellite = false }: ZoneMap
           `
 
           layer.bindPopup(popupDiv)
+          // Whose plot it is, written on the plot.
+          if (satellite) layer.bindTooltip(`<strong>${safeHousehold}</strong><br>${safeCode} · ${safeArea}`, { permanent: true, direction: 'center', className: styles.plotLabel })
 
           layer.on('popupopen', async () => {
             const container = popupDiv.querySelector(`#farm-photo-${safeId}`)
@@ -208,7 +212,7 @@ export default function ZoneMap({ parcels, focusId, satellite = false }: ZoneMap
 
       geoJsonLayerRef.current = geoLayer
       const bounds = geoLayer.getBounds()
-      if (bounds.isValid()) mapRef.current.fitBounds(bounds, { maxZoom: 17, padding: [24, 24] })
+      if (bounds.isValid()) mapRef.current.fitBounds(bounds, { maxZoom: satellite ? 19 : 17, padding: [24, 24] })
     } catch (e) {
       console.error('Error rendering ZoneMap polygons:', e)
     }
