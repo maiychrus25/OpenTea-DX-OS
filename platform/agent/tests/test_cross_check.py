@@ -227,3 +227,26 @@ def test_r2_a_busy_flush_still_alerts_with_the_largest_tickets_as_evidence():
     assert set(kept) == {f"t{index:02d}" for index in range(12, 60)}  # the 48 largest
     assert item.reason_vi.endswith("(60 phiếu; bằng chứng gồm 48 phiếu lớn nhất)")
 
+
+
+def test_timestamp_filters_match_hasuras_column_types():
+    """entry_date and weighed_at are Postgres timestamp (UTC, no zone): a timestamptz variable is refused by Hasura."""
+    from datetime import datetime, timezone
+
+    from dxos_agent.agents import cross_check
+
+    calls = []
+
+    class Gateway:
+        def graphql(self, query, variables=None):
+            calls.append((query, variables or {}))
+            return {"data": {}}
+
+    cross_check.run_cross_check(Gateway(), datetime(2026, 11, 29, 2, 0, tzinfo=timezone.utc))
+    by_op = {q.split("(")[0].split()[-1].split("{")[0]: (q, v) for q, v in calls}
+    for op in (cross_check.SPRAYINGS_OPERATION, cross_check.TICKETS_OPERATION):
+        query, variables = by_op[op]
+        assert "$since: timestamp!" in query and "timestamptz" not in query
+    # Vietnam midnight of the first day looked at, written in UTC: 60 and 45 days before 29/11/2026.
+    assert by_op[cross_check.SPRAYINGS_OPERATION][1] == {"since": "2026-09-29T17:00:00Z"}
+    assert by_op[cross_check.TICKETS_OPERATION][1] == {"since": "2026-10-14T17:00:00Z"}

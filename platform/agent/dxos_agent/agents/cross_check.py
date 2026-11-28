@@ -5,14 +5,14 @@
 R1: a pesticide advance with no spraying logged by the household after the grace period.
 R2: fresh leaf weighed on a parcel above its area norm in one flush.
 """
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 import math
 from typing import Any, Collection, Mapping, Sequence
 
 from ..client import CoreGatewayClient
 from ..evidence import advance_evidence_row, parcel_evidence_row, ticket_evidence_row
 from ..settings import THRESHOLD_DEFAULTS
-from .common import Proposal, RuleRun, proposal, rows_of, submit_rule_run, vn_date_text, vn_day
+from .common import VN_TZ, Proposal, RuleRun, proposal, rows_of, submit_rule_run, utc_text, vn_date_text, vn_day
 
 AGENT_NAME = "cross-check"
 DEFAULT_THRESHOLDS = THRESHOLD_DEFAULTS[AGENT_NAME]
@@ -44,7 +44,7 @@ ITEMS_QUERY = (
     "}"
 )
 SPRAYINGS_QUERY = (
-    f"query {SPRAYINGS_OPERATION}($since: timestamptz!) {{\n"
+    f"query {SPRAYINGS_OPERATION}($since: timestamp!) {{\n"
     '  journal_entries(where: {activity_type: {_eq: "SPRAYING"}, status: {_nin: ["DRAFT", "REJECTED"]}, entry_date: {_gte: $since}}) {\n'
     "    id parcel_id entry_date activity_type status\n"
     "    activities(order_by: [{id: asc}]) { id pesticide_product_id }\n"
@@ -57,7 +57,7 @@ PARCELS_QUERY = (
     "}"
 )
 TICKETS_QUERY = (
-    f"query {TICKETS_OPERATION}($since: timestamptz!) {{\n"
+    f"query {TICKETS_OPERATION}($since: timestamp!) {{\n"
     '  fresh_leaf_tickets(where: {status: {_eq: "VALID"}, weighed_at: {_gte: $since}}, order_by: [{weighed_at: asc}, {id: asc}]) {\n'
     "    id household_id parcel_id cycle_id weighed_at net_kg status\n"
     "  }\n"
@@ -210,10 +210,11 @@ def run_cross_check(
     today = vn_day(now)
     advances = rows_of(gateway.graphql(ADVANCES_QUERY, {"since": (today - timedelta(days=ADVANCE_LOOKBACK_DAYS)).isoformat()}), "input_advances")
     items = rows_of(gateway.graphql(ITEMS_QUERY), "input_items")
-    since_spraying = f"{(today - timedelta(days=ADVANCE_LOOKBACK_DAYS)).isoformat()}T00:00:00+07:00"
+    # entry_date and weighed_at are timestamp columns holding UTC: filter from Vietnam midnight written in UTC.
+    since_spraying = utc_text(datetime.combine(today - timedelta(days=ADVANCE_LOOKBACK_DAYS), time(), VN_TZ))
     sprayings = rows_of(gateway.graphql(SPRAYINGS_QUERY, {"since": since_spraying}), "journal_entries")
     parcels = rows_of(gateway.graphql(PARCELS_QUERY), "parcels")
-    since_ticket = f"{(today - timedelta(days=TICKET_LOOKBACK_DAYS)).isoformat()}T00:00:00+07:00"
+    since_ticket = utc_text(datetime.combine(today - timedelta(days=TICKET_LOOKBACK_DAYS), time(), VN_TZ))
     tickets = rows_of(gateway.graphql(TICKETS_QUERY, {"since": since_ticket}), "fresh_leaf_tickets")
     previous = rows_of(gateway.graphql(ALERTED_QUERY), "platform_agent_proposals")
     alerted = {str(subject) for row in previous for subject in row.get("subject_ids") or []}
