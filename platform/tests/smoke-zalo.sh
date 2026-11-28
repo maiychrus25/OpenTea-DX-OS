@@ -18,7 +18,7 @@ if [ "${WEB_UP:-0}" != "1" ]; then
 fi
 source platform/tests/lib-zalo.sh
 
-ZL_DAY="$(date +%F)"
+ZL_DAY="$(TZ=Asia/Ho_Chi_Minh date +%F)"  # the cooperative's day; the CI runner is on UTC
 # Settlement periods are contiguous and end today at the latest, so the same database cannot close a second one the same day,
 # and the ledger it writes is append-only. The first run covers the four messages; a re-run (apps-smoke runs
 # platform-smoke again on the same stack) stops here.
