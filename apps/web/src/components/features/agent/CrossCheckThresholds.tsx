@@ -88,7 +88,7 @@ const HINTS: Record<ThresholdKey, string> = {
   grace_days: 'Từ 3 đến 30 ngày.',
   fresh_norm_kg_per_ha_flush: 'Từ 300 đến 6000 kg mỗi ha mỗi lứa.',
   norm_tolerance: 'Từ 1.00 đến 3.00. Lượng búp cân vượt định mức nhân hệ số này mới báo.',
-  realert_extra: 'Từ 5% đến 100%. Chỉ báo lại khi tổng vượt thêm tỉ lệ này so với lần báo trước.',
+  realert_extra: 'Từ 5% đến 100%. Báo lại mỗi khi tổng vượt thêm một bậc bằng tỉ lệ này của ngưỡng.',
 }
 
 /** Manager edits the cross-check thresholds; officers see them read-only. The server's validation message shows under the form. */

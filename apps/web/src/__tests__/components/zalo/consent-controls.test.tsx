@@ -11,60 +11,74 @@ import { FarmerZaloOptOut } from '@/components/features/zalo/FarmerZaloOptOut'
 jest.mock('sonner', () => ({ toast: { success: jest.fn(), error: jest.fn() } }))
 
 const URL = '/api/households/hh-1/zalo-consent'
-const json = (body: unknown, ok = true) => ({ ok, status: ok ? 200 : 500, json: async () => body })
+const wrap = (data: unknown) => ({ ok: true, status: 200, json: async () => ({ data }) })
 
 let current: unknown
-let posts: { body: unknown }[]
+let posts: unknown[]
 
 beforeEach(() => {
   jest.clearAllMocks()
   posts = []
   global.fetch = jest.fn(async (_url: string, init?: RequestInit) => {
     if (init?.method === 'POST') {
-      posts.push({ body: JSON.parse(String(init.body)) })
-      return json({})
+      const body = JSON.parse(String(init.body))
+      posts.push(body)
+      current = { status: body.status, source: body.source, at: '2026-11-28T04:00:00.000Z' }
+      return wrap(current)
     }
-    return json(current)
+    return wrap(current)
   }) as unknown as typeof fetch
 })
 
 describe('ZaloConsentControl (officer and manager)', () => {
-  it('shows the recorded status and disables the button that would change nothing', async () => {
-    current = { status: 'OPTED_IN', at: '2026-11-28T03:00:00.000Z', recorded_by_name: 'Cán bộ A' }
+  it('shows the status and the source, and never Invalid Date', async () => {
+    current = { status: 'OPTED_IN', source: 'REGISTRATION', at: '2026-11-28T03:00:00.000Z' }
     render(<ZaloConsentControl householdId="hh-1" />)
     expect(await screen.findByText('Đang nhận tin')).toBeInTheDocument()
-    expect(screen.getByText(/Cán bộ A/)).toBeInTheDocument()
+    expect(screen.getByText(/Cập nhật lúc .* · khi đăng ký/)).toBeInTheDocument()
+    expect(document.body.textContent).not.toContain('Invalid Date')
     expect(screen.getByRole('button', { name: 'Cho phép nhận tin' })).toBeDisabled()
-    expect(global.fetch).toHaveBeenCalledWith(URL)
+    expect((global.fetch as jest.Mock).mock.calls[0][0]).toBe(URL)
   })
 
-  it('records an opt-out as the officer and reloads the status', async () => {
-    current = { status: 'OPTED_IN', at: '2026-11-28T03:00:00.000Z', recorded_by_name: null }
+  it('shows "Chưa ghi nhận" with no time line when nothing is recorded', async () => {
+    current = { status: null, source: null, at: null }
+    render(<ZaloConsentControl householdId="hh-1" />)
+    expect(await screen.findByText('Chưa ghi nhận')).toBeInTheDocument()
+    expect(screen.queryByText(/Cập nhật lúc/)).not.toBeInTheDocument()
+    expect(document.body.textContent).not.toContain('Invalid Date')
+  })
+
+  it('records an opt-out as the officer and shows the new status from the response', async () => {
+    current = { status: 'OPTED_IN', source: 'REGISTRATION', at: '2026-11-28T03:00:00.000Z' }
     render(<ZaloConsentControl householdId="hh-1" />)
     await screen.findByText('Đang nhận tin')
-    current = { status: 'OPTED_OUT', at: '2026-11-28T04:00:00.000Z', recorded_by_name: 'Cán bộ A' }
     fireEvent.click(screen.getByRole('button', { name: 'Tắt nhận tin' }))
     expect(await screen.findByText('Đã tắt nhận tin')).toBeInTheDocument()
-    expect(posts).toEqual([{ body: { status: 'OPTED_OUT', source: 'OFFICER' } }])
+    expect(screen.getByText(/cán bộ ghi nhận/)).toBeInTheDocument()
+    expect(posts).toEqual([{ status: 'OPTED_OUT', source: 'OFFICER' }])
     expect(toast.success).toHaveBeenCalled()
   })
 })
 
 describe('FarmerZaloOptOut', () => {
-  it('lets the farmer turn messages off for their own household only', async () => {
-    current = null
-    render(<FarmerZaloOptOut householdId="hh-1" />)
-    expect(await screen.findByRole('heading', { name: 'Nhận tin Zalo: Chưa ghi nhận' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Tắt nhận tin' }))
-    expect(await screen.findByRole('heading', { name: 'Nhận tin Zalo: Đã tắt' })).toBeInTheDocument()
-    expect(posts).toEqual([{ body: { status: 'OPTED_OUT', source: 'MEMBER' } }])
-    expect(screen.getByRole('button', { name: 'Tắt nhận tin' })).toBeDisabled()
-  })
-
-  it('shows the active label when the household still receives messages', async () => {
-    current = { status: 'OPTED_IN', at: '2026-11-28T03:00:00.000Z', recorded_by_name: null }
+  it('shows the label and the opt-out only after a confirm step', async () => {
+    current = { status: 'OPTED_IN', source: 'REGISTRATION', at: '2026-11-28T03:00:00.000Z' }
     render(<FarmerZaloOptOut householdId="hh-1" />)
     expect(await screen.findByRole('heading', { name: 'Nhận tin Zalo: Đang nhận' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Tắt nhận tin' })).toBeEnabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Tắt nhận tin' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Xác nhận tắt' }))
+    expect(await screen.findByRole('heading', { name: 'Nhận tin Zalo: Đã tắt' })).toBeInTheDocument()
+    expect(screen.getByText('Muốn nhận lại, báo cán bộ HTX.')).toBeInTheDocument()
+    expect(posts).toEqual([{ status: 'OPTED_OUT', source: 'MEMBER' }])
+    expect(screen.queryByRole('button', { name: 'Tắt nhận tin' })).not.toBeInTheDocument()
+  })
+
+  it('shows the status with the label, not a blank, when nothing is recorded', async () => {
+    current = { status: null, source: null, at: null }
+    render(<FarmerZaloOptOut householdId="hh-1" />)
+    expect(await screen.findByRole('heading', { name: 'Nhận tin Zalo: Chưa đăng ký' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Tắt nhận tin' })).not.toBeInTheDocument()
+    expect(screen.getByText('Muốn nhận lại, báo cán bộ HTX.')).toBeInTheDocument()
   })
 })

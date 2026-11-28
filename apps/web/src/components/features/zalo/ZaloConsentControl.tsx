@@ -3,13 +3,14 @@
 
 'use client'
 
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import kit from '@/components/features/dashboard/page-kit.module.css'
 import styles from './zalo.module.css'
-import type { ZaloConsent, ZaloConsentStatus } from '@/lib/zalo/zalo-types'
+import { CONSENT_SOURCE_LABELS, type ZaloConsent } from '@/lib/zalo/zalo-types'
+import { JSON_HEADERS, formatVn, zaloCall } from '@/lib/zalo/zalo-api'
 
-const STATUS_COPY: Record<ZaloConsentStatus, string> = {
+const STATUS_TEXT: Record<'OPTED_IN' | 'OPTED_OUT', string> = {
   OPTED_IN: 'Đang nhận tin',
   OPTED_OUT: 'Đã tắt nhận tin',
 }
@@ -22,40 +23,36 @@ export function ZaloConsentControl({ householdId }: { householdId: string }) {
   const [failed, setFailed] = useState(false)
   const [busy, setBusy] = useState(false)
 
-  const load = useCallback(async () => {
-    try {
-      const res = await fetch(url)
-      if (!res.ok) throw new Error('load')
-      setConsent((await res.json()) as ZaloConsent | null)
-      setFailed(false)
-    } catch {
-      setFailed(true)
-    } finally {
-      setLoaded(true)
+  useEffect(() => {
+    let active = true
+    zaloCall<ZaloConsent>(url)
+      .then((data) => {
+        if (active) setConsent(data)
+      })
+      .catch(() => {
+        if (active) setFailed(true)
+      })
+      .finally(() => {
+        if (active) setLoaded(true)
+      })
+    return () => {
+      active = false
     }
   }, [url])
 
-  useEffect(() => {
-    load()
-  }, [load])
-
-  const record = async (status: ZaloConsentStatus) => {
+  const record = async (status: 'OPTED_IN' | 'OPTED_OUT') => {
     setBusy(true)
     try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status, source: 'OFFICER' }),
-      })
-      if (!res.ok) throw new Error('record')
+      setConsent(await zaloCall<ZaloConsent>(url, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ status, source: 'OFFICER' }) }))
       toast.success(status === 'OPTED_IN' ? 'Đã cho phép hộ nhận tin Zalo.' : 'Đã tắt tin Zalo của hộ.')
-      await load()
     } catch {
       toast.error('Không ghi nhận được. Thử lại sau.')
     } finally {
       setBusy(false)
     }
   }
+
+  const status = consent?.status ?? null
 
   return (
     <section className={kit.card} aria-labelledby="zalo-consent-title">
@@ -65,17 +62,15 @@ export function ZaloConsentControl({ householdId }: { householdId: string }) {
         {!failed && !loaded && <p className={kit.state}>Đang tải...</p>}
         {!failed && loaded && (
           <>
-            <p className={styles.status}>{consent ? STATUS_COPY[consent.status] : 'Chưa ghi nhận'}</p>
-            {consent && (
-              <p className={styles.meta}>
-                Ghi nhận lúc {new Date(consent.at).toLocaleString('vi-VN')} bởi {consent.recorded_by_name ?? 'cán bộ HTX'}
-              </p>
+            <p className={styles.status}>{status ? STATUS_TEXT[status] : 'Chưa ghi nhận'}</p>
+            {consent?.at && consent.source && (
+              <p className={styles.meta}>Cập nhật lúc {formatVn(consent.at)} · {CONSENT_SOURCE_LABELS[consent.source]}</p>
             )}
             <div className={styles.actions}>
-              <button type="button" className={kit.primary} disabled={busy || consent?.status === 'OPTED_IN'} onClick={() => record('OPTED_IN')}>
+              <button type="button" className={kit.primary} disabled={busy || status === 'OPTED_IN'} onClick={() => record('OPTED_IN')}>
                 Cho phép nhận tin
               </button>
-              <button type="button" className={kit.secondary} disabled={busy || consent?.status === 'OPTED_OUT'} onClick={() => record('OPTED_OUT')}>
+              <button type="button" className={kit.secondary} disabled={busy || status === 'OPTED_OUT'} onClick={() => record('OPTED_OUT')}>
                 Tắt nhận tin
               </button>
             </div>
