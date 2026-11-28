@@ -26,9 +26,9 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 - Human in the loop: every alert is a proposal or a read-only block. Nothing changes data on its own.
 - Agent tables expose no `amount_vnd`, `unit_price_vnd`, `price_vnd_per_kg`, names or phones.
 - Defaults, all editable per cooperative through `THRESHOLD_DEFAULTS`:
-  - `cross-check.grace_days = 14`;
-  - `cross-check.fresh_norm_kg_per_ha_flush = 2000`;
-  - `cross-check.norm_tolerance = 1.3`;
+  - `cross-check.grace_days = 10`;
+  - `cross-check.fresh_norm_kg_per_ha_flush = 1800`;
+  - `cross-check.norm_tolerance = 1.35`;
   - `cross-check.realert_extra = 0.2`.
 - Forecast:
   - median of the last 3 closed flushes; fall back to `area_ha × fresh_norm_kg_per_ha_flush` with `source = 'NORM'`;
@@ -40,7 +40,7 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
   - top 4 chunks, each cited by file name;
   - exclude front-matter `ai: false` and any folder containing `.ai-ignore`;
   - no vector store.
-- New dependency: `unpdf` only (MIT). Pin its exact version in `apps/web/package.json`.
+- New dependency: `unpdf` only (MIT). Pin its exact version (no `^` or `~`) in `apps/web/package.json`, and add a row to `DEPENDENCIES.md` in the same format as the others (name, version, licence, why).
 - TTS: 20 requests per minute per user, then 429 `RATE_LIMITED`. Cache by `sha256(voice + text)` in `para/_tts-cache/` for 7 days.
 - Patterns:
   - agent: `platform/agent/dxos_agent/agents/harvest_ready.py`, `evidence.py`, `tests/scenarios/*.json`, `test_m4_scenarios.py`;
@@ -119,12 +119,14 @@ Commit: `feat(forecast): fresh and dry tea forecast for the next 14 days`.
 
 Commit: `feat(chatbot): read text PDFs and pick passages that match the question`.
 
-### Task A5: tea handbook template (depends on §7.4)
+### Task A5: tea handbook template (spec §8.4; its own PR)
 
 **Files:** `docs/templates/para-tea-cooperative/**`, the `./dxos` script (`para seed <htx>` subcommand), `platform/cli/tests/test_dxos_script.py`.
 
-- Port the selected `.md` and `.csv` files of PR #99 into kebab-case folders. Keep each source's attribution and licence at the top.
+- Port the selected `.md` and `.csv` files of PR #99 into kebab-case folders. Keep each source's attribution and licence at the top, and credit the author Nguyễn Bá Quyến in the template README and in each ported file's header.
+- Leave out: the firecrawl script (AGPL-3.0) and the other scripts, every `.xlsx`, and OCR texts with broken characters.
 - Mark the pesticide reference file `ai: false`.
+- This task ships as its own pull request against `main`. After it is opened, the controller closes PR #99 with a thank-you comment that links the new PR (the owner asked for this).
 - `para seed` copies only missing files into `para/<htx>/` through the web document API with a manager token. It never overwrites.
 
 Commit: `docs(templates): tea handbook for the cooperative library from the resource survey`.
@@ -151,7 +153,7 @@ Commit: `feat(tts): cache spoken text and limit requests per person`.
 
 - All suites. Agent scenarios.
 - A throwaway stack with the phase 1–3 flow data, then:
-  - one advance with no spraying after 15 days, faked by back-dating `advanced_on`, gives exactly one alert;
+  - one advance with no spraying after 11 days, faked by back-dating `advanced_on`, gives exactly one alert;
   - a parcel over the norm gives one alert;
   - the forecast block matches hand counts;
   - the chatbot cites the PDF passage;

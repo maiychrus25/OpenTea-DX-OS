@@ -56,7 +56,7 @@ Delivery goes through one platform OA. A stub makes every test run end to end wi
 - **Compose:**
   - `dxos-zalo`: mem 128m, read_only, `cap_drop ALL`. Env: `ZALO_API_BASE`, `DXOS_GATEWAY_URL`, `KEYCLOAK_INTERNAL_URL`, and `DXOS_ZALO_ENV_DIR` with the volume `dxos-zalo-env`;
   - `dxos-zalo-env` under profile `tools`;
-  - `dxos-zalo-stub` under profile `zalo-test` on `127.0.0.1:8082`.
+  - `dxos-zalo-stub` under profile `zalo-test` on `127.0.0.1:8084:8084` (8081 is the Telegram stub, 8082 the LLM stub, 8083 the STT stub).
 - **OA tokens:** access and refresh tokens live only in the secret volume. `platform_admin` sets them through `/platform/zalo`; the web writes them to `platform.zalo_credentials`, encrypted with a key from env. The relay reads them through `GET /api/internal/zalo/credentials`. Never log tokens or phones beyond the last 3 digits.
 - **Patterns to copy:**
   - relay: `platform/telegram/dxos_telegram/{relay.py,gateway.py,auth.py,stub_bot_api.py}`;
@@ -113,7 +113,7 @@ Commit: `feat(zalo): queue price, receipt, withdrawal-ended and settlement messa
 - user APIs:
   - `GET/PUT /api/zalo/settings` (manager);
   - `GET /api/zalo/deliveries?status=&kind=` (manager, accountant);
-  - `POST /api/households/[id]/zalo-consent` with `{ status, source }` (officer, manager), recording `recorded_by`;
+  - `POST /api/households/[id]/zalo-consent` with `{ status, source }`. The officer and manager may record OPTED_IN or OPTED_OUT for any household of their cooperative. A farmer may record only `OPTED_OUT` (source `MEMBER`), and only for a household linked to their own account (`keycloak_user_id`); anything else is 403. Every call records `recorded_by`;
   - `PUT /api/platform/zalo/templates` and `PUT /api/platform/zalo/credentials` (`platform_admin`);
 - tests, and `platform/tests/test_compose_files.py` route checks.
 
@@ -125,6 +125,8 @@ Commit: `feat(zalo): internal relay routes and cooperative settings`.
 - `platform/zalo/{Dockerfile,requirements.txt,dxos_zalo/{__main__.py,config.py,auth.py,gateway.py,zns_api.py,relay.py,stub_zns_api.py},tests/*}`;
 - compose services and volumes in `docker/docker-compose.yml` and `docker/docker-compose.release.yml`;
 - `./dxos zalo enable|disable`, mirroring telegram;
+- `Makefile`: add `dxos-zalo` to `EXTRAS_AGENT` (so `up-agent`, `platform-up` and `stop-extras` start and stop it with `dxos-telegram`);
+- idle when unconfigured: with no OA token in the credential file the relay only touches its heartbeat and stays healthy, as `dxos-telegram` does without `TELEGRAM_BOT_TOKEN`. A test covers it;
 - the image matrix in `.github/workflows/{docker-publish.yml,release.yml}`.
 
 The stub mimics:

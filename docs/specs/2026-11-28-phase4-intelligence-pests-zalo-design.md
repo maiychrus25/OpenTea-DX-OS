@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 -->
 # Đặc tả thiết kế — GĐ4: AI trên dữ liệu thật, Nhận diện 5 sâu bệnh chè, Cổng Zalo OA/ZNS
 
-> **Trạng thái:** Bản thiết kế (2026-11-28), chờ chủ dự án duyệt các mục §7 trước khi giao thực hiện. Nhánh `feat/phase4-intelligence-zalo`, tách từ `main` sau GĐ3 (`70248ddc`).
+> **Trạng thái:** Đã duyệt (2026-11-28). Chủ dự án chốt cả mười mục §7 (xem §8). GĐ4-A và GĐ4-C làm song song, phát hành chung v1.22.0; GĐ4-B làm sau, phát hành v1.23.0. Nhánh `feat/phase4-intelligence-zalo`, tách từ `main` sau GĐ3 (`70248ddc`).
 > **Căn cứ:**
 > - [product-roadmap.md](../product-roadmap.md): §3 `[I]` và `[H]`, §5 GĐ4 mục 1–3, rào chắn Poka-yoke 5 (an toàn và tiền luôn có người duyệt);
 > - DEV-015 trong [deviation-register.md](../deviation-register.md);
@@ -65,13 +65,13 @@ Agent chạy mỗi ngày lúc 05:45 và chỉ dùng luật, không dùng LLM. K�
 - Áp cho phiếu ứng `VALID` mà vật tư có `kind = PESTICIDE`, ứng ngày `d`.
 - Báo khi tới hôm nay vẫn chưa có nhật ký `SPRAYING` (trạng thái khác `DRAFT` và `REJECTED`) trên **bất kỳ** thửa nào của hộ đó trong `[d, d + grace_days]`, cùng `pesticide_product_id` với vật tư. Nếu vật tư không gắn mã thuốc thì lần phun bất kỳ đều được tính.
 - Chỉ báo sau khi đã qua `d + grace_days`.
-- Mặc định `grace_days = 14`, sửa được trong cài đặt agent.
+- Mặc định `grace_days = 10`, sửa được trong cài đặt agent.
 - Khoá chống lặp là id phiếu ứng: mỗi phiếu chỉ báo một lần.
 - Lời: "Hộ {hộ} nhận {thuốc} ngày {d} nhưng chưa ghi nhật ký phun sau {grace} ngày. Cán bộ kiểm tra giúp."
 
 **R2 — Cân búp vượt định mức diện tích.**
 - Theo từng thửa và lứa (`cycle_id`), so Σ `net_kg` phiếu cân `VALID` với `area_ha × fresh_norm_kg_per_ha_flush × tolerance`.
-- Mặc định định mức 2.000 kg búp tươi/ha/lứa, hệ số dung sai 1,3; cả hai sửa được theo HTX.
+- Mặc định định mức 1.800 kg búp tươi/ha/lứa, hệ số dung sai 1,35 (ngưỡng 2.430 kg/ha/lứa); cả hai sửa được theo HTX.
 - Phiếu không gắn lứa thì gom theo cửa sổ 30 ngày.
 - Khoá chống lặp theo (thửa, lứa): báo một lần mỗi lứa, và báo lại khi vượt thêm 20%.
 - Lời: "Thửa {mã} ({ha} ha) đã cân {kg} kg trong lứa này, vượt định mức {định mức} kg. Kiểm tra búp gom từ thửa khác."
@@ -246,3 +246,31 @@ Năm mục tiêu: Rầy xanh, Bọ cánh tơ, Nhện đỏ, Phồng lá chè, B�
    - chi phí tin tính theo HTX, mỗi HTX có hạn mức tháng (mặc định 2.000 tin).
 9. **Đồng ý nhận tin:** cán bộ ghi nhận đồng ý (có người ghi và thời điểm) khi đăng ký hoặc tại buổi họp, và xã viên tự tắt được. Không gửi cho hộ chưa có dòng đồng ý.
 10. **Zalo Mini App** (lộ trình có nhắc): ngoài phạm vi GĐ4-C lần này.
+
+## 8. Quyết định của chủ dự án (2026-11-28, chiều)
+
+1. **Thứ tự:** GĐ4-A và GĐ4-C chạy song song, phát hành chung v1.22.0. GĐ4-B làm sau, phát hành v1.23.0.
+2. **Định mức chè Thái Nguyên** (sửa được theo HTX):
+   - `fresh_norm_kg_per_ha_flush = 1800` (khoảng 65 kg/sào Bắc Bộ 360 m², sát mức bình quân 14 tấn/ha/năm chia 7–8 lứa);
+   - `norm_tolerance = 1.35` (cảnh báo R2 khi vượt 2.430 kg/ha/lứa, khoảng 87,5 kg/sào);
+   - R1 `grace_days = 10`, để cán bộ kịp nhắc ghi nhật ký phun trước khi lứa vào kỳ hái và đụng khoá cách ly ở bàn cân.
+3. **PDF:** thêm `unpdf` (MIT), pin cứng phiên bản và ghi vào `DEPENDENCIES.md`.
+4. **PR #99:**
+   - chuyển chọn lọc sang `docs/templates/para-tea-cooperative/` trong một PR mới;
+   - bỏ script firecrawl (AGPL-3.0), tệp `.xlsx` và tệp OCR hỏng;
+   - đặt `ai: false` cho bảng tra thuốc;
+   - ghi công rõ tác giả Nguyễn Bá Quyến trong tài liệu;
+   - đóng PR #99 với lời cảm ơn kèm đường dẫn tới PR mới.
+5. **Dự báo 14 ngày:** chỉ dùng lịch sử phiếu cân và định mức diện tích, chưa dùng thời tiết.
+6. **Ảnh huấn luyện:** mặc định tắt theo từng HTX, xoá sạch EXIF/GPS khi lưu, chỉ `platform_admin` được xuất.
+7. **Ngưỡng GĐ4-B:** tối thiểu 150 ảnh thực địa mỗi lớp, bắt buộc có lớp `not_tea_leaf`, và kiểm SHA-256 trong `registry.json`.
+8. **Zalo:** một OA chung của nền tảng (thay D15 cũ), hạn mức mặc định 2.000 tin/tháng mỗi HTX.
+9. **Đồng ý nhận tin:** cán bộ ghi nhận OPTED_IN, xã viên tự tắt (OPTED_OUT) được, không gửi cho hộ chưa có dòng đồng ý.
+10. **Zalo Mini App:** để ngoài phạm vi lần này.
+
+Bốn chỉnh sửa kỹ thuật của chủ dự án cho kế hoạch:
+- stub Zalo dùng cổng `127.0.0.1:8084`;
+- nông dân tự tắt nhận tin trên đúng hộ của mình;
+- `dxos-zalo` được nối vào Makefile và đứng chờ khoẻ mạnh khi chưa có token OA;
+- cập nhật trạng thái DEV-008, DEV-010…DEV-015.
+
