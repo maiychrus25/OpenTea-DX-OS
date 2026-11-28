@@ -5,7 +5,7 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 # Giao diện Trưởng HTX theo bộ thiết kế (đợt 1)
 
-**Ngày:** 2026-11-28. **Phạm vi:** `apps/web`, vai Trưởng HTX: khung menu, thanh trên và các trang Tổng quan, Lịch thu hái, Duyệt nhật ký, Vùng trồng, Giá thu mua, Phiếu cân, Vật tư, Quyết toán, Bán hàng, Báo cáo vụ/năm, Xưởng sao sấy, Chứng nhận, Lô hàng, Quản lý thành viên, Bản đồ đối tác, Hồ sơ HTX, Danh mục thuốc, Bản tin, Thông báo, Chatbot, Đề xuất AI, Kho ứng dụng.
+**Ngày:** 2026-11-28. **Phạm vi:** `apps/web`, vai Trưởng HTX: khung menu, thanh trên và các trang Tổng quan, Lịch thu hái, Duyệt nhật ký, Vùng trồng, Giá thu mua, Phiếu cân, Vật tư, Quyết toán, Bán hàng, Báo cáo vụ/năm, Xưởng sao sấy, Chứng nhận, Lô hàng, Quản lý thành viên, Bản đồ đối tác, Hồ sơ HTX, Danh mục thuốc, Bản tin, Thông báo, Chatbot, Đề xuất AI, Kho ứng dụng, Thông báo Zalo.
 
 ## 1. Mục tiêu
 
@@ -44,7 +44,7 @@ Làm đúng theo ảnh thiết kế được cung cấp, thay cho bố cục cũ
 - Menu giữ mục "Thông báo Zalo".
 - Đề xuất AI không có lời khuyên canh tác mẫu: chỉ hiện đề xuất thật; hộp duyệt giữ nguyên ở dưới.
 - Kho ứng dụng liệt kê ứng dụng thật trong danh mục, không phải các mục trong ảnh.
-- Bản tin giữ thời tiết, nút nghe và ghi chú AI.
+- Bản tin giữ thời tiết (thành banner đầu trang, dự báo chi tiết trong hộp thoại), nút nghe và ghi chú AI.
 - Danh mục thuốc không có cột "Liều lượng khuyến cáo": hệ thống không có liều lượng và không được điền số mẫu cạnh tên thuốc thật. Thay bằng thời gian cách ly.
 - Đối tác dùng ba loại thật (người mua, thương lái, nhà kho) thay cho nhãn trong ảnh.
 - Báo cáo: "Vụ" là khoảng ngày tự chọn (mặc định 90 ngày); chi phí chỉ gồm tiền mua búp.
