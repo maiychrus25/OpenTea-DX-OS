@@ -48,7 +48,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Known limits
 
-- The ZNS error codes in `platform/zalo/dxos_zalo/zns_api.py` have not been checked against Zalo's documentation; check them before going live.
 - The TTS limit is per web process.
 - Text is pulled from a PDF the first time the chatbot reads it, not when it is uploaded.
 - The forecast does not use the weather.
