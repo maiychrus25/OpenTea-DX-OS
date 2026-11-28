@@ -25,7 +25,8 @@ export const wholesaleOrderSchema = z.object({
 export const salesDueSchema = z.object({ due_on: day }).strict()
 
 export const salesPaymentSchema = z.object({
-  amount_vnd: z.number().int().min(1).max(1_000_000_000_000),
+  // Money travels as a decimal string (the order screen sends one); a plain integer is accepted too.
+  amount_vnd: z.union([z.string().regex(/^[1-9]\d{0,12}$/), z.number().int().min(1).max(1_000_000_000_000)]),
   paid_on: day.optional(),
   method: z.enum(['TRANSFER', 'CASH']),
   ref: text(100).optional(),

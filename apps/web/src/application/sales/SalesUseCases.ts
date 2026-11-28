@@ -175,7 +175,7 @@ export class UpdateDueDateUseCase {
 export class AddPaymentUseCase {
   constructor(private readonly port: SalesPort, private readonly clock: Clock = () => new Date()) {}
 
-  async execute(actor: SalesActor, id: string, input: { amount_vnd: number; paid_on?: string; method: 'TRANSFER' | 'CASH'; ref?: string }): Promise<SalesOrderView> {
+  async execute(actor: SalesActor, id: string, input: { amount_vnd: number | string; paid_on?: string; method: 'TRANSFER' | 'CASH'; ref?: string }): Promise<SalesOrderView> {
     requireStaff(actor)
     const today = vnDayOf(this.clock())
     const amount = BigInt(input.amount_vnd)

@@ -64,6 +64,17 @@ describe('sales routes', () => {
     expect((await over.json()).error.code).toBe('OVERPAYMENT')
   })
 
+  it('takes the amount as a decimal string, as the order screen sends money', async () => {
+    signIn('accountant')
+    const { data } = await (await orders.POST(req('POST', body()), {})).json()
+    const ok = await payments.POST(req('POST', { amount_vnd: '1000000', method: 'TRANSFER', ref: 'CK-01' }), ctx(data.id))
+    expect(ok.status).toBe(201)
+    expect((await ok.json()).data.outstanding_vnd).toBe('800000')
+    for (const bad of ['0', '-5', '1.5', '01000', 'abc']) {
+      expect((await payments.POST(req('POST', { amount_vnd: bad, method: 'CASH' }), ctx(data.id))).status).toBe(400)
+    }
+  })
+
   it('lets only a manager cancel; a payment blocks it', async () => {
     signIn('accountant')
     const { data } = await (await orders.POST(req('POST', body()), {})).json()
