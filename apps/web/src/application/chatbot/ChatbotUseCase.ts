@@ -42,8 +42,18 @@ QUY TẮC BẮT BUỘC:
 Trả lời bằng tiếng Việt. Cuối mỗi câu trả lời, liệt kê nguồn tham khảo trong dòng riêng với prefix "Nguồn:".
 Nếu không có dữ liệu trong tài liệu, nói rõ "Tài liệu kỹ thuật hiện tại không đề cập đến vấn đề này."`
 
-import { DocumentStoragePort } from '@/domain/document/ports/document-storage.port'
+import { DocumentStoragePort, DocumentItem } from '@/domain/document/ports/document-storage.port'
 import { documentRoot } from '@/domain/document/document-namespace'
+import { hasAiOptOut, selectPassages, type PassageDoc } from './passages'
+
+const AI_IGNORE_FILE = '.ai-ignore'
+const PDF_SIDECAR_SUFFIX = '.pdf.txt'
+const MAX_FOLDER_DEPTH = 4
+// shortcut: no per-HTX index cache, so each question re-reads the newest files; add one when the folders grow.
+const MAX_DOCS = 30
+// A PDF without a sidecar is extracted on its first read; a few per question keep the first answer from stalling.
+const MAX_EXTRACTIONS_PER_QUESTION = 3
+const MAX_UNREADABLE_LISTED = 5
 
 export class ChatbotUseCase {
   private client: OpenAI | null = null
@@ -55,7 +65,9 @@ export class ChatbotUseCase {
     private chatHistory?: ChatHistoryPort,
     private marketData?: MarketDataPort,
     private getToken?: () => Promise<string>,
-    private htxCode?: string
+    private htxCode?: string,
+    /** Text of a PDF (null when it cannot be read); given whether its `.txt` sidecar already exists. */
+    private readPdf?: (key: string, sidecarExists: boolean) => Promise<string | null>
   ) {
     const groqApiKey = process.env.GROQ_API_KEY
     this.model = process.env.OLLAMA_MODEL || 'qwen2.5:0.5b'
@@ -131,30 +143,7 @@ export class ChatbotUseCase {
         if (!this.htxCode) {
           throw new Error('An HTX is required for the technical chatbot documents')
         }
-        const root = documentRoot(this.htxCode)
-        const [resourceDocs, areaDocs] = await Promise.all([
-          this.documentStorage.listDocuments(`${root}Resources/`),
-          this.documentStorage.listDocuments(`${root}Areas/`)
-        ])
-        const docs = [...resourceDocs, ...areaDocs]
-        const textDocs = docs.filter(d => !d.isDir && (d.name.endsWith('.txt') || d.name.endsWith('.md')))
-        
-        // Limit to 5 most recent to avoid blowing up context window
-        const latestDocs = textDocs.sort((a, b) => b.uploadDate.getTime() - a.uploadDate.getTime()).slice(0, 5)
-        
-        const storage = this.documentStorage
-        if (latestDocs.length > 0) {
-          ragContextStr += `\n\n--- TÀI LIỆU KỸ THUẬT NỘI BỘ TỪ P.A.R.A (DÙNG ĐỂ TRẢ LỜI): ---\n`
-          await Promise.all(latestDocs.map(async doc => {
-            try {
-              const content = await storage.getDocumentContent(doc.key)
-              ragContextStr += `\n[Tài liệu: ${doc.name}]\n${content.substring(0, 2000)}\n`
-            } catch (err) {
-              logger.error(`Failed to read doc content ${doc.key}`, { error: err })
-            }
-          }))
-          ragContextStr += `\n--- KẾT THÚC TÀI LIỆU KỸ THUẬT ---\n`
-        }
+        ragContextStr += await this.technicalContext(message, this.documentStorage, documentRoot(this.htxCode))
       }
     } catch (e) {
       logger.error("Failed to fetch RAG context", { error: e })
@@ -240,6 +229,56 @@ export class ChatbotUseCase {
       }
       return this.unavailableStream()
     }
+  }
+
+  /** The passages that match the question, from the HTX's Resources and Areas, plus a note for each unreadable PDF. */
+  private async technicalContext(question: string, storage: DocumentStoragePort, root: string): Promise<string> {
+    const folders = await Promise.all([`${root}Resources/`, `${root}Areas/`].map(folder => this.collectFiles(storage, folder, 0)))
+    const files = folders.flat().sort((a, b) => b.uploadDate.getTime() - a.uploadDate.getTime())
+    const keys = new Set(files.map(f => f.key))
+    const candidates = files
+      .filter(f => f.name.endsWith('.pdf') || ((f.name.endsWith('.txt') || f.name.endsWith('.md')) && !f.name.endsWith(PDF_SIDECAR_SUFFIX)))
+      .slice(0, MAX_DOCS)
+
+    let extractions = 0
+    const docs: PassageDoc[] = []
+    const unreadable: string[] = []
+    await Promise.all(candidates.map(async file => {
+      try {
+        if (!file.name.endsWith('.pdf')) {
+          const text = await storage.getDocumentContent(file.key)
+          docs.push({ key: file.key, name: file.name, text, ai: !hasAiOptOut(text) })
+          return
+        }
+        const sidecarExists = keys.has(`${file.key}.txt`)
+        if (!this.readPdf || (!sidecarExists && extractions >= MAX_EXTRACTIONS_PER_QUESTION)) return
+        if (!sidecarExists) extractions++
+        const text = await this.readPdf(file.key, sidecarExists)
+        if (text) docs.push({ key: file.key, name: file.name, text, ai: true })
+        else unreadable.push(file.name)
+      } catch (err) {
+        logger.error(`Failed to read doc content ${file.key}`, { error: err })
+      }
+    }))
+
+    const passages = selectPassages(question, docs)
+    if (passages.length === 0 && unreadable.length === 0) return ''
+    let context = `\n\n--- TÀI LIỆU KỸ THUẬT NỘI BỘ TỪ P.A.R.A (DÙNG ĐỂ TRẢ LỜI): ---\n`
+    for (const p of passages) context += `\n[Tài liệu: ${p.name}]\n${p.text}\n`
+    for (const name of unreadable.sort().slice(0, MAX_UNREADABLE_LISTED)) {
+      context += `\n[Tài liệu: ${name}] không đọc được (PDF scan, không có lớp chữ), không dùng làm căn cứ.\n`
+    }
+    return `${context}\n--- KẾT THÚC TÀI LIỆU KỸ THUẬT ---\n`
+  }
+
+  /** Files under a folder and its subfolders; a folder holding a `.ai-ignore` file is left out with everything below it. */
+  private async collectFiles(storage: DocumentStoragePort, folder: string, depth: number): Promise<DocumentItem[]> {
+    const items = await storage.listDocuments(folder)
+    if (items.some(i => !i.isDir && i.name === AI_IGNORE_FILE)) return []
+    const files = items.filter(i => !i.isDir)
+    if (depth >= MAX_FOLDER_DEPTH) return files
+    const nested = await Promise.all(items.filter(i => i.isDir).map(i => this.collectFiles(storage, i.key, depth + 1)))
+    return [...files, ...nested.flat()]
   }
 
   private unavailableStream(message = 'Dịch vụ AI hiện không khả dụng. Vui lòng thử lại sau hoặc xem bản tin thị trường.'): ReadableStream {

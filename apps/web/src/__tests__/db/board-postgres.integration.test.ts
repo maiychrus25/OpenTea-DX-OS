@@ -97,13 +97,16 @@ maybe('director board on a real Postgres', () => {
     await prisma.processingBatchOutput.create({ data: { batch_id: foreign.id, grade: 'DINH', kg: '9.0' } })
 
     const board = await useCase.read(ids.htx, NOW, 'manager')
-    expect(board.dry_stock).toEqual([
-      { grade: 'DINH', kg: 6 },
-      { grade: 'TOM_NON', kg: 0 },
-      { grade: 'MOC_CAU', kg: 0 },
-      { grade: 'BOM', kg: 2.5 },
-      { grade: 'CAM', kg: 2.5 },
-    ])
+    expect(board.dry_stock).toEqual({
+      grades: [
+        { grade: 'DINH', kg: 6 },
+        { grade: 'TOM_NON', kg: 0 },
+        { grade: 'MOC_CAU', kg: 0 },
+        { grade: 'BOM', kg: 2.5 },
+        { grade: 'CAM', kg: 2.5 },
+      ],
+      forecast_dry_kg_14d: null,
+    })
     const by = Object.fromEntries((board.alerts ?? []).map((a: { kind: string; count: number }) => [a.kind, a.count]))
     expect(by.BATCH_OUT_OF_BAND).toBe(1)
     expect(by.BATCH_OPEN_TOO_LONG).toBe(1)

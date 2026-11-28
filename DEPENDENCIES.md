@@ -37,6 +37,7 @@ along with their licenses, to ensure full transparency and license compliance.
 | [openai](https://github.com/openai/openai-node) | ^7.5.0 | Apache-2.0 | LLM API client (Groq-compatible) |
 | [qrcode](https://github.com/soldair/node-qrcode) | ^1.5.4 | MIT | QR code generation |
 | [minio](https://github.com/minio/minio-js) | ^8.0.7 | Apache-2.0 | S3-compatible object storage client |
+| [unpdf](https://github.com/unjs/unpdf) | 1.6.2 | MIT | Reads the text layer of PDFs for the technical chatbot (pinned: 1.9 and later need Node 22+, the web image runs Node 20) |
 | [focus-trap-react](https://github.com/focus-trap/focus-trap-react) | ^12.0.3 | MIT | Accessible focus trapping |
 | [idb-keyval](https://github.com/nicolo-ribaudo/idb-keyval) | ^6.3.0 | Apache-2.0 | IndexedDB key-value store |
 | [@ducanh2912/next-pwa](https://github.com/nicolo-ribaudo/next-pwa) | ^10.2.9 | MIT | Progressive Web App support |
