@@ -3,6 +3,7 @@
 import copy
 import os
 import shutil
+import stat
 from pathlib import Path
 
 import pytest
@@ -17,6 +18,8 @@ BASE_PATH = repo_root() / "platform" / "gateway" / "apisix.yaml"
 
 
 ACTING = ["X-DXOS-Acting-Sub", "X-DXOS-Acting-Role", "X-DXOS-Acting-Htx"]
+SECRET = "test-gateway-secret"
+GATEWAY = {"X-Dxos-App-Gateway": SECRET}
 
 
 @pytest.fixture
@@ -48,20 +51,20 @@ def merged_routes(base_text, fragments):
 
 
 def test_public_route_has_no_auth(manifest):
-    route = by_id(app_routes(manifest))["app-tea-tour-public-1"]
+    route = by_id(app_routes(manifest, SECRET))["app-tea-tour-public-1"]
     assert route["uri"] == "/apps/tea-tour/public/*"
     assert route["priority"] == 20
     assert route["upstream"] == {"nodes": {"app-tea-tour:8080": 1}}
-    assert route["plugins"] == {"proxy-rewrite": {"regex_uri": ["^/apps/tea-tour(/.*)?$", "$1"], "headers": {"remove": ACTING}}}
+    assert route["plugins"] == {"proxy-rewrite": {"regex_uri": ["^/apps/tea-tour(/.*)?$", "$1"], "headers": {"set": GATEWAY, "remove": ACTING}}}
 
 
 def test_protected_route_requires_roles_and_audience(manifest, base_text):
-    routes = merged_routes(base_text, {"tea-tour": app_routes(manifest)})
+    routes = merged_routes(base_text, {"tea-tour": app_routes(manifest, SECRET)})
     guide = routes["app-tea-tour-protected-2"]
     assert guide["uri"] == "/apps/tea-tour/guide*"
     assert guide["upstream"] == {"nodes": {"app-tea-tour:8080": 1}}
     assert guide["plugins"]["proxy-rewrite"] == {
-        "regex_uri": ["^/apps/tea-tour(/.*)?$", "$1"], "headers": {"remove": ACTING}}
+        "regex_uri": ["^/apps/tea-tour(/.*)?$", "$1"], "headers": {"set": GATEWAY, "remove": ACTING}}
     oidc = guide["plugins"]["openid-connect"]
     # The merge key resolved to the base &oidc settings, so the secret stays in one place.
     assert oidc["client_id"] == "dxos-gateway"
@@ -74,18 +77,18 @@ def test_protected_route_requires_roles_and_audience(manifest, base_text):
         "required": ["roles"],
         "properties": {"roles": {"type": "array", "contains": {"enum": ["farmer"]}}},
     }
-    assert render_gateway(base_text, {"tea-tour": app_routes(manifest)}).count("client_secret") == 1
+    assert render_gateway(base_text, {"tea-tour": app_routes(manifest, SECRET)}).count("client_secret") == 1
 
 
 def test_every_app_route_matches_only_the_internal_listener(manifest):
     # 9080 is published to the host; only web's proxy (on 9081) may reach an app (R23).
-    routes = app_routes(manifest)
+    routes = app_routes(manifest, SECRET)
     assert len(routes) == 3
     assert all(route["vars"] == [["server_port", "==", "9081"]] for route in routes)
 
 
 def test_longer_prefix_has_higher_priority(manifest):
-    routes = by_id(app_routes(manifest))
+    routes = by_id(app_routes(manifest, SECRET))
     assert routes["app-tea-tour-protected-1"]["uri"] == "/apps/tea-tour/*"
     assert routes["app-tea-tour-protected-2"]["priority"] > routes["app-tea-tour-protected-1"]["priority"]
     assert routes["app-tea-tour-protected-1"]["priority"] == 11
@@ -97,7 +100,7 @@ def test_render_without_apps_equals_base(base_text):
 
 
 def test_render_keeps_end_marker(manifest, base_text):
-    out = render_gateway(base_text, {"tea-tour": app_routes(manifest)})
+    out = render_gateway(base_text, {"tea-tour": app_routes(manifest, SECRET)})
     assert out.endswith("\n#END\n") and out.count("#END") == 1
     assert out.startswith(base_text[: -len("#END\n")])
     assert "&id" not in out
@@ -121,7 +124,7 @@ def test_sync_writes_in_place(tmp_path, manifest, base_text):
     sync_gateway(repo)
     assert target.read_text(encoding="utf-8") == base_text
     inode = os.stat(target).st_ino
-    write_fragment(repo, "tea-tour", app_routes(manifest))
+    write_fragment(repo, "tea-tour", app_routes(manifest, SECRET))
     sync_gateway(repo)
     assert os.stat(target).st_ino == inode
     assert "app-tea-tour-public-1" in target.read_text(encoding="utf-8")
@@ -131,8 +134,8 @@ def test_sync_rebuilds_from_fragments(tmp_path, manifest):
     repo = make_repo(tmp_path)
     other = copy.deepcopy(manifest)
     other["id"] = "hello"
-    write_fragment(repo, "tea-tour", app_routes(manifest))
-    write_fragment(repo, "hello", app_routes(other))
+    write_fragment(repo, "tea-tour", app_routes(manifest, SECRET))
+    write_fragment(repo, "hello", app_routes(other, SECRET))
     sync_gateway(repo)
     text = (repo / "docker" / "runtime" / "gateway" / "apisix.yaml").read_text(encoding="utf-8")
     ids = [route["id"] for route in yaml.safe_load(text)["routes"]]
@@ -144,7 +147,7 @@ def test_sync_rebuilds_from_fragments(tmp_path, manifest):
 
 def test_sync_never_leaves_old_end_marker_after_partial_write(tmp_path, manifest, monkeypatch):
     repo = make_repo(tmp_path)
-    write_fragment(repo, "tea-tour", app_routes(manifest))
+    write_fragment(repo, "tea-tour", app_routes(manifest, SECRET))
     sync_gateway(repo)
     target = repo / "docker" / "runtime" / "gateway" / "apisix.yaml"
     (repo / "docker" / "runtime" / "gateway" / "apps" / "tea-tour.yaml").unlink()
@@ -185,7 +188,7 @@ def test_sync_rejects_foreign_fragment_route(tmp_path, manifest, field, value):
     sync_gateway(repo)
     target = repo / "docker" / "runtime" / "gateway" / "apisix.yaml"
     before = target.read_bytes()
-    routes = app_routes(manifest)
+    routes = app_routes(manifest, SECRET)
     if value is None:
         routes[0].pop(field, None)
     else:
@@ -197,16 +200,18 @@ def test_sync_rejects_foreign_fragment_route(tmp_path, manifest, field, value):
 
 
 def test_every_route_but_the_actor_routes_strips_the_acting_headers(agent_manifest):
-    routes = by_id(app_routes(agent_manifest))
+    routes = by_id(app_routes(agent_manifest, SECRET))
     assert {i for i in routes if "-actor-" in i} == {"app-tea-tour-actor-1", "app-tea-tour-actor-2"}
     for route_id, route in routes.items():
-        removed = route["plugins"]["proxy-rewrite"].get("headers", {}).get("remove")
+        headers = route["plugins"]["proxy-rewrite"]["headers"]
+        removed = headers.get("remove")
+        assert headers["set"] == GATEWAY, route_id  # public, protected, agent and actor routes alike
         assert (removed is None) == ("-actor-" in route_id), route_id
         assert removed in (None, ACTING)
 
 
 def test_actor_route_is_exact_internal_and_needs_the_actor_client(agent_manifest, base_text):
-    route = merged_routes(base_text, {"tea-tour": app_routes(agent_manifest)})["app-tea-tour-actor-2"]
+    route = merged_routes(base_text, {"tea-tour": app_routes(agent_manifest, SECRET)})["app-tea-tour-actor-2"]
     assert route["uri"] == "/apps/tea-tour/agent/actions/promotion-end"
     assert route["methods"] == ["POST"] and route["priority"] == 100
     assert route["vars"] == [["server_port", "==", "9081"]]
@@ -219,33 +224,90 @@ def test_actor_route_is_exact_internal_and_needs_the_actor_client(agent_manifest
 
 
 def test_suggestions_route_takes_only_the_agent_token(agent_manifest, base_text):
-    routes = merged_routes(base_text, {"tea-tour": app_routes(agent_manifest)})
+    routes = merged_routes(base_text, {"tea-tour": app_routes(agent_manifest, SECRET)})
     route = routes["app-tea-tour-agent-1"]
     assert route["uri"] == "/apps/tea-tour/agent/suggestions" and route["methods"] == ["GET"]
     # The merge key resolves to the base &oidc_agent: azp dxos-agent-<htx>, role agent, htx_code.
     assert route["plugins"]["openid-connect"] == routes["internal-agent"]["plugins"]["openid-connect"]
-    assert route["plugins"]["proxy-rewrite"]["headers"] == {"remove": ACTING}
+    assert route["plugins"]["proxy-rewrite"]["headers"] == {"set": GATEWAY, "remove": ACTING}
 
 
 def test_manifest_without_agent_block_has_no_actor_or_agent_route(manifest):
-    assert not [i for i in by_id(app_routes(manifest)) if "-actor-" in i or "-agent-" in i]
+    assert not [i for i in by_id(app_routes(manifest, SECRET)) if "-actor-" in i or "-agent-" in i]
 
 
 def test_sync_strips_the_acting_headers_from_an_old_fragment(tmp_path, manifest):
     repo = make_repo(tmp_path)
-    routes = app_routes(manifest)
+    routes = app_routes(manifest, SECRET)
     for route in routes:
         route["plugins"]["proxy-rewrite"].pop("headers", None)  # a fragment written before the acting headers existed
     write_fragment(repo, "tea-tour", routes)
     sync_gateway(repo)
     text = (repo / "docker" / "runtime" / "gateway" / "apisix.yaml").read_text(encoding="utf-8")
     merged = by_id(yaml.safe_load(text)["routes"])
-    assert all(merged[r["id"]]["plugins"]["proxy-rewrite"]["headers"] == {"remove": ACTING} for r in routes)
+    # The secret is the app's own (made on this sync), not whatever the old fragment held.
+    secret = (repo / "docker" / "runtime" / "apps" / "tea-tour.env").read_text(encoding="utf-8").split("=", 1)[1].strip()
+    assert all(merged[r["id"]]["plugins"]["proxy-rewrite"]["headers"] == {"set": {"X-Dxos-App-Gateway": secret}, "remove": ACTING}
+               for r in routes)
 
 
 def test_sync_accepts_agent_and_actor_routes(tmp_path, agent_manifest):
     repo = make_repo(tmp_path)
-    write_fragment(repo, "tea-tour", app_routes(agent_manifest))
+    write_fragment(repo, "tea-tour", app_routes(agent_manifest, SECRET))
     sync_gateway(repo)
     text = (repo / "docker" / "runtime" / "gateway" / "apisix.yaml").read_text(encoding="utf-8")
     assert "app-tea-tour-actor-1" in text and "<<: *oidc_agent" in text and "&id" not in text
+
+
+def test_sync_back_fills_secret_env_and_recreate_flag_for_an_install_made_before_the_secret(tmp_path, manifest, monkeypatch):
+    """The upgrade path: an old install (routes without the header, compose file without env_file) after one sync."""
+    monkeypatch.delenv("DXOS_RUNTIME_SUBDIR", raising=False)
+    repo = make_repo(tmp_path)
+    apps = repo / "docker" / "runtime" / "apps"
+    apps.mkdir(parents=True)
+    old = app_routes(manifest, SECRET)
+    for route in old:
+        route["plugins"]["proxy-rewrite"].pop("headers", None)
+    write_fragment(repo, "tea-tour", old)
+    old_compose = {"services": {"app-tea-tour": {"build": {"context": "../miniapps/tea-tour"}, "user": "10001:10001"}}}
+    (apps / "tea-tour.compose.yml").write_text(yaml.safe_dump(old_compose), encoding="utf-8")
+    sync_gateway(repo)
+    env = apps / "tea-tour.env"
+    assert stat.S_IMODE(env.stat().st_mode) == 0o600
+    key, secret = env.read_text(encoding="utf-8").strip().split("=", 1)
+    assert key == "DXOS_APP_GATEWAY_SECRET" and len(secret) >= 43  # 32 bytes, base64url
+    routes = yaml.safe_load((repo / "docker" / "runtime" / "gateway" / "apisix.yaml").read_text(encoding="utf-8"))["routes"]
+    mine = [r for r in routes if r["id"].startswith("app-tea-tour-")]
+    assert mine and all(r["plugins"]["proxy-rewrite"]["headers"]["set"] == {"X-Dxos-App-Gateway": secret} for r in mine)
+    compose = yaml.safe_load((apps / "tea-tour.compose.yml").read_text(encoding="utf-8"))
+    assert compose["services"]["app-tea-tour"]["env_file"] == ["runtime/docker/apps/tea-tour.env"]
+    assert (apps / "tea-tour.recreate").exists()  # make platform-up recreates the container so it reads the env file
+    # A second sync changes nothing: the secret stays, and a flag that was handled stays handled.
+    (apps / "tea-tour.recreate").unlink()
+    sync_gateway(repo)
+    assert env.read_text(encoding="utf-8").strip() == f"{key}={secret}"
+    assert not (apps / "tea-tour.recreate").exists()
+
+
+def test_sync_keeps_the_database_url_next_to_the_new_secret(tmp_path, manifest):
+    repo = make_repo(tmp_path)
+    apps = repo / "docker" / "runtime" / "apps"
+    apps.mkdir(parents=True)
+    (apps / "tea-tour.env").write_text("DXOS_APP_DB_URL=postgresql://app_tea_tour:pw@postgres:5432/agrimarket\n")
+    write_fragment(repo, "tea-tour", app_routes(manifest, SECRET))
+    sync_gateway(repo)
+    lines = (apps / "tea-tour.env").read_text(encoding="utf-8").splitlines()
+    assert lines[0] == "DXOS_APP_DB_URL=postgresql://app_tea_tour:pw@postgres:5432/agrimarket"
+    assert lines[1].startswith("DXOS_APP_GATEWAY_SECRET=")
+    assert (apps / "tea-tour.recreate").exists()
+
+
+def test_each_app_gets_its_own_secret(tmp_path, manifest):
+    repo = make_repo(tmp_path)
+    other = copy.deepcopy(manifest)
+    other["id"] = "hello"
+    write_fragment(repo, "tea-tour", app_routes(manifest, SECRET))
+    write_fragment(repo, "hello", app_routes(other, SECRET))
+    sync_gateway(repo)
+    apps = repo / "docker" / "runtime" / "apps"
+    assert (apps / "tea-tour.env").read_text() != (apps / "hello.env").read_text()
