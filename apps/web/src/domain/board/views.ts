@@ -11,9 +11,17 @@ export interface DirectorBoard {
   prices: PricesToday | null
   payable: MemberPayable | null
   dry_stock: DryStockByGrade[] | null
-  /** Sales come in sub-project S8; until then the block says there are no wholesale orders. */
-  receivables: { available: false }
+  /** Trader receivables (S8); null when the block failed to load. */
+  receivables: BoardReceivables | null
   alerts: BoardAlert[] | null
+}
+
+export interface BoardReceivables {
+  outstanding_vnd: string
+  overdue_count: number
+  overdue_vnd: string
+  /** The three partners who owe the most, largest first. */
+  top: { partner_name: string; outstanding_vnd: string }[]
 }
 
 export interface LeafToday {
@@ -51,9 +59,10 @@ export type BoardAlertKind =
   | 'SETTLEMENT_DRAFT'
   | 'UNPAID_LINES'
   | 'PRICE_NOT_PUBLISHED'
+  | 'ORDERS_OVERDUE'
 
 /** Alerts the accountant also sees; the others are for the head only. */
-export const MONEY_ALERTS: readonly BoardAlertKind[] = ['SETTLEMENT_DRAFT', 'UNPAID_LINES', 'PRICE_NOT_PUBLISHED']
+export const MONEY_ALERTS: readonly BoardAlertKind[] = ['SETTLEMENT_DRAFT', 'UNPAID_LINES', 'PRICE_NOT_PUBLISHED', 'ORDERS_OVERDUE']
 
 export interface BoardAlert {
   kind: BoardAlertKind

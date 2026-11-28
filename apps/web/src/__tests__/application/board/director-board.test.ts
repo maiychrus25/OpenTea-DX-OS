@@ -39,7 +39,7 @@ describe('DirectorBoardUseCase blocks', () => {
     expect(board.prices?.published).toBe(true)
     expect(board.payable).toEqual({ unpaid_lines_vnd: '5000000', unsettled_leaf_vnd: '3000000', unsettled_advances_vnd: '1000000', total_vnd: '7000000' })
     expect(board.dry_stock).toEqual([{ grade: 'DINH', kg: 3.5 }])
-    expect(board.receivables).toEqual({ available: false })
+    expect(board.receivables).toBeNull() // computed in S8
     expect(board.alerts).toEqual([])
   })
 

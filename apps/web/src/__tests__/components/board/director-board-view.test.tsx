@@ -16,14 +16,14 @@ const full: DirectorBoard = {
   dry_stock: [
     { grade: 'DINH', kg: 19 }, { grade: 'TOM_NON', kg: 0 }, { grade: 'MOC_CAU', kg: 0 }, { grade: 'BOM', kg: 4.5 }, { grade: 'CAM', kg: 0 },
   ],
-  receivables: { available: false },
+  receivables: null,
   alerts: [
     { kind: 'PARCELS_IN_WITHDRAWAL', count: 2, message: '2 nương đang trong thời gian cách ly', href: '/manager/schedule' },
     { kind: 'UNPAID_LINES', count: 3, message: '3 hộ chưa nhận tiền quyết toán quá 7 ngày', href: '/manager/settlements' },
   ],
 }
 
-const failing: DirectorBoard = { today: '2026-11-28', leaf: null, prices: null, payable: null, dry_stock: null, receivables: { available: false }, alerts: null }
+const failing: DirectorBoard = { today: '2026-11-28', leaf: null, prices: null, payable: null, dry_stock: null, receivables: null, alerts: null }
 
 describe('manager board', () => {
   test('the six blocks show their values in the order of the spec', () => {

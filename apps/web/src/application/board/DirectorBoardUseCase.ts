@@ -28,7 +28,7 @@ export class DirectorBoardUseCase {
       this.block('dry_stock', () => this.source.dryStock(htxProfileId)),
       this.block('alerts', () => this.alerts(htxProfileId, now, today, role, pricesBlock)),
     ])
-    return { today, leaf, prices, payable, dry_stock, receivables: { available: false }, alerts }
+    return { today, leaf, prices, payable, dry_stock, receivables: null, alerts }
   }
 
   private async block<T>(name: string, load: () => Promise<T>): Promise<T | null> {

@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 -->
 # Đặc tả thiết kế — GĐ3: Bảng điều hành Giám đốc, Bán hàng gắn lô và Báo cáo vụ/năm
 
-> **Trạng thái:** Bản nháp (2026-11-28), chờ chủ dự án chọn ở §7 trước khi viết kế hoạch. Nhánh `feat/phase3-director-sales`, tách từ `feat/phase2-processing-qr`.
+> **Trạng thái:** Đã duyệt (2026-11-28). Chủ dự án chốt cả bốn mục §7 theo khuyến nghị (§8). S7 đã làm; S8 và S9 làm theo §3. Nhánh `feat/phase3-director-sales`, tách từ `feat/phase2-processing-qr`.
 > **Căn cứ:** [product-roadmap.md](../product-roadmap.md) §5 GĐ3, §6 (vai `manager`, `accountant`, khách mua), §7 KPI "kiểm tra hàng – tiền – rủi ro mỗi sáng < 60 giây trên 1 màn hình"; §3 `[D]` (dữ liệu chuỗi giá trị đi qua lõi, không giữ bảng cô lập).
 
 ## 1. Mục đích
@@ -70,32 +70,80 @@ Kế toán cũng có bảng: `/accountant/dashboard` dùng khối 1, 2, 3 và c�
 
 KPI: một lần tải dưới 1 giây trên dữ liệu mẫu của một HTX. Đo bằng test hiệu năng của use case trên Postgres thật, với 50.000 phiếu cân.
 
-### S8 — Bán hàng gắn lô và công nợ thương lái (cần quyết §7.1–§7.3)
+### S8 — Bán hàng gắn lô và công nợ thương lái
 
-Mục tiêu:
-- mỗi dòng bán (sỉ hoặc lẻ) trỏ tới một lô `QR_EXPORTED`;
-- tồn của lô = khối lượng lô − tổng kg đã bán, không bán quá tồn;
-- đơn sỉ gắn với một `Partner` của HTX, có hạn thanh toán, có các lần thu tiền;
-- công nợ = tổng đơn − tổng đã thu.
+**Dữ liệu trong lõi** (migration `20261128170000_sales`, cả ba bảng có trigger kiểm toán `dxos_audit_row`):
 
-Dữ liệu đề xuất (lõi):
-- `sales_orders`: `partner_id`, `kind` WHOLESALE|RETAIL, số đơn, ngày, hạn thanh toán, trạng thái;
-- `sales_order_lines`: `lot_id`, kg, đơn giá, thành tiền;
-- `sales_payments`: số tiền, ngày, phương thức, người ghi, chỉ thêm dòng.
+- `sales_orders`:
+  - `id`, `htx_profile_id`;
+  - `order_no` (duy nhất), dạng `{HTX}-DH-YYYYMMDD-NNN`, đánh số dưới khoá tư vấn;
+  - `kind` WHOLESALE|RETAIL;
+  - `source` CORE|TEA_SHOP, kèm `external_ref` (mã đơn của tea-shop). (`htx_profile_id`, `source`, `external_ref`) là duy nhất, để gửi lại không tạo đơn thứ hai;
+  - `partner_id` (bắt buộc với WHOLESALE, cùng HTX), `customer_name` (lẻ, tuỳ chọn);
+  - `ordered_on DATE`;
+  - `due_on DATE`: WHOLESALE mặc định `ordered_on + 30`, sửa được; RETAIL để rỗng;
+  - `status` CONFIRMED|CANCELLED, `total_vnd BIGINT`, `note`;
+  - `created_by_id`, `created_at`, `cancelled_by_id`, `cancelled_at`, `cancel_reason`.
+- `sales_order_lines`:
+  - `id`, `order_id`, `lot_id`;
+  - `net_g INT > 0`: khối lượng bán tính bằng **gam**, để quy đổi chính xác cả gói 250 g;
+  - `pack_count`, `pack_net_g`: cùng có hoặc cùng rỗng. Khi có thì `net_g = pack_count × pack_net_g`;
+  - `price_vnd_per_kg` (sỉ), `amount_vnd BIGINT ≥ 0`.
+- `sales_payments`:
+  - `id`, `order_id`, `amount_vnd > 0`, `paid_on DATE`, `method` TRANSFER|CASH, `ref`, `created_by_id`, `created_at`;
+  - chỉ thêm dòng: trigger chặn UPDATE, DELETE, TRUNCATE.
 
-Mọi bảng đều có trigger kiểm toán. Chữ ký người: chỉ trưởng HTX hoặc kế toán ghi thu tiền; giảm giá và xoá nợ cần trưởng HTX.
+**Tồn của lô (một chỗ duy nhất):**
+- Lô bán được khi `status = QR_EXPORTED`, cùng HTX, và có khối lượng: `total_weight_kg ?? actual_weight_kg ?? estimated_weight_kg`.
+- Sức chứa = khối lượng đó × 1000 g (làm tròn tới gam).
+- Còn lại = sức chứa − Σ `net_g` của các dòng thuộc đơn CONFIRMED. Huỷ đơn thì phần đã bán tự quay về tồn.
 
-### S9 — Báo cáo vụ/năm cho Đại hội thành viên (làm sau S7, phần bán hàng chờ S8)
+**Quy tắc:**
+1. Tạo đơn trong một giao dịch:
+   - khoá các lô theo thứ tự id;
+   - mỗi lô phải còn đủ, nếu không thì trả 409 `LOT_STOCK_SHORT` kèm số gam còn lại của từng lô;
+   - lô không bán được thì trả 422 `LOT_NOT_SELLABLE`.
+2. Thành tiền dòng sỉ = `price_vnd_per_kg × net_g / 1000`, làm tròn nửa lên tới đồng. Dòng lẻ lấy `amount_vnd` do tea-shop gửi (giá gói × số gói, sau khuyến mãi). `total_vnd` = Σ dòng.
+3. Thu tiền:
+   - chỉ với đơn CONFIRMED;
+   - tổng đã thu không vượt `total_vnd`, nếu vượt thì trả 409 `OVERPAYMENT`;
+   - ghi dưới khoá dòng đơn.
+4. Huỷ đơn:
+   - chỉ trưởng HTX huỷ được, và phải có lý do;
+   - đơn đã có thu tiền thì không huỷ được (409 `ORDER_HAS_PAYMENTS`).
+5. Đổi hạn thanh toán: trưởng HTX hoặc kế toán, khi đơn sỉ còn nợ.
+6. Công nợ thương lái chỉ tính trên đơn WHOLESALE CONFIRMED: phải thu = `total_vnd − Σ thu`. Quá hạn khi `due_on < hôm nay` và còn phải thu. Đơn lẻ của tea-shop thanh toán khi giao hàng nên không vào công nợ.
+7. Quyền: trưởng HTX và kế toán tạo đơn sỉ, ghi thu, xem công nợ; chỉ trưởng HTX huỷ.
 
-- Trang `/manager/reports/[period]`, với kỳ là một vụ (theo `season_label`) hoặc một năm dương lịch, đọc trực tiếp từ dữ liệu. Các phần:
-  - thành viên và diện tích;
-  - búp tươi thu mua theo tháng (kg, tiền);
-  - đã trả xã viên và nợ vật tư;
-  - chế biến (số mẻ, tỷ lệ bình quân, số mẻ lệch);
-  - lô và chứng nhận;
-  - bán hàng và công nợ (sau S8);
-  - an toàn cách ly (số lần bị chặn ở bàn cân nếu có ghi log, số phiếu phun).
-- In ra bằng trang HTML đúng khổ A4, trình duyệt "Lưu thành PDF" như tem của GĐ2. Có thêm CSV cho từng bảng.
+**Bảng điều hành:**
+- Khối 5 hiện tổng phải thu, số đơn và số tiền quá hạn, và 3 thương lái nợ nhiều nhất.
+- Thêm cảnh báo `ORDERS_OVERDUE`: "{n} đơn bán sỉ quá hạn thanh toán" → `/manager/sales?overdue=1`.
+- Không gửi tin ra ngoài.
+
+**tea-shop 0.4.0 nối với lõi (Core Action API):**
+- APISIX thêm route nội bộ `/api/internal/apps/*` chỉ trên cổng 9081 (mạng của mini-app):
+  - kiểm token người dùng (openid-connect) rồi gắn `X-Dxos-Gateway`;
+  - web kiểm lại bearer qua Keycloak và lấy HTX, vai từ token, như mẫu `internal-staff`.
+- Sản phẩm thêm `lot_id` (lô của lõi) và `pack_net_g` (trọng lượng tịnh mỗi gói, gam). Cả hai bắt buộc khi gắn lô. Lô chọn từ `GET /api/internal/apps/sales/sellable-lots`.
+- Khi trưởng HTX bấm xác nhận đơn (NEW → CONFIRMED), tea-shop gọi `POST /api/internal/apps/sales/retail-orders`, gửi `external_ref` = mã đơn tea-shop, mỗi dòng có lô, số gói, gam/gói và thành tiền, kèm token của chính người bấm.
+  - Lõi trả 409 `LOT_STOCK_SHORT` thì không xác nhận, và báo "Lô … chỉ còn … kg".
+  - Lõi không trả lời thì cũng không xác nhận, và báo thử lại.
+- Huỷ một đơn đã xác nhận thì gọi `POST /api/internal/apps/sales/retail-orders/{external_ref}/cancel`.
+- Số gói tồn riêng của tea-shop vẫn là giới hạn của gian hàng, còn kg của lô chỉ nằm trong lõi.
+
+### S9 — Báo cáo vụ/năm cho Đại hội thành viên
+
+- Kỳ báo cáo là một năm dương lịch hoặc một khoảng ngày tự chọn (một vụ). Trang `/manager/reports` cho chọn kỳ. Trang `/manager/reports/view?from=&to=` dựng báo cáo khổ A4 để in hoặc "Lưu thành PDF" bằng trình duyệt. Kế toán xem được báo cáo.
+- `SeasonReportUseCase.read(htxProfileId, from, to)` trả 7 phần, mọi số đều tính thẳng từ dữ liệu:
+  1. Thành viên: số hộ, số thửa, diện tích.
+  2. Thu mua búp: theo tháng (kg tịnh, tiền, số phiếu) và theo phẩm cấp.
+  3. Tiền xã viên: số kỳ đã chốt, đã chi trả, còn phải trả cuối kỳ, vật tư đã ứng.
+  4. Chế biến: số mẻ, kg tươi vào, kg khô ra, tỷ lệ bình quân, số mẻ lệch, kg khô theo hạng.
+  5. Lô và chứng nhận: số lô, số lô đã xuất QR, kg; chứng nhận còn hiệu lực cuối kỳ.
+  6. Bán hàng: doanh thu sỉ và lẻ, kg bán, phải thu cuối kỳ, 10 thương lái lớn nhất.
+  7. An toàn: số lần phun đã duyệt, số thửa được nghiệm thu đạt cách ly.
+- Mỗi phần có một tệp CSV tải riêng: `GET /api/reports/season.csv?from=&to=&section=`.
+- Không thêm thư viện PDF.
 
 ## 4. Thứ tự đề xuất
 
@@ -135,3 +183,12 @@ Mọi bảng đều có trigger kiểm toán. Chữ ký người: chỉ trưởn
    - mặc định 30 ngày, sửa được theo đơn;
    - nhắc nợ chỉ hiện trên bảng điều hành, không tự gửi tin cho thương lái, vì đó là kênh Zalo ở GĐ4.
 4. **Bảng điều hành thay hẳn trang chủ hiện tại** (bỏ ô giá thế giới và các ô diện tích ở đầu trang) theo bảng vai §6 của lộ trình. Anh đồng ý thì em làm S7 ngay.
+
+## 8. Quyết định của chủ dự án (2026-11-28, sáng)
+
+Chủ dự án chốt cả bốn mục ở §7 theo khuyến nghị:
+1. Bán sỉ và sổ thu tiền nằm trong lõi, có trigger kiểm toán, mở cho trưởng HTX và kế toán.
+2. tea-shop giữ gian hàng lẻ. Sản phẩm gắn một lô `QR_EXPORTED`; khi xác nhận đơn, tea-shop gọi Core Action API để ghi đơn RETAIL và trừ tồn lô ở một chỗ. Sản phẩm phải có trọng lượng tịnh mỗi gói để quy đổi chính xác sang kg của lô.
+3. Hạn thanh toán mặc định 30 ngày, sửa được theo đơn. Quá hạn hiện cảnh báo đỏ trên bảng điều hành, không tự gửi tin ra ngoài.
+4. Bảng điều hành sáu khối (S7) thay hẳn trang chủ `/manager/dashboard`.
+

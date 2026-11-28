@@ -44,7 +44,7 @@ describe('accountant area', () => {
       prices: { published: false, grades: [] },
       payable: { unpaid_lines_vnd: '0', unsettled_leaf_vnd: '1235000', unsettled_advances_vnd: '0', total_vnd: '1235000' },
       dry_stock: null,
-      receivables: { available: false },
+      receivables: null,
       alerts: [],
     }
     ;(loadDirectorBoard as jest.Mock).mockResolvedValue(board)

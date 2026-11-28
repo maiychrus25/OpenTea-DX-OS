@@ -65,7 +65,7 @@ const board: DirectorBoard = {
   prices: { published: true, grades: [{ grade_id: 'g1', grade_name: 'Loại 1', price_vnd_per_kg: 13000 }] },
   payable: { unpaid_lines_vnd: '0', unsettled_leaf_vnd: '1235000', unsettled_advances_vnd: '0', total_vnd: '1235000' },
   dry_stock: [{ grade: 'DINH', kg: 19 }, { grade: 'TOM_NON', kg: 0 }, { grade: 'MOC_CAU', kg: 0 }, { grade: 'BOM', kg: 0 }, { grade: 'CAM', kg: 0 }],
-  receivables: { available: false },
+  receivables: null,
   alerts: [],
 }
 
