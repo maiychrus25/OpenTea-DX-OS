@@ -43,7 +43,7 @@ async function visit(page: Page, path: string, heading: string | RegExp) {
 const SCREENS: Screen[] = [
   { name: 'farmer-dashboard', role: 'farmer', open: p => visit(p, '/farmer/dashboard', /Chào/) },
   { name: 'farmer-journal', role: 'farmer', open: p => visit(p, '/farmer/journal', 'Nhật ký của tôi') },
-  { name: 'farmer-diagnosis', role: 'farmer', open: p => visit(p, '/farmer/diagnosis', 'Chẩn đoán bệnh tự động') },
+  { name: 'farmer-diagnosis', role: 'farmer', open: p => visit(p, '/farmer/diagnosis', 'Chẩn đoán sâu bệnh') },
   { name: 'officer-journal-approval', role: 'officer', open: p => visit(p, '/officer/journal', 'Kiểm tra và phê duyệt nhật ký') },
   { name: 'officer-disease-queue', role: 'officer', open: p => visit(p, '/officer/diseases', 'Danh sách Báo cáo Bệnh cần duyệt') },
   {
