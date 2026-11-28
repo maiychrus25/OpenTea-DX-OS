@@ -18,3 +18,5 @@
 @media (max-width: 1200px) {
   .columns { grid-template-columns: minmax(0, 1fr); }
 }
+.sideHead button { font-size: 13px; white-space: nowrap; }
+.side > button { padding: 8px 0 0; font-size: 13px; }

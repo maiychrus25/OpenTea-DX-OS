@@ -474,3 +474,8 @@ div.popupItem {
   .head .icon svg { width: 17px; height: 17px; }
   .head .sidebarFoot { padding: 6px 12px 10px; }
 }
+
+.head .profileText strong { font-size: 13px; }
+.head .profileText small { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.head .coopIcon { width: 34px; height: 34px; }
+.head .profile { gap: 10px; }

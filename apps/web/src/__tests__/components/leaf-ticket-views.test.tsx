@@ -34,8 +34,8 @@ describe("the head's ticket page", () => {
       ? { data: [{ ...ticket, id: 't2', ticket_no: 'HTX-PC-20261128-002' }], next_cursor: null, totals: { net_kg: 95, amount_vnd: '1235000' } }
       : { data: [ticket], next_cursor: 'c1', totals: { net_kg: 95, amount_vnd: '1235000' } }
     render(<ManagerLeafTicketsPage />)
-    expect(await screen.findByRole('button', { name: 'HTX-PC-20261128-002' })).toBeInTheDocument()
-    expect(screen.getByRole('complementary', { name: 'Phiếu cân HTX-PC-20261128-001' })).toHaveTextContent('1.235.000 đ')
+    expect(await screen.findByRole('button', { name: 'PC-20261128-002' })).toBeInTheDocument()
+    expect(screen.getByRole('complementary', { name: 'Phiếu PC-20261128-001' })).toHaveTextContent('1.235.000 đ')
     expect(screen.getByRole('link', { name: 'In phiếu' })).toHaveAttribute('href', '/manager/leaf-tickets/t1/print')
     expect(screen.getByRole('button', { name: 'Hủy phiếu' })).toBeInTheDocument()
   })

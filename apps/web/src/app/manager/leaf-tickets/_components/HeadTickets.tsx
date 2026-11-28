@@ -27,6 +27,9 @@ const status = (t: LeafTicket) => (t.status === 'VOIDED' ? <Pill tone="red">Đã
 /** The most pages read for one day; a cooperative's day is far below this. */
 const MAX_PAGES = 20
 
+/** The number without the cooperative's code, which every row would repeat. */
+const shortNo = (no: string) => no.slice(no.indexOf('PC-') < 0 ? 0 : no.indexOf('PC-'))
+
 /** One day's weigh tickets with the chosen one beside the list. */
 export function HeadTickets() {
   const [date, setDate] = useState(() => localDay(new Date()))
@@ -139,7 +142,7 @@ export function HeadTickets() {
                     {paged.rows.map((t, index) => (
                       <tr key={t.id} aria-selected={t.id === chosen?.id} onClick={() => setChosenId(t.id)}>
                         <td>{paged.start + index + 1}</td>
-                        <td><button type="button" className={ui.link} onClick={() => setChosenId(t.id)}>{t.ticket_no}</button></td>
+                        <td><button type="button" className={ui.link} title={t.ticket_no} onClick={() => setChosenId(t.id)}>{shortNo(t.ticket_no)}</button></td>
                         <td>{t.household_name}</td>
                         <td>{t.parcel_code}</td>
                         <td>{t.grade_name}</td>
@@ -159,7 +162,7 @@ export function HeadTickets() {
 
         {chosen && (
           <DetailPanel
-            title={`Phiếu cân ${chosen.ticket_no}`}
+            title={`Phiếu ${shortNo(chosen.ticket_no)}`}
             status={status(chosen)}
             rows={[
               { icon: <UserRound size={15} />, label: 'Xã viên', value: chosen.household_name },
