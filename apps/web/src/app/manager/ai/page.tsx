@@ -11,6 +11,8 @@ import { cooperativeBudgetLevel } from '@/application/agent/agent-budget'
 import { cooperativeHealth } from '@/application/telegram/telegram-services'
 import { requireTenant } from '@/lib/api/tenant'
 import { isLabsEnabled } from '@/lib/labs'
+import { AiOverview } from './_components/AiOverview'
+import { loadAiOverview } from './_components/load-ai'
 
 export default async function ManagerAiInboxPage() {
   const session = await auth()
@@ -20,13 +22,17 @@ export default async function ManagerAiInboxPage() {
   const tenant = await requireTenant()
   const health = await cooperativeHealth(tenant.htxCode)
   const budgetLevel = await cooperativeBudgetLevel(tenant.htxCode)
+  const overview = await loadAiOverview(tenant.htxProfileId, tenant.htxCode)
 
   return (
-    <>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <AiOverview data={overview} />
       <TelegramHealthBanner {...health} />
       <AgentBudgetBanner level={budgetLevel} />
       <CampaignPanel />
-      <ProposalInbox role="manager" labs={isLabsEnabled()} />
-    </>
+      <div id="proposals">
+        <ProposalInbox role="manager" labs={isLabsEnabled()} />
+      </div>
+    </div>
   )
 }
