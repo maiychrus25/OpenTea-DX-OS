@@ -63,9 +63,10 @@ TICKETS_QUERY = (
     "  }\n"
     "}"
 )
+# The agent role sees only its cooperative's cross-check proposals, and only subject_ids (Hasura permission), so no filter here.
 ALERTED_QUERY = (
     f"query {ALERTED_OPERATION} {{\n"
-    f'  platform_agent_proposals(where: {{agent: {{_eq: "{AGENT_NAME}"}}}}) {{ subject_ids }}\n'
+    "  platform_agent_proposals { subject_ids }\n"
     "}"
 )
 
