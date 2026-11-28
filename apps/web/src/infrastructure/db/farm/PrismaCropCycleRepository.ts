@@ -80,6 +80,7 @@ export class PrismaCropCycleRepository implements CropCyclePort {
         },
       },
       include: {
+        leaf_tickets: { where: { status: 'VALID' }, select: { net_kg: true } },
         parcel: {
           include: {
             household: true,
@@ -139,6 +140,7 @@ export class PrismaCropCycleRepository implements CropCyclePort {
         parcelName: cycle.parcel.parcel_code,
         householdName: cycle.parcel.household.name,
         cropType: cycle.parcel.crop_type,
+        harvestedKg: (cycle.leaf_tickets ?? []).reduce((sum, ticket) => sum + Number(ticket.net_kg), 0),
         areaHa: cycle.parcel.area_ha,
         estimatedYieldKg: cycle.parcel.estimated_yield_per_ha ? (cycle.parcel.estimated_yield_per_ha * cycle.parcel.area_ha) : null,
         estimatedHarvestDate: cycle.estimated_harvest_date ? cycle.estimated_harvest_date.toISOString() : null,
