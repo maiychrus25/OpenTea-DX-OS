@@ -23,7 +23,7 @@ Làm đúng theo ảnh thiết kế được cung cấp, thay cho bố cục cũ
 |---|---|
 | Tổng quan | % so cùng kỳ khi năm trước chưa có số; việc "Duyệt phiếu cân"; cảnh báo và bản tin khi chưa có dữ liệu |
 | Lịch thu hái | % so kỳ trước khi tháng trước chưa có số |
-| Vùng trồng | Nút "Thêm vùng trồng" (việc của cán bộ kỹ thuật); bản đồ khu A–D khi chưa thửa nào có ranh giới |
+| Vùng trồng | Nút "Thêm vùng trồng" (việc của cán bộ kỹ thuật) |
 | Phiếu cân | "Chờ xác nhận" (phiếu không có bước này) |
 | Vật tư | Tồn kho, ngưỡng cảnh báo, sắp hết, nhóm chế phẩm sinh học |
 | Bán hàng | "Chờ giao hàng", "Đang giao" |
@@ -42,6 +42,7 @@ Làm đúng theo ảnh thiết kế được cung cấp, thay cho bố cục cũ
 - Quyết toán còn nháp: nút "Đánh dấu đã chi trả" thành "Xem và chốt kỳ".
 - Lọc "Khu vực" thay bằng lọc nông hộ hoặc giống chè.
 - Menu giữ mục "Thông báo Zalo".
+- Hai bản đồ (vùng trồng, đối tác) mở bằng ảnh vệ tinh thật; thửa chưa có ranh giới hiện chấm vị trí, không vẽ khu minh hoạ.
 - Đề xuất AI không có lời khuyên canh tác mẫu: chỉ hiện đề xuất thật; hộp duyệt giữ nguyên ở dưới.
 - Kho ứng dụng liệt kê ứng dụng thật trong danh mục, không phải các mục trong ảnh.
 - Bản tin giữ thời tiết (thành banner đầu trang, dự báo chi tiết trong hộp thoại), nút nghe và ghi chú AI.

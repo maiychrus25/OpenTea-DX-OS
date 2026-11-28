@@ -16,6 +16,8 @@ interface ZoneMapProps {
   parcels: ParcelSummary[]
   /** A parcel to move the map to. */
   focusId?: string | null
+  /** Open on satellite imagery instead of the street map. */
+  satellite?: boolean
 }
 
 // Khóa vùng kéo bản đồ (Giới hạn trong lãnh thổ đất liền/gần bờ Việt Nam)
@@ -24,11 +26,12 @@ const VIETNAM_BOUNDS: L.LatLngBoundsLiteral = [
   [23.5, 109.5] // Đông Bắc
 ]
 
-export default function ZoneMap({ parcels, focusId }: ZoneMapProps) {
+export default function ZoneMap({ parcels, focusId, satellite = false }: ZoneMapProps) {
   const [isMounted, setIsMounted] = useState(false)
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
   const geoJsonLayerRef = useRef<L.GeoJSON | null>(null)
+  const pointLayerRef = useRef<L.LayerGroup | null>(null)
 
   useEffect(() => {
     setIsMounted(true)
@@ -52,7 +55,7 @@ export default function ZoneMap({ parcels, focusId }: ZoneMapProps) {
       maxBoundsViscosity: 1.0,
     })
 
-    addMapBaseLayers(map)
+    addMapBaseLayers(map, satellite ? 'satellite' : 'street')
 
     mapRef.current = map
     const timer = setTimeout(() => map.invalidateSize(), 250)
@@ -68,7 +71,10 @@ export default function ZoneMap({ parcels, focusId }: ZoneMapProps) {
       map.remove()
       mapRef.current = null
       geoJsonLayerRef.current = null
+      pointLayerRef.current = null
     }
+    // The base layer is chosen once; the viewer switches it on the map afterwards.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMounted])
 
   // Render polygons GeoJSON
@@ -78,6 +84,26 @@ export default function ZoneMap({ parcels, focusId }: ZoneMapProps) {
     if (geoJsonLayerRef.current) {
       geoJsonLayerRef.current.remove()
       geoJsonLayerRef.current = null
+    }
+
+    pointLayerRef.current?.remove()
+    pointLayerRef.current = null
+    // A parcel without a drawn boundary still shows where it was recorded; parcels sharing a point share one dot.
+    const spots = new Map<string, ParcelSummary[]>()
+    for (const parcel of parcels) {
+      if (parcel.polygon_geojson || !parcel.centroid_lat || !parcel.centroid_lng) continue
+      const key = `${parcel.centroid_lat},${parcel.centroid_lng}`
+      spots.set(key, [...(spots.get(key) ?? []), parcel])
+    }
+    if (spots.size) {
+      const group = L.layerGroup().addTo(mapRef.current)
+      spots.forEach((here) => {
+        const dot = L.circleMarker([here[0].centroid_lat!, here[0].centroid_lng!], { radius: 9, color: 'var(--accent-lime)', weight: 3, fillColor: 'var(--color-primary)', fillOpacity: 0.9 })
+        dot.bindTooltip(escapeHtml(here.length === 1 ? here[0].parcel_code : `${here.length} thửa`), { permanent: true, direction: 'top' })
+        dot.bindPopup(here.map(p => `<strong>${escapeHtml(p.parcel_code)}</strong> · ${escapeHtml(p.household?.name || '—')} · ${escapeHtml(parcelStatusLabel(p.status))}`).join('<br>'))
+        group.addLayer(dot)
+      })
+      pointLayerRef.current = group
     }
 
     const featuresWithParcels = parcels
@@ -93,7 +119,7 @@ export default function ZoneMap({ parcels, focusId }: ZoneMapProps) {
       const points = parcels
         .filter(p => p.centroid_lat && p.centroid_lng)
         .map(p => [p.centroid_lat!, p.centroid_lng!] as [number, number])
-      if (points.length > 0) mapRef.current.fitBounds(L.latLngBounds(points), { maxZoom: 15 })
+      if (points.length > 0) mapRef.current.fitBounds(L.latLngBounds(points), { maxZoom: satellite ? 17 : 15 })
       return
     }
 
@@ -186,7 +212,7 @@ export default function ZoneMap({ parcels, focusId }: ZoneMapProps) {
     } catch (e) {
       console.error('Error rendering ZoneMap polygons:', e)
     }
-  }, [parcels, isMounted])
+  }, [parcels, isMounted, satellite])
 
   // Declared after the layers effect so that it wins over the fit to all parcels.
   useEffect(() => {

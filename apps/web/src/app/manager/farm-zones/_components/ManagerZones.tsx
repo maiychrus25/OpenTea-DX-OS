@@ -18,7 +18,6 @@ import type { ParcelSummary } from '@/domain/farm/ports/ParcelPort'
 import { fetchJson, LOAD_FAILED_MESSAGE } from '@/lib/api/fetch-json'
 import { PARCEL_STATUS_CONFIG, isCultivating, parcelStatusLabel } from '@/lib/map-config'
 import styles from './zones.module.css'
-import { SampleZones } from './SampleZones'
 
 const ZoneMap = dynamic(() => import('@/components/features/map/ZoneMap'), { ssr: false })
 
@@ -65,8 +64,9 @@ export default function ManagerZones() {
   const growing = all.filter((p) => isCultivating(p.status))
   const drawn = listed.filter((p) => p.polygon_geojson).length
   const paged = pageOf(listed, page, 5)
-  const hasShapes = all.some((p) => p.polygon_geojson)
-  const look = (p: ParcelSummary) => { if (p.polygon_geojson) { setFocus(p.id); setView('map') } else setOpened(p) }
+  const undrawn = all.filter((p) => !p.polygon_geojson).length
+  // A parcel with a boundary or a recorded point is shown on the map; one with neither opens its details.
+  const look = (p: ParcelSummary) => { if (p.polygon_geojson || (p.centroid_lat && p.centroid_lng)) { setFocus(p.id); setView('map') } else setOpened(p) }
 
   const rows = (full: boolean) => (
     <>
@@ -144,7 +144,10 @@ export default function ManagerZones() {
 
       {view === 'map' ? (
         <div className={styles.workspace}>
-          {parcels !== null && !hasShapes ? <SampleZones /> : <div className={styles.map}><ZoneMap parcels={listed} focusId={focus} /></div>}
+          <div className={styles.map}>
+            <ZoneMap parcels={listed} focusId={focus} satellite />
+            {undrawn > 0 && <p className={styles.note}>{undrawn} thửa chưa được vẽ ranh giới; chấm trên bản đồ là vị trí đã lưu của thửa.</p>}
+          </div>
           <section className={kit.card} aria-label="Danh sách vùng trồng">
             <h2 className={styles.title}><List size={18} aria-hidden="true" />Danh sách vùng trồng</h2>
             {state ?? rows(false)}

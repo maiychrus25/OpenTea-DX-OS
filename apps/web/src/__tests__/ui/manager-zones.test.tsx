@@ -19,7 +19,7 @@ it('counts the parcels, filters by status and gives the head no drawing action',
   expect(await screen.findByRole('cell', { name: 'TC-1' })).toBeInTheDocument()
   expect(screen.getByText('3 ha')).toBeInTheDocument()
   expect(screen.queryByRole('link', { name: /Vẽ ranh giới/ })).not.toBeInTheDocument()
-  expect(screen.getByRole('img', { name: 'Bản đồ vùng trồng mẫu' })).toBeInTheDocument()
+  expect(screen.getByText(/2 thửa chưa được vẽ ranh giới/)).toBeInTheDocument()
   fireEvent.change(screen.getByRole('combobox', { name: 'Trạng thái' }), { target: { value: 'DRAFT' } })
   expect(screen.getByRole('cell', { name: 'TC-2' })).toBeInTheDocument()
   expect(screen.queryByRole('cell', { name: 'TC-1' })).not.toBeInTheDocument()

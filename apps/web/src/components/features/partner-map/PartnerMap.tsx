@@ -292,7 +292,7 @@ export default function PartnerMap() {
       maxBoundsViscosity: 1.0,
     })
 
-    addMapBaseLayers(map)
+    addMapBaseLayers(map, 'satellite')
 
     const markersLayer = L.layerGroup().addTo(map)
     markersLayerRef.current = markersLayer
