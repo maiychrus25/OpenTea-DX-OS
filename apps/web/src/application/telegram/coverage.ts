@@ -79,6 +79,7 @@ export const TELEGRAM_COVERAGE: TelegramCoverage = {
     'GET /api/leaf-tickets/[id]',
     'POST /api/leaf-tickets/[id]/void',
     'GET /api/leaf-tickets/export.csv',
+    'GET /api/reports/season.csv',
     'GET /api/leaf-tickets/mine',
     'GET /api/cycles/[id]/weighing-summary',
     // Money and bank details stay out of chat: input items, advances, the member ledger and bank accounts.
