@@ -216,5 +216,14 @@ def test_r2_a_ticket_of_an_unknown_parcel_is_ignored():
     assert r2([ticket(9000, parcel="gone")]) == []
 
 
-def test_r2_a_flush_with_too_many_tickets_is_skipped():
-    assert r2([ticket(100, f"t{index}") for index in range(60)]) == []
+def test_r2_a_busy_flush_still_alerts_with_the_largest_tickets_as_evidence():
+    tickets = [ticket(100 + index, f"t{index:02d}") for index in range(60)]  # 60 tickets, 100..159 kg each
+    (item,) = r2(tickets)
+    assert item.payload["slots"]["kg"] == sum(100 + index for index in range(60))  # the total uses all 60
+    rows = item.evidence["rows"]
+    assert len(rows) == 49 and rows[0]["table"] == "parcels"
+    kept = [row["id"] for row in rows[1:]]
+    assert kept == sorted(kept)
+    assert set(kept) == {f"t{index:02d}" for index in range(12, 60)}  # the 48 largest
+    assert item.reason_vi.endswith("(60 phiếu; bằng chứng gồm 48 phiếu lớn nhất)")
+

@@ -6,7 +6,6 @@ R1: a pesticide advance with no spraying logged by the household after the grace
 R2: fresh leaf weighed on a parcel above its area norm in one flush.
 """
 from datetime import date, datetime, timedelta
-import logging
 import math
 from typing import Any, Collection, Mapping, Sequence
 
@@ -15,15 +14,13 @@ from ..evidence import advance_evidence_row, parcel_evidence_row, ticket_evidenc
 from ..settings import THRESHOLD_DEFAULTS
 from .common import Proposal, RuleRun, proposal, rows_of, submit_rule_run, vn_date_text, vn_day
 
-log = logging.getLogger("dxos_agent")
-
 AGENT_NAME = "cross-check"
 DEFAULT_THRESHOLDS = THRESHOLD_DEFAULTS[AGENT_NAME]
 KIND = "notification.internal"
 ADVANCE_LOOKBACK_DAYS = 60  # an older advance is not raised the first day the agent runs
 WINDOW_DAYS = 30  # tickets without a flush are grouped over this many days
 TICKET_LOOKBACK_DAYS = 45
-MAX_TICKET_ROWS = 48  # evidence holds at most 50 rows: the parcel and its tickets; a flush with more is skipped and logged
+MAX_TICKET_ROWS = 48  # evidence holds at most 50 rows: the parcel and its tickets; a busier flush cites its largest tickets
 MAX_PARCEL_CODES = 20
 # A spraying counts unless its entry is a draft or was rejected (the same rule as the withdrawal period in harvest-ready).
 SPRAYING_EXCLUDED_STATUSES = ("DRAFT", "REJECTED")
@@ -179,9 +176,6 @@ def norm_alerts(
         total = sum(float(ticket["net_kg"]) for ticket in group)
         if limit <= 0 or total <= limit:
             continue
-        if len(group) > MAX_TICKET_ROWS:
-            log.warning("A13 cross-check skipped parcel %s: %d tickets in one flush", parcel["parcel_code"], len(group))
-            continue
         step = math.floor((total / limit - 1) / extra)
         prefix = f"cross-check:norm:{parcel_id}:{cycle_id or 'window'}:"
         raised = [int(key[len(prefix):]) for key in alerted if key.startswith(prefix) and key[len(prefix):].isdigit()]
@@ -189,6 +183,9 @@ def norm_alerts(
             continue
         area = round(float(parcel["area_ha"]), 2)
         kg, norm_kg = round(total), round(limit)
+        # The total counts every ticket; a busy flush cites only its largest ones, kept in id order.
+        cited = sorted(sorted(group, key=lambda t: (-float(t["net_kg"]), str(t["id"])))[:MAX_TICKET_ROWS], key=lambda t: str(t["id"]))
+        note = f" ({len(group)} phiếu; bằng chứng gồm {MAX_TICKET_ROWS} phiếu lớn nhất)" if len(group) > MAX_TICKET_ROWS else ""
         proposals.append(
             proposal(
                 KIND,
@@ -198,8 +195,8 @@ def norm_alerts(
                     "subjects": [f"{prefix}{step}"],
                 },
                 f"Thửa {parcel['parcel_code']} ({area:g} ha) đã cân {kg} kg trong lứa này, vượt định mức {norm_kg} kg. "
-                "Kiểm tra búp gom từ thửa khác.",
-                [parcel_evidence_row(parcel)] + [ticket_evidence_row(ticket) for ticket in sorted(group, key=lambda t: str(t["id"]))],
+                f"Kiểm tra búp gom từ thửa khác.{note}",
+                [parcel_evidence_row(parcel)] + [ticket_evidence_row(ticket) for ticket in cited],
             )
         )
     return proposals
