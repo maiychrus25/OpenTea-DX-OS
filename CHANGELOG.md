@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.22.0] - 2026-11-28
+
 ### Added
 
 - **Cross-check agent (A13)**: every morning at 05:45 the agent raises two alerts for officers and the head, as proposals with evidence; it never changes data.
