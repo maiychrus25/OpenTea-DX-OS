@@ -206,5 +206,5 @@ Mã là nguồn cuối cùng. Phần dưới liệt kê chỗ mã khác thân đ
 8. **Huỷ đơn lẻ lần hai.** `POST .../retail-orders/[external_ref]/cancel` cho đơn đã huỷ trả đúng đơn đó (200), không phải 409 `ORDER_CANCELLED`; lý do tuỳ chọn, thiếu thì là "Huỷ từ gian hàng".
 9. **Route Core Action API có thêm giới hạn** 120 yêu cầu mỗi phút theo header `Authorization` (429) ở APISIX. Web kiểm `azp` của token bằng `KEYCLOAK_CLIENT_ID` (mặc định `nextjs-web`), từ chối token vai dịch vụ, và chỉ nhận vai `manager`.
 10. **Báo cáo, phần "An toàn".** Số "thửa được nghiệm thu đạt cách ly" mã đếm là số lứa có `parcel_crop_cycles.harvested_at` trong kỳ (`harvests_approved`), không đếm lần bấm nghiệm thu. Phần "Thành viên" tính tại thời điểm xem, không theo kỳ.
-11. **Phần "Bán hàng" của báo cáo** (§3 S9 mục 6) được nối bằng nhiệm vụ R2 của kế hoạch, ở commit riêng sau commit đầu của báo cáo. Khi phần này chưa có số liệu, mã trả `sales: null` và `GET /api/reports/season.csv?section=sales` trả 503 `SECTION_UNAVAILABLE`.
+11. **Phần "Bán hàng" của báo cáo** (§3 S9 mục 6) được nối bằng nhiệm vụ R2 của kế hoạch, ở commit riêng sau commit đầu của báo cáo. Phần này chỉ là `null` (và CSV của nó trả 503 `SECTION_UNAVAILABLE`) khi việc tải lỗi, như mọi phần khác.
 12. **Tệp CSV báo cáo.** Mỗi phần một bảng; phần hỏng hoặc không có bảng xuất trả 503 `SECTION_UNAVAILABLE`, không trả tệp rỗng.
