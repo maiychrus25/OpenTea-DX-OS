@@ -29,7 +29,7 @@ Một số giá trị đọc từ repo, không được gõ tay. Trong HTML, ch�
 | `version` | `apps/web/package.json`, trường `version` | `v1.13.0` |
 | `latest` | mục phiên bản có phát hành mới nhất trong `CHANGELOG.md` (`## [X.Y.Z] - YYYY-MM-DD`) | `v1.13.0 · 2026-11-22` |
 | `releases` | số tiêu đề `## [X.Y.Z]` trong `CHANGELOG.md` | `17` |
-| `apps` | số thư mục con của `miniapps/` có `app.yaml` | `7` |
+| `apps` | số thư mục con của `miniapps/` có `app.yaml`, trừ `FROZEN_APPS` trong `scripts/inject-site-values.py` (các app đã đóng băng, không được quảng bá) | `4` |
 
 `scripts/inject-site-values.py` điền các giá trị này; `scripts/build-site.sh` gọi nó sau khi sao chép trang.
 
