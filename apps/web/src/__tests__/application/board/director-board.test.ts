@@ -28,7 +28,7 @@ function source(over: Partial<BoardSource> = {}): BoardSource {
   }
 }
 
-const read = (s: BoardSource, now = NOW, role: 'manager' | 'accountant' = 'manager') => new DirectorBoardUseCase(s).read('htx-1', now, role)
+const read = (s: BoardSource, now = NOW, role: 'manager' | 'accountant' = 'manager', forecast?: { read: jest.Mock }) => new DirectorBoardUseCase(s, forecast).read('htx-1', now, role)
 
 describe('DirectorBoardUseCase blocks', () => {
   it('reads today, yesterday, prices, payable and stock', async () => {
@@ -40,9 +40,17 @@ describe('DirectorBoardUseCase blocks', () => {
     expect(s.leafBetween).toHaveBeenCalledWith('htx-1', new Date('2026-11-26T17:00:00Z'), new Date('2026-11-27T17:00:00Z'))
     expect(board.prices?.published).toBe(true)
     expect(board.payable).toEqual({ unpaid_lines_vnd: '5000000', unsettled_leaf_vnd: '3000000', unsettled_advances_vnd: '1000000', total_vnd: '7000000' })
-    expect(board.dry_stock).toEqual([{ grade: 'DINH', kg: 3.5 }])
+    expect(board.dry_stock).toEqual({ grades: [{ grade: 'DINH', kg: 3.5 }], forecast_dry_kg_14d: null })
     expect(board.receivables).toEqual({ outstanding_vnd: '0', overdue_count: 0, overdue_vnd: '0', top: [] })
     expect(board.alerts).toEqual([])
+  })
+
+  it('adds the 14-day dry forecast to the stock block, and keeps the stock when the forecast fails', async () => {
+    const forecast = { read: jest.fn(async () => ({ weeks: [], parcels: [], total_fresh_kg: 100, total_dry_kg: 21.1 })) }
+    expect((await read(source(), NOW, 'manager', forecast)).dry_stock).toEqual({ grades: [{ grade: 'DINH', kg: 3.5 }], forecast_dry_kg_14d: 21.1 })
+    expect(forecast.read).toHaveBeenCalledWith('htx-1', '2026-11-28')
+    const failing = { read: jest.fn(async () => { throw new Error('boom') }) }
+    expect((await read(source(), NOW, 'manager', failing)).dry_stock).toEqual({ grades: [{ grade: 'DINH', kg: 3.5 }], forecast_dry_kg_14d: null })
   })
 
   it('can owe less than zero in total', async () => {

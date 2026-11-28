@@ -13,9 +13,10 @@ const full: DirectorBoard = {
   leaf: { net_kg: 95, amount_vnd: '1235000', tickets: 2, yesterday_net_kg: 85 },
   prices: { published: true, grades: [{ grade_id: 'g1', grade_name: 'Loại 1', price_vnd_per_kg: 13000 }] },
   payable: { unpaid_lines_vnd: '500000', unsettled_leaf_vnd: '2000000', unsettled_advances_vnd: '300000', total_vnd: '2200000' },
-  dry_stock: [
-    { grade: 'DINH', kg: 19 }, { grade: 'TOM_NON', kg: 0 }, { grade: 'MOC_CAU', kg: 0 }, { grade: 'BOM', kg: 4.5 }, { grade: 'CAM', kg: 0 },
-  ],
+  dry_stock: {
+    grades: [{ grade: 'DINH', kg: 19 }, { grade: 'TOM_NON', kg: 0 }, { grade: 'MOC_CAU', kg: 0 }, { grade: 'BOM', kg: 4.5 }, { grade: 'CAM', kg: 0 }],
+    forecast_dry_kg_14d: 42.1,
+  },
   receivables: null,
   alerts: [
     { kind: 'PARCELS_IN_WITHDRAWAL', count: 2, message: '2 nương đang trong thời gian cách ly', href: '/manager/schedule' },
@@ -91,7 +92,7 @@ describe('manager board', () => {
   })
 
   test('each block with a null value shows its own state and the others still load', () => {
-    render(<DirectorBoardView board={{ ...failing, dry_stock: [{ grade: 'DINH', kg: 5 }] }} role="manager" />)
+    render(<DirectorBoardView board={{ ...failing, dry_stock: { grades: [{ grade: 'DINH', kg: 5 }], forecast_dry_kg_14d: null } }} role="manager" />)
     expect(screen.getByText('Chưa tải được số liệu thu mua hôm nay.')).toBeInTheDocument()
     expect(screen.getByText('Chưa tải được giá thu mua.')).toBeInTheDocument()
     expect(screen.getByText('Chưa tải được số tiền phải trả.')).toBeInTheDocument()
