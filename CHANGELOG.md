@@ -7,6 +7,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Cross-check agent (A13)**: every morning at 05:45 the agent raises two alerts for officers and the head, as proposals with evidence; it never changes data.
+  - Pesticide advanced to a household, but no spraying logged on any of its parcels within 10 days.
+  - Leaf weighed on a parcel in one flush above 1,800 kg per hectare × 1.35. It is raised again only after a further 20% of that limit.
+
+  The head changes the four thresholds on `/manager/ai/settings`. The agent reads advances, tickets and batches without any money, name or phone column.
+- **14-day forecast (`apps/web`)**: `/officer/processing` and `/manager/processing` show the fresh and dry tea expected over the next 14 days, by week and by parcel.
+  - A parcel's figure is the median of its last three flushes, or its area times the norm when it has none (marked "Theo định mức").
+  - Dry tea is fresh ÷ 4.75. The director board's dry stock block adds the 14-day figure.
+- **Technical chatbot reads PDFs**: text PDFs in the cooperative library are read, and the answer is built from the four passages that best match the question, each citing its file.
+  - A question with or without Vietnamese diacritics finds the same passage.
+  - Scanned PDFs are named as unreadable and never used.
+  - Files marked `ai: false`, or in a folder with `.ai-ignore`, are never read.
+  - New dependency `unpdf` 1.6.2 (MIT).
+- **"Nghe" for farmers**: a listen button on today's prices and picking dates, the journal guidance, the diagnosis care plan and the ledger balance. It never reads a bank account. Spoken audio is cached for 7 days.
+- **Zalo messages for members (platform OA)**: members who agreed get four ZNS messages, through one platform Zalo OA and the new `dxos-zalo` relay:
+  - today's leaf price;
+  - a weighing receipt;
+  - "withdrawal ended" for their parcel;
+  - their settlement result, with a link to the slip.
+
+  The details:
+  - Each cooperative turns Zalo on, picks the kinds, sets quiet hours (default 21:00–06:00) and a monthly quota (default 2,000) on `/manager/zalo`, which also lists deliveries with the reason a message was not sent.
+  - Officers record consent on the household page. A farmer can turn messages off for their own household from the profile. A household without consent is never sent anything.
+  - The platform admin enters the OA token and the approved ZNS template ids on `/platform/zalo`. Tokens are stored encrypted and never shown again.
+  - A ZNS stub (`dxos-zalo-stub`, profile `zalo-test`, port 8084) lets the smoke run every message end to end without an OA.
+
+### Changed
+
+- `POST /api/tts` now enforces 20 requests per minute per person (429 `RATE_LIMITED`).
+
+### Upgrade notes
+
+- Set `DXOS_ZALO_TOKEN_KEY` in `docker/.env.local` to 32 random bytes (64 hex characters, for example `openssl rand -hex 32`) before saving an OA token; the web refuses to store a token without it.
+- `make platform-up`, then `make web-up`: the first creates the Zalo tables (`10-zalo.sql`), restarts Hasura so the agent can read the new tables, and starts `dxos-zalo`, which waits healthy until a token exists; the second rebuilds the web app at `1.22.0`. No data migration.
+- Cross-check agent: it runs for each cooperative that already has the agent enabled. Review the thresholds on `/manager/ai/settings`.
+- Zalo (optional): `./dxos zalo enable` creates the Keycloak client `dxos-zalo`. Set `ZALO_APP_ID` and `ZALO_APP_SECRET` so the relay can refresh the token. As `platform_admin`, enter the OA token and the four ZNS template ids on `/platform/zalo`. Then turn Zalo on per cooperative on `/manager/zalo` and record consent.
+
+### Known limits
+
+- The ZNS error codes in `platform/zalo/dxos_zalo/zns_api.py` have not been checked against Zalo's documentation; check them before going live.
+- The TTS limit is per web process.
+- Text is pulled from a PDF the first time the chatbot reads it, not when it is uploaded.
+- The forecast does not use the weather.
+
 ## [1.21.0] - 2026-11-28
 
 ### Added
