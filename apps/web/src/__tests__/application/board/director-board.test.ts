@@ -9,6 +9,7 @@ jest.mock('@/lib/logger', () => ({ logger: { error: jest.fn() } }))
 // 2026-11-28 10:00 in Vietnam.
 const NOW = new Date('2026-11-28T03:00:00Z')
 const B = BigInt
+const NO_DEBT = { outstanding_vnd: '0', overdue_count: 0, overdue_vnd: '0', partners: [] }
 
 function source(over: Partial<BoardSource> = {}): BoardSource {
   return {
@@ -22,6 +23,7 @@ function source(over: Partial<BoardSource> = {}): BoardSource {
     stockRowsOnOrBefore: jest.fn(async () => 0),
     draftPeriods: jest.fn(async () => []),
     unpaidLinesClosedBefore: jest.fn(async () => 0),
+    receivables: jest.fn(async () => NO_DEBT),
     ...over,
   }
 }
@@ -39,7 +41,7 @@ describe('DirectorBoardUseCase blocks', () => {
     expect(board.prices?.published).toBe(true)
     expect(board.payable).toEqual({ unpaid_lines_vnd: '5000000', unsettled_leaf_vnd: '3000000', unsettled_advances_vnd: '1000000', total_vnd: '7000000' })
     expect(board.dry_stock).toEqual([{ grade: 'DINH', kg: 3.5 }])
-    expect(board.receivables).toBeNull() // computed in S8
+    expect(board.receivables).toEqual({ outstanding_vnd: '0', overdue_count: 0, overdue_vnd: '0', top: [] })
     expect(board.alerts).toEqual([])
   })
 
@@ -69,6 +71,42 @@ describe('DirectorBoardUseCase blocks', () => {
     const s = source()
     await new DirectorBoardUseCase(s).read('htx-7', NOW, 'manager')
     for (const fn of Object.values(s)) for (const call of (fn as jest.Mock).mock.calls) expect(call[0]).toBe('htx-7')
+  })
+})
+
+describe('DirectorBoardUseCase receivables', () => {
+  const debt = {
+    outstanding_vnd: '9000000', overdue_count: 2, overdue_vnd: '4000000',
+    partners: [1, 2, 3, 4].map((n) => ({ partner_id: `p${n}`, partner_name: `Thương lái ${n}`, outstanding_vnd: String(5 - n), overdue_vnd: '0' })),
+  }
+
+  it('shows the total, the overdue figures and the three largest partners', async () => {
+    const board = await read(source({ receivables: async () => debt }), NOW, 'accountant')
+    expect(board.receivables).toEqual({
+      outstanding_vnd: '9000000', overdue_count: 2, overdue_vnd: '4000000',
+      top: [{ partner_name: 'Thương lái 1', outstanding_vnd: '4' }, { partner_name: 'Thương lái 2', outstanding_vnd: '3' }, { partner_name: 'Thương lái 3', outstanding_vnd: '2' }],
+    })
+  })
+
+  it('is null when the query fails, and the rest of the board still loads', async () => {
+    const board = await read(source({ receivables: async () => { throw new Error('boom') } }))
+    expect(board.receivables).toBeNull()
+    expect(board.payable).not.toBeNull()
+    expect(board.alerts).toEqual([])
+  })
+
+  it('raises ORDERS_OVERDUE first among the money alerts, with the role link', async () => {
+    const withMoney = { receivables: async () => debt, draftPeriods: async () => [{ id: 'p1', code: 'C1' }], unpaidLinesClosedBefore: async () => 5, parcelsInWithdrawal: async () => 1 }
+    const manager = await read(source(withMoney))
+    expect(manager.alerts?.map((a) => a.kind)).toEqual(['PARCELS_IN_WITHDRAWAL', 'ORDERS_OVERDUE', 'SETTLEMENT_DRAFT', 'UNPAID_LINES'])
+    expect(manager.alerts?.find((a) => a.kind === 'ORDERS_OVERDUE')).toEqual({ kind: 'ORDERS_OVERDUE', count: 2, message: '2 đơn bán sỉ quá hạn thanh toán', href: '/manager/sales?overdue=1' })
+    const accountant = await read(source(withMoney), NOW, 'accountant')
+    expect(accountant.alerts?.map((a) => [a.kind, a.href])).toEqual([['ORDERS_OVERDUE', '/accountant/sales?overdue=1'], ['SETTLEMENT_DRAFT', '/accountant/settlements/p1'], ['UNPAID_LINES', '/accountant/settlements']])
+  })
+
+  it('raises no overdue alert when nothing is overdue or the block failed', async () => {
+    expect((await read(source({ receivables: async () => ({ ...debt, overdue_count: 0 }) }))).alerts).toEqual([])
+    expect((await read(source({ receivables: async () => { throw new Error('x') } }))).alerts).toEqual([])
   })
 })
 

@@ -9,6 +9,7 @@ import {
   type TelegramTokenVerifier,
   type VerifiedTelegramToken,
 } from '@/domain/telegram/ports/TelegramTokenVerifier'
+import type { UserTokenVerifier, VerifiedUserToken } from '@/domain/auth/ports/UserTokenVerifier'
 import { MCP_CLIENT_ID, type McpTokenVerifier, type VerifiedMcpToken } from '@/domain/mcp/ports/McpTokenVerifier'
 import { ForbiddenError, UnauthorizedError } from '@/domain/errors'
 
@@ -301,5 +302,34 @@ export class KeycloakMcpTokenVerifier implements McpTokenVerifier {
       throw new UnauthorizedError('Invalid MCP client binding')
     }
     return { sub: payload.sub as string, azp: MCP_CLIENT_ID, roles }
+  }
+}
+
+const SERVICE_ROLES = ['agent', 'telegram', 'staff-sync', 'web-service']
+
+/**
+ * Verifies a person's browser-session access token (client `KEYCLOAK_CLIENT_ID`, `nextjs-web` by default), forwarded by a mini-app.
+ * Service tokens are refused even if they carry a human role; the cooperative comes from the `htx_code` claim.
+ */
+export class KeycloakUserTokenVerifier implements UserTokenVerifier {
+  private readonly jwt: KeycloakJwtVerifier
+
+  constructor(options: KeycloakJwtVerifierOptions & { expectedAzp?: string } = {}) {
+    this.jwt = new KeycloakJwtVerifier(options)
+    this.expectedAzp = options.expectedAzp
+  }
+
+  private readonly expectedAzp: string | undefined
+
+  async verify(token: string): Promise<VerifiedUserToken> {
+    const { payload, roles } = await this.jwt.verifyClaims(token)
+    // Read at call time, from the same variable the NextAuth Keycloak provider uses.
+    const azp = this.expectedAzp ?? (process.env.KEYCLOAK_CLIENT_ID || 'nextjs-web')
+    if (payload.azp !== azp) throw new UnauthorizedError('Invalid user client binding')
+    if (roles.some((role) => SERVICE_ROLES.includes(role))) throw new ForbiddenError('Service tokens are not accepted here')
+    if (typeof payload.htx_code !== 'string' || !HTX_CODE_RE.test(payload.htx_code)) {
+      throw new ForbiddenError('Valid htx_code claim required')
+    }
+    return { sub: payload.sub as string, azp, htxCode: payload.htx_code, roles }
   }
 }

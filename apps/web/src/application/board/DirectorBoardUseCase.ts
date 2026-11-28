@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
-import { MONEY_ALERTS, type BoardAlert, type DirectorBoard, type LeafToday, type MemberPayable } from '@/domain/board/views'
+import { MONEY_ALERTS, type BoardAlert, type BoardReceivables, type DirectorBoard, type LeafToday, type MemberPayable } from '@/domain/board/views'
 import type { BoardSource } from '@/domain/board/ports/BoardSource'
 import { vnDayOf, vnDayStart } from '@/application/agent/campaign/vn-day'
 import { logger } from '@/lib/logger'
@@ -21,14 +21,16 @@ export class DirectorBoardUseCase {
   async read(htxProfileId: string, now: Date, role: 'manager' | 'accountant'): Promise<DirectorBoard> {
     const today = vnDayOf(now)
     const pricesBlock = this.block('prices', () => this.source.prices(htxProfileId, today))
-    const [leaf, prices, payable, dry_stock, alerts] = await Promise.all([
+    const receivablesBlock = this.block('receivables', () => this.receivables(htxProfileId, today))
+    const [leaf, prices, payable, dry_stock, receivables, alerts] = await Promise.all([
       this.block('leaf', () => this.leaf(htxProfileId, today)),
       pricesBlock,
       this.block('payable', () => this.payable(htxProfileId)),
       this.block('dry_stock', () => this.source.dryStock(htxProfileId)),
-      this.block('alerts', () => this.alerts(htxProfileId, now, today, role, pricesBlock)),
+      receivablesBlock,
+      this.block('alerts', () => this.alerts(htxProfileId, now, today, role, pricesBlock, receivablesBlock)),
     ])
-    return { today, leaf, prices, payable, dry_stock, receivables: null, alerts }
+    return { today, leaf, prices, payable, dry_stock, receivables, alerts }
   }
 
   private async block<T>(name: string, load: () => Promise<T>): Promise<T | null> {
@@ -59,10 +61,23 @@ export class DirectorBoardUseCase {
     }
   }
 
-  private async alerts(htxProfileId: string, now: Date, today: string, role: 'manager' | 'accountant', pricesBlock: Promise<{ published: boolean } | null>): Promise<BoardAlert[]> {
+  private async receivables(htxProfileId: string, today: string): Promise<BoardReceivables> {
+    const r = await this.source.receivables(htxProfileId, today)
+    return {
+      outstanding_vnd: r.outstanding_vnd,
+      overdue_count: r.overdue_count,
+      overdue_vnd: r.overdue_vnd,
+      top: r.partners.slice(0, 3).map((p) => ({ partner_name: p.partner_name, outstanding_vnd: p.outstanding_vnd })),
+    }
+  }
+
+  private async alerts(
+    htxProfileId: string, now: Date, today: string, role: 'manager' | 'accountant',
+    pricesBlock: Promise<{ published: boolean } | null>, receivablesBlock: Promise<{ overdue_count: number } | null>,
+  ): Promise<BoardAlert[]> {
     const s = this.source
     const accountant = role === 'accountant'
-    const [withdrawal, outOfBand, openTooLong, oldStock, drafts, unpaid, prices] = await Promise.all([
+    const [withdrawal, outOfBand, openTooLong, oldStock, drafts, unpaid, prices, receivables] = await Promise.all([
       s.parcelsInWithdrawal(htxProfileId, today),
       s.outOfBandBatchesSince(htxProfileId, vnDayStart(shiftDay(today, -30))),
       s.openBatchesOnOrBefore(htxProfileId, shiftDay(today, -3)),
@@ -71,6 +86,7 @@ export class DirectorBoardUseCase {
       // Closed on or before the day 8 days back = more than 7 days ago.
       s.unpaidLinesClosedBefore(htxProfileId, vnDayStart(shiftDay(today, -7))),
       pricesBlock,
+      receivablesBlock,
     ])
     const late = now.getTime() >= vnDayStart(today).getTime() + PRICE_DEADLINE_MS
     const all: (BoardAlert | null)[] = [
@@ -78,6 +94,8 @@ export class DirectorBoardUseCase {
       outOfBand > 0 ? { kind: 'BATCH_OUT_OF_BAND', count: outOfBand, message: `${outOfBand} mẻ lệch khoảng chuẩn trong 30 ngày`, href: '/manager/processing' } : null,
       openTooLong > 0 ? { kind: 'BATCH_OPEN_TOO_LONG', count: openTooLong, message: `${openTooLong} mẻ còn mở quá 2 ngày`, href: '/manager/processing' } : null,
       oldStock > 0 ? { kind: 'OLD_DRY_STOCK', count: oldStock, message: `${oldStock} dòng tồn chè khô quá 60 ngày`, href: '/manager/processing' } : null,
+      // A receivables block that failed shows no overdue alert, as an unread price block shows no price alert.
+      receivables && receivables.overdue_count > 0 ? { kind: 'ORDERS_OVERDUE', count: receivables.overdue_count, message: `${receivables.overdue_count} đơn bán sỉ quá hạn thanh toán`, href: `/${role}/sales?overdue=1` } : null,
       drafts.length > 0 ? { kind: 'SETTLEMENT_DRAFT', count: 1, message: `Kỳ quyết toán ${drafts[0].code} còn nháp`, href: `/${role}/settlements/${drafts[0].id}` } : null,
       unpaid > 0 ? { kind: 'UNPAID_LINES', count: unpaid, message: `${unpaid} hộ chưa nhận tiền quyết toán quá 7 ngày`, href: `/${role}/settlements` } : null,
       prices && !prices.published && late ? { kind: 'PRICE_NOT_PUBLISHED', count: 1, message: 'Chưa công bố giá thu mua hôm nay', href: accountant ? '/accountant/dashboard' : '/manager/leaf-prices' } : null,

@@ -337,5 +337,16 @@ def test_only_the_staff_route_is_internal_and_served_on_the_public_port():
     # The staff app runs outside the compose network (D14); the agent and relay routes stay on 9081 only.
     routes = load_routes()
     assert "vars" not in routes["internal-staff"]
-    for route_id in ("internal-agent", "internal-agent-llm", "internal-telegram", "internal-web-disease"):
+    for route_id in ("internal-agent", "internal-agent-llm", "internal-telegram", "internal-web-disease", "internal-apps"):
         assert routes[route_id]["vars"] == [["server_port", "==", "9081"]], route_id
+
+
+def test_apps_route_takes_a_user_token_on_the_internal_port_and_refuses_service_tokens():
+    route = load_routes()["internal-apps"]
+    assert route["uri"] == "/api/internal/apps/*"
+    assert route["vars"] == [["server_port", "==", "9081"]]
+    schema = route["plugins"]["openid-connect"]["claim_schema"]
+    assert schema == load_routes()["workflow"]["plugins"]["openid-connect"]["claim_schema"]
+    assert schema["properties"]["realm_access"]["properties"]["roles"]["not"]["contains"]["enum"] == ["agent", "telegram", "staff-sync", "web-service"]
+    assert route["plugins"]["limit-count"]["count"] == 120 and route["plugins"]["limit-count"]["key"] == "$http_authorization"
+    assert "X-Dxos-Gateway" in route["plugins"]["proxy-rewrite"]["headers"]["set"]

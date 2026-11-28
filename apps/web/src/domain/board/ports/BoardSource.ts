@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 import type { DryStockByGrade, PricesToday } from '@/domain/board/views'
+import type { ReceivablesSummary } from '@/domain/sales/views'
 
 /** Raw figures of the director board. Every method is one HTX only, and reads aggregates, never row lists. */
 export interface BoardSource {
@@ -18,6 +19,8 @@ export interface BoardSource {
   openBatchesOnOrBefore(htxProfileId: string, day: string): Promise<number>
   /** Stock rows with kg left and processed_on on or before the Vietnam day `day`. */
   stockRowsOnOrBefore(htxProfileId: string, day: string): Promise<number>
+  /** Trader receivables as of the Vietnam day `today` (wholesale confirmed orders only). */
+  receivables(htxProfileId: string, today: string): Promise<ReceivablesSummary>
   draftPeriods(htxProfileId: string): Promise<{ id: string; code: string }[]>
   /** Unpaid lines (payable above zero) of CLOSED periods closed before `before`. */
   unpaidLinesClosedBefore(htxProfileId: string, before: Date): Promise<number>

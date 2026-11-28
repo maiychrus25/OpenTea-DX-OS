@@ -70,7 +70,7 @@ maybe('director board on a real Postgres', () => {
     expect(board.prices).toEqual({ published: true, grades: [{ grade_id: ids.grade, grade_name: 'Búp 1', price_vnd_per_kg: 9000 }] })
     // unpaid 400000 + unsettled valid tickets (139500 + 180000 + 63000) - valid unsettled advance 200000
     expect(board.payable).toEqual({ unpaid_lines_vnd: '400000', unsettled_leaf_vnd: '382500', unsettled_advances_vnd: '200000', total_vnd: '582500' })
-    expect(board.receivables).toEqual({ available: false })
+    expect(board.receivables).toEqual({ outstanding_vnd: '0', overdue_count: 0, overdue_vnd: '0', top: [] })
   })
 
   it('sums dry stock per grade and counts old rows and open batches at their boundaries', async () => {

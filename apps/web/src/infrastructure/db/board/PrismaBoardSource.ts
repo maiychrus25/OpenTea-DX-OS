@@ -5,6 +5,7 @@ import { prisma } from '@/infrastructure/db/prisma.client'
 import { WITHDRAWAL_EXCLUDED_STATUSES } from '@/domain/journal/withdrawal-status'
 import type { BoardSource } from '@/domain/board/ports/BoardSource'
 import { DRY_TEA_GRADES, type DryTeaGrade } from '@/domain/processing/grades'
+import { receivablesOf } from '@/infrastructure/db/sales/PrismaSalesRepository'
 import { PrismaLeafPriceRepository } from '@/infrastructure/db/weighing/PrismaLeafPriceRepository'
 import { endOfVnDay, weighingBlock } from '@/application/weighing/withdrawal-gate'
 
@@ -44,6 +45,10 @@ export class PrismaBoardSource implements BoardSource {
       prisma.inputAdvance.aggregate({ where: { htx_profile_id: htxProfileId, status: 'VALID', settlement_id: null }, _sum: { amount_vnd: true } }),
     ])
     return { unpaid_lines_vnd: lines._sum.payable_vnd ?? ZERO, unsettled_leaf_vnd: tickets._sum.amount_vnd ?? ZERO, unsettled_advances_vnd: advances._sum.amount_vnd ?? ZERO }
+  }
+
+  receivables(htxProfileId: string, today: string) {
+    return receivablesOf(prisma, htxProfileId, today)
   }
 
   async dryStock(htxProfileId: string) {
