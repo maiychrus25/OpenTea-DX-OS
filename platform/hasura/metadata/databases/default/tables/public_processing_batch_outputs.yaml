@@ -1,0 +1,19 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 OpenTea Developers
+table:
+  name: processing_batch_outputs
+  schema: public
+object_relationships:
+  - name: batch
+    using:
+      foreign_key_constraint_on: batch_id
+select_permissions:
+  - role: agent
+    permission:
+      columns:
+        - id
+        - batch_id
+        - grade
+        - kg
+      allow_aggregations: true
+      filter: {batch: {htx_profile: {'_and': [{'htx_code': {'_eq': 'X-Hasura-Htx-Code'}}, {'htx_code': {'_neq': ''}}]}}}

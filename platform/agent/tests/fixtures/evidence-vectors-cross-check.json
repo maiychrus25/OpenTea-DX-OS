@@ -1,0 +1,101 @@
+{
+  "version": 2,
+  "cases": [
+    {
+      "name": "advance as Hasura returns it, no settlement",
+      "table": "input_advances",
+      "source": {
+        "id": "adv_1",
+        "household_id": "hh_1",
+        "item_id": "it_1",
+        "quantity": 2.5,
+        "advanced_on": "2026-11-10",
+        "status": "VALID",
+        "settlement_id": null
+      },
+      "values": {
+        "id": "adv_1",
+        "household_id": "hh_1",
+        "item_id": "it_1",
+        "quantity_milli": 2500,
+        "advanced_on": "2026-11-10",
+        "status": "VALID",
+        "settlement_id": null
+      },
+      "canonical": "{\"advanced_on\":\"2026-11-10\",\"household_id\":\"hh_1\",\"id\":\"adv_1\",\"item_id\":\"it_1\",\"quantity_milli\":2500,\"settlement_id\":null,\"status\":\"VALID\"}",
+      "sha256": "64552c88986909080a03abde68d686fc4d0ddf81bf27c29dee1940c5a08f4e0c"
+    },
+    {
+      "name": "advance as Prisma returns it, settled, voided",
+      "table": "input_advances",
+      "source": {
+        "id": "adv_2",
+        "household_id": "hh_1",
+        "item_id": "it_1",
+        "quantity": 1.15,
+        "advanced_on": "2026-11-10T00:00:00.000Z",
+        "status": "VOIDED",
+        "settlement_id": "st_1"
+      },
+      "values": {
+        "id": "adv_2",
+        "household_id": "hh_1",
+        "item_id": "it_1",
+        "quantity_milli": 1150,
+        "advanced_on": "2026-11-10",
+        "status": "VOIDED",
+        "settlement_id": "st_1"
+      },
+      "canonical": "{\"advanced_on\":\"2026-11-10\",\"household_id\":\"hh_1\",\"id\":\"adv_2\",\"item_id\":\"it_1\",\"quantity_milli\":1150,\"settlement_id\":\"st_1\",\"status\":\"VOIDED\"}",
+      "sha256": "46b40945392b6e2e87c2c75265886071a63e43e99531580b15bf6abf0fdee802"
+    },
+    {
+      "name": "ticket in a flush, naive timestamp",
+      "table": "fresh_leaf_tickets",
+      "source": {
+        "id": "tk_1",
+        "household_id": "hh_1",
+        "parcel_id": "pc_1",
+        "cycle_id": "cy_1",
+        "weighed_at": "2026-11-20T02:15:30.5",
+        "net_kg": 12.3,
+        "status": "VALID"
+      },
+      "values": {
+        "id": "tk_1",
+        "household_id": "hh_1",
+        "parcel_id": "pc_1",
+        "cycle_id": "cy_1",
+        "weighed_at": "2026-11-20T02:15:30.500Z",
+        "net_kg_milli": 12300,
+        "status": "VALID"
+      },
+      "canonical": "{\"cycle_id\":\"cy_1\",\"household_id\":\"hh_1\",\"id\":\"tk_1\",\"net_kg_milli\":12300,\"parcel_id\":\"pc_1\",\"status\":\"VALID\",\"weighed_at\":\"2026-11-20T02:15:30.500Z\"}",
+      "sha256": "69e94ea4dd957dff38e02820c22946e8983beae48a1797f19e1d0e921541ac36"
+    },
+    {
+      "name": "ticket without a flush, timestamp with an offset",
+      "table": "fresh_leaf_tickets",
+      "source": {
+        "id": "tk_2",
+        "household_id": "hh_2",
+        "parcel_id": "pc_2",
+        "cycle_id": null,
+        "weighed_at": "2026-11-20T09:15:30+07:00",
+        "net_kg": 0.7,
+        "status": "VOIDED"
+      },
+      "values": {
+        "id": "tk_2",
+        "household_id": "hh_2",
+        "parcel_id": "pc_2",
+        "cycle_id": null,
+        "weighed_at": "2026-11-20T02:15:30.000Z",
+        "net_kg_milli": 700,
+        "status": "VOIDED"
+      },
+      "canonical": "{\"cycle_id\":null,\"household_id\":\"hh_2\",\"id\":\"tk_2\",\"net_kg_milli\":700,\"parcel_id\":\"pc_2\",\"status\":\"VOIDED\",\"weighed_at\":\"2026-11-20T02:15:30.000Z\"}",
+      "sha256": "7593e4d8f88722dde71eda817adfeffada44e1bf69ad53fc2f02a1f1b262a64d"
+    }
+  ]
+}

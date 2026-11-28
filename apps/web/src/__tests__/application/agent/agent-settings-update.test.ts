@@ -159,3 +159,44 @@ describe('agent.settings.update staleness', () => {
     expect(mockFindForEvidence).not.toHaveBeenCalled()
   })
 })
+
+describe('cross-check decimal thresholds', () => {
+  const parse = (thresholds: Record<string, number>) => action.payloadSchema.safeParse({ agent: 'cross-check', thresholds })
+
+  it('accepts two decimals inside the range', () => {
+    expect(parse({ norm_tolerance: 1.35 }).success).toBe(true)
+    expect(parse({ realert_extra: 0.05 }).success).toBe(true)
+    expect(parse({ norm_tolerance: 3, realert_extra: 1 }).success).toBe(true)
+  })
+
+  it.each([
+    ['three decimals', { norm_tolerance: 1.355 }],
+    ['a tolerance below 1.00', { norm_tolerance: 0.99 }],
+    ['a tolerance above 3.00', { norm_tolerance: 3.01 }],
+    ['a re-alert step below 0.05', { realert_extra: 0.04 }],
+    ['a re-alert step above 1.00', { realert_extra: 1.01 }],
+    ['an unknown cross-check key', { grace_days: 5 }],
+  ])('rejects %s', (_label, thresholds) => {
+    expect(parse(thresholds).success).toBe(false)
+  })
+
+  it('keeps every other threshold an integer', () => {
+    expect(action.payloadSchema.safeParse({ agent: 'field-watch', thresholds: { silent_hours: 0.5 } }).success).toBe(false)
+    expect(action.payloadSchema.safeParse({ agent: 'field-watch', thresholds: { silent_hours: 8.5 } }).success).toBe(false)
+  })
+
+  it('hashes a stored decimal as thousandths, so the evidence stays integer', async () => {
+    mockFindForEvidence.mockResolvedValueOnce({ thresholds: { norm_tolerance: 1.35, grace_days: 12 }, schedule: null })
+    expect(await EVIDENCE_LOADERS.agent_settings('TC', 'TC:cross-check')).toEqual({
+      thresholds: { norm_tolerance_milli: 1350, grace_days: 12 },
+      schedule: null,
+    })
+  })
+
+  it('previews the change from the stored decimal', () => {
+    const evidence = { rows: [settingsRow({ norm_tolerance_milli: 1500 }, null, 'TC:cross-check')], sha256: 'x' }
+    expect(action.preview({ agent: 'cross-check', thresholds: { norm_tolerance: 1.35 } }, new Map(), evidence)).toEqual([
+      'Dung sai định mức: 1.5 → 1.35 (siết)',
+    ])
+  })
+})

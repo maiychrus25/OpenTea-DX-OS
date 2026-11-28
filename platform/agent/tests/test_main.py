@@ -543,3 +543,26 @@ def test_replay_mode_still_reports_the_providers_whose_keys_are_set(cooperative,
     plain = replace(cfg, provider_name="replay", replay_dir=tmp_path)
     agent_main.run_once(plain, {}, now=datetime(2026, 11, 24, 3, 0, tzinfo=timezone.utc))
     assert gateway.heartbeat_providers == ["ollama"]
+
+
+def test_cross_check_runs_once_a_day_with_its_thresholds_and_its_failure_stops_nobody(monkeypatch, cooperative):
+    cfg, gateway = cooperative
+    gateway.entries = [_clean_entry("je_1")]
+    calls = []
+    harvest_runs = []
+    monkeypatch.setattr(agent_main.harvest_ready, "run_harvest_ready", lambda *a, **k: harvest_runs.append(a))
+    monkeypatch.setattr(agent_main.cross_check, "run_cross_check", lambda *a, **k: calls.append(a[1]))
+    runtimes: dict = {}
+    t0 = datetime(2026, 11, 24, 3, 0, tzinfo=timezone.utc)
+
+    agent_main.run_once(cfg, runtimes, now=t0)
+    agent_main.run_once(cfg, runtimes, now=t0 + timedelta(minutes=5))  # the same Vietnam day
+    assert calls == [t0]
+
+    def failing(*args, **kwargs):
+        del args, kwargs
+        raise RuntimeError("cross-check broke")
+
+    monkeypatch.setattr(agent_main.cross_check, "run_cross_check", failing)
+    agent_main.run_once(cfg, runtimes, now=t0 + timedelta(days=1))
+    assert len(harvest_runs) == 2

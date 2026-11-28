@@ -150,6 +150,8 @@ export const TELEGRAM_COVERAGE: TelegramCoverage = {
     'POST /api/journal/[id]/review',
     'GET /api/agent/settings',
     'PUT /api/agent/settings',
+    'GET /api/agent/settings/cross-check',
+    'PUT /api/agent/settings/cross-check',
     'POST /api/agent/proposals/[id]/decision',
     'GET /api/weather/live',
     'GET /api/agent/campaigns/today',

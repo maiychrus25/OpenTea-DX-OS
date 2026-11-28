@@ -50,7 +50,7 @@ function onlyTightens(payload: Record<string, unknown>, current: Record<string, 
   if (!defined) return false
   return keys.every((key) => {
     const setting = defined[key]
-    if (!setting) return false
+    if (!setting || setting.decimal) return false // a decimal setting is changed by a person, not on its own
     const from = Number(current[key] ?? setting.defaultValue)
     const to = thresholds[key]
     return setting.stricter === 'lower' ? to <= from : to >= from

@@ -48,9 +48,12 @@ export class PrismaAgentSettingsRepository implements AgentSettingsRepository {
     `
     const agents: Partial<Record<ConfigurableAgent, AgentSettingRecord>> = {}
     let monthlyLimit: number | null = null
+    let crossCheckThresholds: Record<string, unknown> | null = null
     for (const row of rows) {
       if (row.agent === BUDGET_SETTINGS_AGENT) {
         monthlyLimit = row.monthly_budget
+      } else if (row.agent === 'cross-check') {
+        crossCheckThresholds = row.thresholds ?? {}
       } else if (isConfigurable(row.agent)) {
         agents[row.agent] = {
           enabled: row.enabled,
@@ -61,7 +64,7 @@ export class PrismaAgentSettingsRepository implements AgentSettingsRepository {
         }
       }
     }
-    return { agents, monthlyLimit }
+    return { agents, monthlyLimit, crossCheckThresholds }
   }
 
   async availableProviders(htxCode: string): Promise<AgentProvider[]> {
@@ -96,6 +99,19 @@ export class PrismaAgentSettingsRepository implements AgentSettingsRepository {
         ON CONFLICT (htx_code, agent) DO UPDATE
           SET monthly_budget = EXCLUDED.monthly_budget
         WHERE platform.agent_settings.monthly_budget IS DISTINCT FROM EXCLUDED.monthly_budget
+      `
+    })
+  }
+
+  async upsertThresholds(htxCode: string, agent: string, thresholds: Record<string, number>, actor: string): Promise<void> {
+    await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT set_config('dxos.actor', ${actor}, true)`
+      await tx.$executeRaw`
+        INSERT INTO platform.agent_settings (htx_code, agent, thresholds)
+        VALUES (${htxCode}, ${agent}, ${JSON.stringify(thresholds)}::jsonb)
+        ON CONFLICT (htx_code, agent) DO UPDATE
+          SET thresholds = platform.agent_settings.thresholds || EXCLUDED.thresholds
+        WHERE platform.agent_settings.thresholds IS DISTINCT FROM (platform.agent_settings.thresholds || EXCLUDED.thresholds)
       `
     })
   }

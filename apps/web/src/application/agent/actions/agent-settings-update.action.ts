@@ -17,6 +17,8 @@ export interface ThresholdSetting {
   max: number
   stricter: SettingDirection
   defaultValue: number
+  /** Two decimals instead of a whole number; the evidence hashes such a value as thousandths. */
+  decimal?: true
 }
 
 /** The keys A10 may change (contract C2). Exported for M12, which allows tightening only. */
@@ -42,6 +44,12 @@ export const SETTING_KEYS = {
       harvest_window_days: { label: 'Cửa sổ thu hoạch', unit: 'ngày', min: 0, max: 30, stricter: 'higher', defaultValue: 3 },
     } satisfies Record<string, ThresholdSetting>,
   },
+  'cross-check': {
+    thresholds: {
+      norm_tolerance: { label: 'Dung sai định mức', unit: '', min: 1, max: 3, stricter: 'lower', defaultValue: 1.35, decimal: true },
+      realert_extra: { label: 'Bước báo lại', unit: '', min: 0.05, max: 1, stricter: 'lower', defaultValue: 0.2, decimal: true },
+    } satisfies Record<string, ThresholdSetting>,
+  },
   digest: {
     schedule: { label: 'Giờ báo cáo ngày', min: '05:00', max: '22:00', stricter: null, defaultValue: '18:00' },
   },
@@ -51,8 +59,8 @@ const HH_MM = /^([01]\d|2[0-3]):[0-5]\d$/
 
 const payloadSchema = z
   .object({
-    agent: z.enum(['field-watch', 'disease-watch', 'harvest-ready', 'digest']),
-    thresholds: z.record(z.number().int()).optional(),
+    agent: z.enum(['field-watch', 'disease-watch', 'harvest-ready', 'cross-check', 'digest']),
+    thresholds: z.record(z.number()).optional(),
     schedule: z.string().regex(HH_MM).optional(),
   })
   .strict()
@@ -77,6 +85,10 @@ const payloadSchema = z
       const value = payload.thresholds![key]
       if (!setting) {
         ctx.addIssue({ code: 'custom', message: `Khóa ${key} không được phép` })
+      } else if (!('decimal' in setting) && !Number.isInteger(value)) {
+        ctx.addIssue({ code: 'custom', message: `${key} phải là số nguyên` })
+      } else if ('decimal' in setting && Math.round(value * 100) / 100 !== value) {
+        ctx.addIssue({ code: 'custom', message: `${key} chỉ có tối đa hai chữ số thập phân` })
       } else if (value < setting.min || value > setting.max) {
         ctx.addIssue({ code: 'custom', message: `${key} nằm ngoài ${setting.min}..${setting.max}` })
       }
@@ -127,7 +139,8 @@ export const agentSettingsUpdateAction: ActionDefinition<AgentSettingsUpdatePayl
     for (const [key, next] of Object.entries(payload.thresholds ?? {})) {
       const setting = defined[key]
       if (!setting) continue
-      const from = Number(now.thresholds[key] ?? setting.defaultValue)
+      const stored = now.thresholds[`${key}_milli`] === undefined ? now.thresholds[key] : Number(now.thresholds[`${key}_milli`]) / 1000
+      const from = Number(stored ?? setting.defaultValue)
       lines.push(`${formatChange(setting, from, next)}(${strictnessTag(setting.stricter, from, next)})`)
     }
     if (payload.schedule !== undefined) {

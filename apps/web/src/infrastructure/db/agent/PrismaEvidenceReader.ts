@@ -64,3 +64,15 @@ export async function findSensorReadingForEvidence(htxCode: string, id: string) 
   `
   return rows[0] ?? null
 }
+
+export function findInputAdvanceForEvidence(htxCode: string, id: string) {
+  return prisma.inputAdvance.findFirst({
+    where: { id, htx_profile: { htx_code: htxCode } },
+  })
+}
+
+export function findFreshLeafTicketForEvidence(htxCode: string, id: string) {
+  return prisma.freshLeafTicket.findFirst({
+    where: { id, htx_profile: { htx_code: htxCode } },
+  })
+}
