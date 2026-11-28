@@ -32,6 +32,23 @@ EXPECTED_COLUMNS = {
         "withdrawal_days", "safe_harvest_date", "created_at",
     },
 }
+# Phase 1-3 tables (A1): ids and quantities only, never a money column.
+PHASE_COLUMNS = {
+    "input_advances": {"id", "household_id", "item_id", "quantity", "advanced_on", "status", "settlement_id"},
+    "input_items": {"id", "kind", "pesticide_product_id", "active"},
+    "fresh_leaf_tickets": {"id", "household_id", "parcel_id", "cycle_id", "weighed_at", "net_kg", "status"},
+    "processing_batches": {"id", "status", "processed_on", "fresh_kg", "dry_kg", "recovery_ratio", "out_of_band"},
+    "processing_batch_outputs": {"id", "batch_id", "grade", "kg"},
+}
+MONEY_COLUMNS = {"amount_vnd", "unit_price_vnd", "price_vnd_per_kg"}
+HTX_FILTER = {"htx_profile": COOPERATIVE_FILTER}
+PHASE_FILTERS = {
+    "input_advances": HTX_FILTER,
+    "input_items": HTX_FILTER,
+    "fresh_leaf_tickets": HTX_FILTER,
+    "processing_batches": HTX_FILTER,
+    "processing_batch_outputs": {"batch": HTX_FILTER},
+}
 # Aggregate view with no personal column, so the agent may read all of its columns.
 ALL_COLUMNS = {"telemetry.sensor_daily"}
 
@@ -77,3 +94,13 @@ def test_field_disease_harvest_and_bulletin_reads_match_the_contract():
     assert permissions["public.weather_cache"]["filter"] == PARCEL_FILTER
     assert permissions["telemetry.sensor_readings"]["filter"] == COOPERATIVE_FILTER
     assert permissions["telemetry.sensor_daily"]["filter"] == COOPERATIVE_FILTER
+
+
+def test_phase_tables_expose_exact_columns_without_money_and_stay_in_the_cooperative():
+    permissions = agent_permissions()
+    for table, columns in PHASE_COLUMNS.items():
+        perm = permissions[f"public.{table}"]
+        assert set(perm["columns"]) == columns, table
+        assert not MONEY_COLUMNS & set(perm["columns"]), table
+        assert perm["filter"] == PHASE_FILTERS[table], table
+        assert perm["allow_aggregations"] is True, table
