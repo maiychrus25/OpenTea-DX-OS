@@ -638,7 +638,7 @@ Quy trình: phiếu cân búp tươi vào một mẻ sao, mẻ cho ra chè khô 
 
 ### 3.27 Bảng điều hành Giám đốc (GĐ3 S7)
 
-`/manager/dashboard` là màn hình buổi sáng của Trưởng HTX; `/accountant/dashboard` dùng cùng bảng cho kế toán. Bảng do `DirectorBoardUseCase.read` dựng ở máy chủ (không có route API riêng). **Mỗi khối tải riêng:** khối hỏng chỉ thành `null` (ghi log, trang hiện "Chưa tải được ..." cho khối đó) và các khối còn lại vẫn có. Ngày "hôm nay" là ngày Việt Nam.
+`/manager/dashboard` là màn hình buổi sáng của Trưởng HTX; `/accountant/dashboard` dùng cùng bảng cho kế toán, **không có khối 4 (tồn chè khô)**: kế toán thấy khối 1, 2, 3, 5 và các cảnh báo về tiền. Bảng do `DirectorBoardUseCase.read` dựng ở máy chủ (không có route API riêng). **Mỗi khối tải riêng:** khối hỏng chỉ thành `null` (ghi log, trang hiện "Chưa tải được ..." cho khối đó) và các khối còn lại vẫn có. Ngày "hôm nay" là ngày Việt Nam.
 
 - **Khối 1, búp hôm nay:** tổng kg tịnh, thành tiền và số phiếu của phiếu cân `VALID` cân trong ngày, kèm kg tịnh của hôm qua.
 - **Khối 2, giá hôm nay:** giá từng phẩm cấp đang dùng đã công bố trong ngày; `published` là `false` khi chưa phẩm cấp nào có giá.
