@@ -1,0 +1,20 @@
+/* SPDX-License-Identifier: MIT */
+/* SPDX-FileCopyrightText: 2026 OpenTea Developers */
+
+.alert { display: flex; align-items: center; gap: 10px; margin: 0; padding: 10px 16px; border-radius: var(--radius-button); background: var(--color-warning-subtle); color: var(--alert-warn-fg); font-size: 13.5px; }
+.columns { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 12px; align-items: start; }
+.tight td, .tight th { padding-left: 9px; padding-right: 9px; }
+.tight th { white-space: normal; }
+.side { padding: 12px 16px; }
+.side ul { margin: 0; padding: 0; list-style: none; }
+.side li { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--color-border-row); font-size: 13px; }
+.side li > span { display: flex; flex-direction: column; min-width: 0; }
+.side small { color: var(--color-ink-secondary); }
+.sideHead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.sideHead h2 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 16px; font-weight: 800; color: var(--color-ink-heading); }
+.sideHead h2 svg { color: var(--color-primary); }
+.none { font-size: 13.5px; color: var(--color-ink-secondary); }
+
+@media (max-width: 1200px) {
+  .columns { grid-template-columns: minmax(0, 1fr); }
+}
