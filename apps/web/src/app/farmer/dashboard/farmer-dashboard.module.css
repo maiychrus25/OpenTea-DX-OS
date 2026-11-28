@@ -102,3 +102,5 @@
   .parcel strong, .parcel small, .entry { overflow-wrap: anywhere; }
   .entry { flex-wrap: wrap; }
 }
+
+.listenPicking { display: flex; justify-content: flex-end; padding: 6px 11px 0; }

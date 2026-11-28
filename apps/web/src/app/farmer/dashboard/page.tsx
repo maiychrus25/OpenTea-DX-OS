@@ -12,6 +12,8 @@ import { auth } from '@/auth'
 import { requireTenant } from '@/lib/api/tenant'
 import { EmptyState } from '@/components/ui'
 import { WeatherHero } from '@/components/features/farmer-web/WeatherHero'
+import { ListenButton } from '@/components/features/tts/ListenButton'
+import { pickingSentence } from '@/lib/tts/sentences'
 import { LeafPriceCard } from '@/components/features/weighing/LeafPriceCard'
 import { FarmerMoneyCard } from '@/components/features/ledger/FarmerMoneyCard'
 import { activeWithdrawals } from '@/domain/journal/active-withdrawals'
@@ -244,6 +246,18 @@ export default async function FarmerDashboard() {
             </span>
             <Link href="/farmer/schedule">Xem lịch <ArrowRight size={14} aria-hidden="true" /></Link>
           </div>
+          {parcels.length > 0 && (
+            <div className={styles.listenPicking}>
+              <ListenButton label="Nghe ngày hái" text={pickingSentence(parcels.map(parcel => {
+                const wait = withdrawals.find(w => w.parcel_code === parcel.parcel_code)
+                const planned = harvests.find(cycle => cycle.parcel_id === parcel.id)?.estimated_harvest_date
+                // A planned day inside the withdrawal period cannot be used, so the safe day is read instead.
+                const blocked = !!wait && (!planned || wait.safe > planned)
+                const day = blocked ? wait!.safe : planned
+                return { parcel_code: parcel.parcel_code, date: day ? fullDay(day) : null, withdrawal: blocked }
+              }))} />
+            </div>
+          )}
           {parcels.length === 0 ? (
             <EmptyState icon={<Sprout />} title="Bạn chưa có thửa đất nào được phân công." />
           ) : (
