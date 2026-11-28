@@ -7,6 +7,7 @@ import { Camera, KeyRound, Lock, Pencil, Smartphone } from 'lucide-react'
 import { auth } from '@/auth'
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { TelegramLinkCard } from '@/components/features/telegram/TelegramLinkCard'
+import { FarmerZaloOptOut } from '@/components/features/zalo/FarmerZaloOptOut'
 import { SignOutButton } from '@/components/features/farmer-web/SignOutButton'
 import kit from '@/components/features/farmer-web/kit.module.css'
 import { BRAND_NAME } from '@/lib/brand'
@@ -144,6 +145,8 @@ export default async function FarmerProfilePage() {
       </section>
 
       <TelegramLinkCard role="farmer" />
+
+      {household && <FarmerZaloOptOut householdId={household.id} />}
 
       <section className={styles.foot} aria-label="Hỗ trợ và đăng xuất">
         <SignOutButton />
